@@ -26,7 +26,7 @@ import { OPERATOR_NAME } from "@/lib/branding"
 import { StatStrip } from "@/components/stat-strip"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -203,76 +203,91 @@ function CompanyCard({
   const [borrando, setBorrando] = useState(false)
 
   return (
-    <Card className={archivada ? "opacity-60" : undefined}>
-      <CardHeader className="flex-row items-start gap-3 space-y-0">
-        <CompanyAvatar company={company} size={40} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h2 className="truncate font-semibold">{company.name}</h2>
-            {archivada && (
-              <Badge variant="secondary" className="text-[10px]">
-                Archivada
-              </Badge>
-            )}
+    <Card
+      className={
+        archivada
+          ? "gap-0 py-0 opacity-60 transition-shadow"
+          : "gap-0 py-0 transition-shadow hover:shadow-md"
+      }
+    >
+      {/* Franja de identidad: el color de la empresa da el primer golpe de vista. */}
+      <div className="h-1 rounded-t-xl" style={{ backgroundColor: company.accent_color }} />
+
+      <CardHeader className="pt-5">
+        <div className="flex items-start gap-3">
+          <CompanyAvatar company={company} size={44} className="rounded-lg" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="truncate text-base font-semibold">{company.name}</h2>
+              {archivada && (
+                <Badge variant="secondary" className="text-[10px]">
+                  Archivada
+                </Badge>
+              )}
+            </div>
+            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="size-3 shrink-0" />
+              <span className="truncate">
+                {sedes} sede{sedes === 1 ? "" : "s"} · {members} comercial
+                {members === 1 ? "" : "es"}
+              </span>
+            </p>
           </div>
-          <p className="flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
-            <MapPin className="size-3" />
-            {sedes} sede{sedes === 1 ? "" : "s"} · {members} comercial
-            {members === 1 ? "" : "es"} · {modules} módulo{modules === 1 ? "" : "s"}
-          </p>
         </div>
 
         {isSuperAdmin && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-8">
-                <MoreHorizontal className="size-4" />
-                <span className="sr-only">Acciones de {company.name}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href={`/e/${company.slug}/configuracion`}>
-                  <Settings className="size-4" />
-                  Configuración
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              {archivada ? (
-                <DropdownMenuItem
-                  onSelect={async () => {
-                    const r = await archiveCompany(company.id, false)
-                    if (r.ok) toast.success(`${company.name} reactivada`)
-                    else toast.error(r.error)
-                  }}
-                >
-                  <ArchiveRestore className="size-4" />
-                  Reactivar
+          <CardAction>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-8">
+                  <MoreHorizontal className="size-4" />
+                  <span className="sr-only">Acciones de {company.name}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href={`/e/${company.slug}/configuracion`}>
+                    <Settings className="size-4" />
+                    Configuración
+                  </Link>
                 </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem
-                  variant="destructive"
-                  onSelect={async () => {
-                    const r = await archiveCompany(company.id, true)
-                    if (r.ok) {
-                      toast.success(`${company.name} archivada`, {
-                        description: "Los registros históricos se conservan.",
-                      })
-                    } else {
-                      toast.error(r.error)
-                    }
-                  }}
-                >
-                  Archivar empresa
+                <DropdownMenuSeparator />
+                {archivada ? (
+                  <DropdownMenuItem
+                    onSelect={async () => {
+                      const r = await archiveCompany(company.id, false)
+                      if (r.ok) toast.success(`${company.name} reactivada`)
+                      else toast.error(r.error)
+                    }}
+                  >
+                    <ArchiveRestore className="size-4" />
+                    Reactivar
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onSelect={async () => {
+                      const r = await archiveCompany(company.id, true)
+                      if (r.ok) {
+                        toast.success(`${company.name} archivada`, {
+                          description: "Los registros históricos se conservan.",
+                        })
+                      } else {
+                        toast.error(r.error)
+                      }
+                    }}
+                  >
+                    Archivar empresa
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onSelect={() => setBorrando(true)}>
+                  <Trash2 className="size-4" />
+                  Eliminar definitivamente
                 </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onSelect={() => setBorrando(true)}>
-                <Trash2 className="size-4" />
-                Eliminar definitivamente
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </CardAction>
         )}
 
         <DeleteCompanyDialog
@@ -280,41 +295,20 @@ function CompanyCard({
           companyName={company.name}
           open={borrando}
           onOpenChange={setBorrando}
-          // Ya estamos en el listado: no hay a dónde navegar después.
           onDeleted={() => {}}
         />
       </CardHeader>
 
-      <CardContent className="space-y-3">
-        <div className="space-y-1.5">
-          <div className="flex items-baseline justify-between text-sm">
-            <span className="text-muted-foreground">Ventas del mes</span>
-            <span className="font-semibold tabular-nums">{formatNumber(totals.ventas)}</span>
-          </div>
-          {ratioVentas !== null ? (
-            <>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className={
-                    ratioVentas >= 1
-                      ? "h-full bg-emerald-600"
-                      : ratioVentas >= 0.6
-                        ? "h-full bg-amber-500"
-                        : "h-full bg-rose-500"
-                  }
-                  style={{ width: `${Math.min(100, ratioVentas * 100)}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground tabular-nums">
-                {formatPercent(ratioVentas)} de la meta
-              </p>
-            </>
-          ) : (
-            <p className="text-xs text-muted-foreground">Sin meta de ventas este mes</p>
-          )}
+      <CardContent className="pt-4 pb-5">
+        {/* La cifra que se busca primero, en grande. */}
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-sm text-muted-foreground">Ventas de {monthLabel(month)}</span>
+          <span className="text-2xl font-semibold tabular-nums">
+            {formatNumber(totals.ventas)}
+          </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 border-t pt-3 text-sm">
+        <div className="mt-4 grid grid-cols-2 gap-4 border-t pt-4">
           <div>
             <p className="text-xs text-muted-foreground">Facturación</p>
             <p className="font-medium tabular-nums">{formatCOPShort(totals.facturacion)}</p>
@@ -324,16 +318,9 @@ function CompanyCard({
             <p className="font-medium tabular-nums">{formatCOPShort(totals.recaudo)}</p>
           </div>
         </div>
-
-        <div className="flex items-center gap-1.5 border-t pt-3 text-xs">
-          <CheckCircle2 className="size-3.5 text-muted-foreground" />
-          <span className="text-muted-foreground">
-            {members} comercial{members === 1 ? "" : "es"} · {sedes} sede{sedes === 1 ? "" : "s"}
-          </span>
-        </div>
       </CardContent>
 
-      <CardFooter>
+      <CardFooter className="border-t pt-4 pb-5">
         <Button asChild variant="outline" className="w-full" disabled={archivada}>
           <Link href={`/e/${company.slug}`}>
             Entrar
