@@ -1,10 +1,11 @@
 "use client"
 
-import { AlertTriangle, Copy, Lock, LockOpen } from "lucide-react"
+import { AlertTriangle, Copy } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
 import { useActiveCompany } from "@/components/company-guard"
+import { MoneyInput } from "@/components/money-input"
 import { PageHeader } from "@/components/page-header"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -31,15 +32,13 @@ import {
 } from "@/lib/kpi"
 import {
   copyObjectivesFromPreviousMonth,
-  setLockMonth,
   setObjective,
-} from "@/lib/store/actions"
+} from "@/lib/data/records-actions"
 import {
   useCanManage,
   useCompanyMembers,
   useDb,
   useEffectiveToday,
-  useIsSuperAdmin,
 } from "@/lib/store/hooks"
 
 export default function ObjetivosPage() {
@@ -48,13 +47,11 @@ export default function ObjetivosPage() {
   const today = useEffectiveToday()
   const members = useCompanyMembers(company.id)
   const canManage = useCanManage(company.id)
-  const isSuperAdmin = useIsSuperAdmin()
 
   const [month, setMonth] = useState(monthOf(today))
 
   const progreso = objectiveProgress(db, company.id, month, today)
-  const bloqueado = progreso.length > 0 && progreso.every((p) => p.objective.locked)
-  const puedeEditar = canManage && (!bloqueado || isSuperAdmin)
+  const puedeEditar = canManage
 
   const elapsed = businessDaysElapsed(month, today)
   const totalDias = businessDaysInMonth(month)
@@ -77,15 +74,16 @@ export default function ObjetivosPage() {
     )
   }
 
-  function guardar(metricCode: string, userId: string | null, raw: string) {
+  async function guardar(metricCode: string, userId: string | null, raw: number | string) {
     const value = Math.max(0, Number(raw) || 0)
-    setObjective({
+    const r = await setObjective({
       company_id: company.id,
       period_month: month,
       metric_code: metricCode,
       user_id: userId,
       target_value: value,
     })
+    if (!r.ok) toast.error(r.error ?? "No se pudo guardar la meta.")
   }
 
   /** Advierte (no bloquea) si la suma de metas individuales no cuadra con la de empresa. */
@@ -123,9 +121,10 @@ export default function ObjetivosPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  const n = copyObjectivesFromPreviousMonth(company.id, month)
-                  if (n > 0) toast.success(`${n} meta(s) copiadas del mes anterior`)
+                onClick={async () => {
+                  const r = await copyObjectivesFromPreviousMonth(company.id, month)
+                  if (!r.ok) toast.error(r.error)
+                  else if (r.copiadas) toast.success(`${r.copiadas} meta(s) copiadas del mes anterior`)
                   else toast.info("No hay metas nuevas que copiar del mes anterior")
                 }}
               >
@@ -133,34 +132,10 @@ export default function ObjetivosPage() {
                 Copiar del mes anterior
               </Button>
             )}
-            {isSuperAdmin && progreso.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setLockMonth(company.id, month, !bloqueado)
-                  toast.success(bloqueado ? "Mes desbloqueado" : "Mes bloqueado")
-                }}
-              >
-                {bloqueado ? <LockOpen className="size-4" /> : <Lock className="size-4" />}
-                {bloqueado ? "Desbloquear mes" : "Bloquear mes"}
-              </Button>
-            )}
           </>
         }
       />
 
-      {bloqueado && (
-        <Alert className="mb-4">
-          <Lock />
-          <AlertDescription>
-            {monthLabel(month)} está cerrado.{" "}
-            {isSuperAdmin
-              ? "Como super admin puedes desbloquearlo para editar."
-              : "Solo el super admin puede modificar las metas de un mes cerrado."}
-          </AlertDescription>
-        </Alert>
-      )}
 
       {!canManage && (
         <Alert className="mb-4">
@@ -207,16 +182,13 @@ export default function ObjetivosPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Input
-                        type="number"
-                        min={0}
-                        step={metric.unit === "moneda" ? 100_000 : 1}
-                        inputMode="numeric"
-                        disabled={!puedeEditar}
-                        defaultValue={objetivo?.target_value ?? 0}
+                      <MetaInput
                         key={`${metric.code}-${month}-${objetivo?.target_value ?? 0}`}
-                        onBlur={(e) => guardar(metric.code, null, e.target.value)}
-                        className="ml-auto w-40 text-right tabular-nums"
+                        unit={metric.unit}
+                        disabled={!puedeEditar}
+                        valorInicial={objetivo?.target_value ?? 0}
+                        onGuardar={(valor) => guardar(metric.code, null, valor)}
+                        className="ml-auto w-40"
                       />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
@@ -283,15 +255,13 @@ export default function ObjetivosPage() {
                           : null
                         return (
                           <TableCell key={metric.code} className="text-right">
-                            <Input
-                              type="number"
-                              min={0}
-                              inputMode="numeric"
-                              disabled={!puedeEditar}
-                              defaultValue={objetivo?.target_value ?? 0}
+                            <MetaInput
                               key={`${metric.code}-${member.id}-${month}-${objetivo?.target_value ?? 0}`}
-                              onBlur={(e) => guardar(metric.code, member.id, e.target.value)}
-                              className="ml-auto w-24 text-right tabular-nums"
+                              unit={metric.unit}
+                              disabled={!puedeEditar}
+                              valorInicial={objetivo?.target_value ?? 0}
+                              onGuardar={(valor) => guardar(metric.code, member.id, valor)}
+                              className="ml-auto w-28"
                             />
                             <p className="mt-1 text-xs text-muted-foreground tabular-nums">
                               real {formatByUnit(Math.round(real), metric.unit)}
@@ -322,5 +292,56 @@ function CumplBadge({ ratio }: { ratio: number }) {
     <Badge variant={variant} className="tabular-nums">
       {formatPercent(ratio)}
     </Badge>
+  )
+}
+
+/**
+ * Casilla de meta.
+ *
+ * Las metas de dinero llevan separador de miles: en pesos, `18000000` no se lee
+ * de un vistazo y equivocarse en un cero cambia la meta por diez. Las de
+ * cantidad y porcentaje siguen siendo un número normal.
+ *
+ * Guarda al salir del campo, no en cada tecla: si no, escribir "30" guardaría
+ * primero una meta de 3.
+ */
+function MetaInput({
+  unit,
+  valorInicial,
+  onGuardar,
+  disabled,
+  className,
+}: {
+  unit: "cantidad" | "moneda" | "porcentaje"
+  valorInicial: number
+  onGuardar: (valor: number) => void
+  disabled?: boolean
+  className?: string
+}) {
+  const [valor, setValor] = useState(valorInicial)
+
+  if (unit === "moneda") {
+    return (
+      <MoneyInput
+        value={valor}
+        onValueChange={setValor}
+        disabled={disabled}
+        onBlur={() => onGuardar(valor)}
+        className={className}
+      />
+    )
+  }
+
+  return (
+    <Input
+      type="number"
+      min={0}
+      inputMode="numeric"
+      disabled={disabled}
+      value={valor}
+      onChange={(e) => setValor(Math.max(0, Number(e.target.value) || 0))}
+      onBlur={() => onGuardar(valor)}
+      className={`text-right tabular-nums ${className ?? ""}`}
+    />
   )
 }
