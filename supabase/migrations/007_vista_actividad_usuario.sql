@@ -1,8 +1,5 @@
--- ============================================================
--- Command Center · 007 · Actividad por usuario
--- Cuántos registros históricos tiene a su nombre cada usuario. Lo usa la
--- pantalla de usuarios para decir exactamente qué se conserva al eliminarlo.
--- ============================================================
+-- Cuantos registros historicos tiene a su nombre cada usuario. Se usa en la
+-- pantalla de usuarios para decir exactamente que se conserva al eliminarlo.
 create or replace view v_user_activity as
 select
   p.id as user_id,

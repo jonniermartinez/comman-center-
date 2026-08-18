@@ -1,10 +1,10 @@
 -- ============================================================
--- Command Center · 009 · Logos de las empresas cliente
+-- Logos de las empresas cliente.
 --
--- El bucket es público de lectura a propósito: el logo se pinta en el sidebar y
--- en las tarjetas, y hacerlo privado obligaría a firmar una URL en cada render.
--- No hay nada sensible en un logo. Escribir, en cambio, solo puede quien
--- administra esa empresa.
+-- El bucket es publico de lectura a proposito: el logo se pinta en el sidebar
+-- y en las tarjetas, y hacerlo privado obligaria a firmar una URL por cada
+-- render. No hay nada sensible en un logo. Escribir, en cambio, solo puede
+-- quien administra esa empresa.
 -- ============================================================
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
@@ -19,9 +19,8 @@ on conflict (id) do update
       file_size_limit = excluded.file_size_limit,
       allowed_mime_types = excluded.allowed_mime_types;
 
--- Los archivos se guardan como <company_id>/<nombre>, así que la primera
--- carpeta de la ruta dice a qué empresa pertenece el archivo. La ruta no es
--- una convención cosmética: es de dónde sale el permiso.
+-- Los archivos se guardan como <company_id>/<nombre>, asi que la primera
+-- carpeta de la ruta dice a que empresa pertenece el archivo.
 drop policy if exists company_logos_read on storage.objects;
 create policy company_logos_read on storage.objects
   for select using (bucket_id = 'company-logos');

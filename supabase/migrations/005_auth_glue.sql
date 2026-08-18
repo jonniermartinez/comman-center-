@@ -1,13 +1,14 @@
 -- ============================================================
--- Command Center · 005 · Enganche entre auth.users y profiles
+-- Enganche entre auth.users y profiles
 --
--- No hay registro público: el super admin invita. Al crearse el usuario en Auth
--- (invitación o alta manual desde el panel) nace aquí su perfil, tomando el
--- nombre y el rol de la metadata de la invitación.
+-- No hay registro publico: el super admin invita. Al crearse el usuario en Auth
+-- (invitacion o alta manual desde el panel) nace aqui su perfil, tomando el
+-- nombre y el rol de la metadata de la invitacion.
 --
--- El primer usuario de la instalación nace super_admin y activo: si no, no
--- habría nadie con permiso para crear al resto (el huevo y la gallina). Del
--- segundo en adelante todos nacen invitados con el rol que traigan.
+-- El primer usuario de la instalacion nace super_admin y activo: si no, no
+-- habria nadie con permiso para crear al resto (problema del huevo y la
+-- gallina). A partir del segundo, todos nacen invitados con el rol que se les
+-- haya asignado.
 -- ============================================================
 create or replace function handle_new_auth_user()
 returns trigger
@@ -43,6 +44,7 @@ begin
     rol,
     case
       when es_el_primero then 'activo'::user_status
+      -- Si el alta trae contrasena confirmada, ya puede entrar.
       when new.email_confirmed_at is not null then 'activo'::user_status
       else 'invitado'::user_status
     end
@@ -58,8 +60,10 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function handle_new_auth_user();
 
--- El invitado pasa a activo cuando acepta la invitación y define su contraseña
--- (ahí Auth marca email_confirmed_at).
+-- ------------------------------------------------------------
+-- El invitado pasa a activo cuando acepta la invitacion y define su
+-- contrasena (ahi Auth marca email_confirmed_at).
+-- ------------------------------------------------------------
 create or replace function handle_auth_user_confirmed()
 returns trigger
 language plpgsql
@@ -68,9 +72,12 @@ set search_path = public
 as $$
 begin
   if new.email_confirmed_at is not null and old.email_confirmed_at is null then
-    update profiles set status = 'activo' where id = new.id and status = 'invitado';
+    update profiles
+       set status = 'activo'
+     where id = new.id and status = 'invitado';
   end if;
 
+  -- El correo se mantiene sincronizado si se cambia desde Auth.
   if new.email is distinct from old.email then
     update profiles set email = new.email where id = new.id;
   end if;
@@ -84,8 +91,10 @@ create trigger on_auth_user_confirmed
   after update on auth.users
   for each row execute function handle_auth_user_confirmed();
 
--- Datos de sesión en una sola llamada: quién soy, con qué rol, y a qué empresas
--- y sedes tengo acceso. Evita cinco consultas al pintar el shell.
+-- ------------------------------------------------------------
+-- Datos de sesion en una sola llamada: quien soy, con que rol, y a que
+-- empresas y sedes tengo acceso. Evita cinco consultas al pintar el shell.
+-- ------------------------------------------------------------
 create or replace function me()
 returns jsonb
 language sql

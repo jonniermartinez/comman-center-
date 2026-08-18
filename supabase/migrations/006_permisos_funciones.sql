@@ -1,12 +1,12 @@
 -- ============================================================
--- Command Center · 006 · Superficie de la API
---
--- Ninguna de estas funciones tiene por qué ser invocable sin sesión vía
--- /rest/v1/rpc. Las de trigger no se llaman nunca desde fuera; los helpers de
--- RLS solo los necesita un usuario autenticado (Postgres verifica el permiso de
--- EXECUTE también cuando la función se evalúa dentro de una política, así que
--- revocárselo a `authenticated` rompería toda lectura).
+-- Superficie de la API: ninguna de estas funciones tiene por que ser
+-- invocable sin sesion via /rest/v1/rpc. Las de trigger no se llaman nunca
+-- desde fuera; los helpers de RLS solo los necesita un usuario autenticado
+-- (Postgres verifica el permiso de EXECUTE tambien cuando la funcion se
+-- evalua dentro de una politica).
 -- ============================================================
+
+-- Funciones de trigger: nadie las invoca directamente.
 do $$
 declare f text;
 begin
@@ -21,6 +21,7 @@ begin
 end;
 $$;
 
+-- Helpers de RLS y acciones: solo con sesion iniciada.
 do $$
 declare f text;
 begin

@@ -1,14 +1,13 @@
 -- ============================================================
--- Command Center · 010 · Borrado del reporte de ventas del día
+-- El reporte de ventas del dia se reemplaza completo.
 --
--- Guardar el reporte borra las líneas de ese día en esa sede y las vuelve a
--- escribir: el formulario es la única fuente de verdad de ese día, así que una
--- financiación que quedó en cero tiene que desaparecer, no quedarse como línea
--- vieja.
+-- Guardar borra las lineas de ese dia en esa sede y las vuelve a escribir: el
+-- formulario es la unica fuente de verdad de ese dia, asi que una financiacion
+-- que quedo en cero tiene que desaparecer, no quedarse como linea vieja.
 --
--- Sin política de DELETE ese borrado no falla: RLS simplemente no borra nada y
--- el INSERT posterior choca contra el índice único. Es el único sitio de la app
--- donde se borran filas de un registro histórico, y por eso la política se
+-- Sin politica de DELETE, ese borrado no falla: RLS simplemente no borra nada y
+-- el INSERT posterior choca contra el indice unico. Es el unico sitio de la app
+-- donde se borran filas de un registro historico, y por eso la politica se
 -- limita a quien ya puede escribir en esa empresa.
 -- ============================================================
 do $$

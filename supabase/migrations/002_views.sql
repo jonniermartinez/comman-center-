@@ -1,14 +1,9 @@
--- ============================================================
--- Command Center · 002 · Vistas de KPIs y agregados
--- Los ratios y los reportes mensuales viven acá: no se digitan
--- ni se guardan, se calculan. Así nunca hay descuadre con el detalle.
--- ============================================================
-
--- División segura: null en vez de error/0 cuando el denominador es 0.
+-- Division segura: null en vez de error/0 cuando el denominador es 0.
 create or replace function safe_ratio(numerador numeric, denominador numeric)
 returns numeric
 language sql
 immutable
+set search_path = public
 as $$
   select case when coalesce(denominador, 0) = 0
               then null
@@ -16,9 +11,6 @@ as $$
          end;
 $$;
 
--- ------------------------------------------------------------
--- KPI Diario con los seis ratios del Excel
--- ------------------------------------------------------------
 create or replace view v_daily_kpi as
 select
   k.*,
@@ -30,11 +22,7 @@ select
   safe_ratio(k.llamada_agenda,       k.llamadas_contestadas) as volumen_venta_agendas
 from daily_kpi k;
 
--- ------------------------------------------------------------
--- KPI consolidado del mes por empresa y responsable.
--- Los ratios se recalculan sobre los totales, NO se promedian
--- los ratios diarios (promediar ratios da un número falso).
--- ------------------------------------------------------------
+-- Los ratios se recalculan sobre los totales, NO se promedian los ratios diarios.
 create or replace view v_monthly_kpi as
 select
   company_id,
@@ -59,10 +47,6 @@ select
 from daily_kpi
 group by company_id, date_trunc('month', report_date), user_id;
 
--- ------------------------------------------------------------
--- Gestión Diaria: inicial vs final del mismo día,
--- para ver cuánto se depuró en la jornada.
--- ------------------------------------------------------------
 create or replace view v_daily_management_progress as
 select
   company_id,
@@ -79,9 +63,6 @@ select
 from daily_management
 group by company_id, report_date, user_id;
 
--- ------------------------------------------------------------
--- Reporte de ventas diario (equivalente al "Reporte Diario" del Excel)
--- ------------------------------------------------------------
 create or replace view v_daily_sales as
 select
   s.company_id,
@@ -95,9 +76,6 @@ from sales_entries s
 join financing_types f on f.code = s.financing_code
 group by s.company_id, s.report_date, s.financing_code, f.name, s.kind;
 
--- ------------------------------------------------------------
--- Reporte mensual: la suma de los diarios. Nunca se digita.
--- ------------------------------------------------------------
 create or replace view v_monthly_sales as
 select
   s.company_id,
@@ -129,10 +107,6 @@ select
 from collection_entries
 group by company_id, date_trunc('month', report_date), method_code;
 
--- ------------------------------------------------------------
--- Totales del mes por empresa: lo que alimenta las tarjetas
--- de cumplimiento del dashboard.
--- ------------------------------------------------------------
 create or replace view v_monthly_totals as
 with ventas as (
   select company_id, date_trunc('month', report_date)::date as period_month,
@@ -173,13 +147,8 @@ left join ventas v on v.company_id = c.id and v.period_month = p.period_month
 left join fact   f on f.company_id = c.id and f.period_month = p.period_month
 left join rec    r on r.company_id = c.id and r.period_month = p.period_month;
 
--- ------------------------------------------------------------
--- Cumplimiento de objetivos: meta vs real, por empresa/mes/métrica.
--- user_id null = meta de empresa.
--- ------------------------------------------------------------
 create or replace view v_objective_progress as
 with real_values as (
-  -- métricas de venta a nivel empresa
   select company_id, period_month, 'ventas_mensuales'::text as metric_code,
          null::uuid as user_id, ventas_mes::numeric as real_value
   from v_monthly_totals
@@ -193,7 +162,6 @@ with real_values as (
   select company_id, period_month, 'recaudo', null::uuid, recaudo_mes
   from v_monthly_totals
   union all
-  -- métricas de KPI por responsable
   select company_id, period_month, 'ratio_contactabilidad', user_id,
          round(ratio_contactabilidad * 100, 2)
   from v_monthly_kpi
@@ -224,10 +192,6 @@ left join real_values rv
   and coalesce(rv.user_id, '00000000-0000-0000-0000-000000000000'::uuid)
       = coalesce(o.user_id, '00000000-0000-0000-0000-000000000000'::uuid);
 
--- ------------------------------------------------------------
--- Estado de captura del día: quién registró y quién no.
--- Alimenta el aviso "⚠ sin registrar hoy" del grid de empresas.
--- ------------------------------------------------------------
 create or replace view v_capture_status as
 select
   cu.company_id,
@@ -246,10 +210,6 @@ where cu.removed_at is null
   and p.deleted_at is null
   and p.status = 'activo';
 
--- ------------------------------------------------------------
--- Totales del mes por sede: el desglose del dashboard de empresa.
--- El total de la empresa es la suma de estas filas.
--- ------------------------------------------------------------
 create or replace view v_branch_monthly as
 with ventas as (
   select branch_id, date_trunc('month', report_date)::date as period_month,
