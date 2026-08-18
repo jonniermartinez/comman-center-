@@ -5,14 +5,16 @@ import { createContext, useContext } from "react"
 import type { Database } from "./types"
 
 /**
- * Toda la base, tal como la ve la sesión actual.
+ * Los datos de referencia de la sesión.
  *
- * Llega desde el servidor ya resuelta por RLS y se inyecta por contexto —no por
- * una variable de módulo— porque en el render del servidor el módulo se comparte
- * entre peticiones y ahí se filtrarían datos de un usuario a otro.
+ * Llegan del servidor ya resueltos por RLS y se inyectan por contexto —no por
+ * una variable de módulo— porque en el render del servidor el módulo se
+ * comparte entre peticiones y ahí se filtrarían datos de un usuario a otro.
  */
 export const BASE_VACIA: Database = {
   profiles: [],
+  staff: [],
+  company_staff: [],
   companies: [],
   branches: [],
   company_modules: [],
@@ -21,13 +23,12 @@ export const BASE_VACIA: Database = {
   payment_methods: [],
   company_financing_types: [],
   company_payment_methods: [],
+  products: [],
+  schools: [],
+  channels: [],
+  sale_states: [],
+  cash_concepts: [],
   metrics: [],
-  daily_kpi: [],
-  daily_management: [],
-  sales_entries: [],
-  billing_entries: [],
-  collection_entries: [],
-  objectives: [],
 }
 
 const RemoteContext = createContext<Database>(BASE_VACIA)
