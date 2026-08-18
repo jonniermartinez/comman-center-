@@ -499,8 +499,17 @@ def leer_pagos(ruta, cat, ctx, fecha_por_ref=None):
             "titular_nombre": texto(f("Nombre Titular Crédito"), 200),
             "amount": valor,
             "method_code": cat.add("payment_methods", f("Medio Pago")),
-            "recibo": texto(f("N° Recibo Voucher", "Voucher"), 60),
+            "recibo": texto(f("N° Recibo Voucher"), 60),
             "observacion": texto(f("Observación"), 600),
+            # Solo los archivos de Carss traen estos cinco. Los del titular
+            # podrían deducirse de la venta, pero únicamente cuando el pago
+            # encontró la suya; los tres documentos son de este abono y no
+            # están en ninguna otra parte.
+            "licencia_id": texto(f("ID Titular Licencia"), 40),
+            "licencia_nombre": texto(f("Nombre Titular Licencia"), 200),
+            "pagare": texto(f("Pagaré"), 60),
+            "voucher": texto(f("Voucher"), 60),
+            "contrato": texto(f("Contrato"), 60),
             "source": "excel", "source_file": ctx["archivo"], "source_row": nfila,
         })
     return salida, sin_fecha
