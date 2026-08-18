@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, Save } from "lucide-react"
+import { Pencil, Plus, Save } from "lucide-react"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
@@ -39,6 +39,18 @@ const CERO = {
 
 type Valores = typeof CERO
 
+/** Una jornada ya registrada, como la devuelve el listado. */
+export interface JornadaExistente extends Valores {
+  id: string
+  branch_id: string
+  report_date: string
+  staff_id: string
+  responsable_nombre: string
+  hora_llegada: string | null
+  hora_salida: string | null
+  notas: string | null
+}
+
 /**
  * Registro de la jornada de una persona.
  *
@@ -54,6 +66,7 @@ export function NuevaJornada({
   horaEntrada,
   canManage,
   myStaffId,
+  registro,
 }: {
   companyId: string
   branches: { id: string; name: string; is_primary: boolean }[]
@@ -62,18 +75,27 @@ export function NuevaJornada({
   /** Quien administra registra a nombre de cualquiera; el comercial, lo suyo. */
   canManage: boolean
   myStaffId: string | null
+  /** Si viene, el formulario corrige esa jornada en vez de crear una. */
+  registro?: JornadaExistente
 }) {
   const hoy = todayISO()
+  const editando = !!registro
   const [open, setOpen] = useState(false)
-  const [fecha, setFecha] = useState(hoy)
-  const [staffId, setStaffId] = useState(myStaffId ?? "")
+  const [fecha, setFecha] = useState(registro?.report_date ?? hoy)
+  const [staffId, setStaffId] = useState(registro?.staff_id ?? myStaffId ?? "")
   const [branchId, setBranchId] = useState(
-    branches.find((b) => b.is_primary)?.id ?? branches[0]?.id ?? "",
+    registro?.branch_id ?? branches.find((b) => b.is_primary)?.id ?? branches[0]?.id ?? "",
   )
-  const [llegada, setLlegada] = useState("")
-  const [salida, setSalida] = useState("")
-  const [v, setV] = useState<Valores>({ ...CERO })
-  const [notas, setNotas] = useState("")
+  const [llegada, setLlegada] = useState(registro?.hora_llegada?.slice(0, 5) ?? "")
+  const [salida, setSalida] = useState(registro?.hora_salida?.slice(0, 5) ?? "")
+  const [v, setV] = useState<Valores>(
+    registro
+      ? (Object.fromEntries(
+          Object.keys(CERO).map((k) => [k, Number(registro[k as keyof Valores] ?? 0)]),
+        ) as Valores)
+      : { ...CERO },
+  )
+  const [notas, setNotas] = useState(registro?.notas ?? "")
   const [pendiente, startTransition] = useTransition()
 
   const persona = staff.find((s) => s.id === staffId)
@@ -90,17 +112,26 @@ export function NuevaJornada({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="size-4" />
-          Registrar jornada
-        </Button>
+        {editando ? (
+          <Button variant="ghost" size="icon" className="size-8">
+            <Pencil className="size-4" />
+            <span className="sr-only">Editar la jornada del {registro.report_date}</span>
+          </Button>
+        ) : (
+          <Button>
+            <Plus className="size-4" />
+            Registrar jornada
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Registrar jornada</DialogTitle>
+          <DialogTitle>{editando ? "Editar jornada" : "Registrar jornada"}</DialogTitle>
           <DialogDescription>
-            Una jornada por persona y día. Volver a guardar la misma corrige lo registrado.
+            {editando
+              ? `Corrigiendo la jornada de ${registro.responsable_nombre}.`
+              : "Una jornada por persona y día. Volver a guardar la misma corrige lo registrado."}
           </DialogDescription>
         </DialogHeader>
 
@@ -262,6 +293,7 @@ export function NuevaJornada({
             onClick={() =>
               startTransition(async () => {
                 const r = await saveActivity({
+                  id: registro?.id,
                   company_id: companyId,
                   branch_id: branchId,
                   report_date: fecha,
@@ -276,16 +308,16 @@ export function NuevaJornada({
                   toast.error(r.error ?? "No se pudo guardar.")
                   return
                 }
-                toast.success("Jornada registrada", {
+                toast.success(editando ? "Jornada actualizada" : "Jornada registrada", {
                   description: `${persona?.full_name} · ${fecha}`,
                 })
-                limpiar()
+                if (!editando) limpiar()
                 setOpen(false)
               })
             }
           >
             <Save className="size-4" />
-            {pendiente ? "Guardando…" : "Guardar jornada"}
+            {pendiente ? "Guardando…" : editando ? "Guardar cambios" : "Guardar jornada"}
           </Button>
         </DialogFooter>
       </DialogContent>
