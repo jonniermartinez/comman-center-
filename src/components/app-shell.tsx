@@ -17,7 +17,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { CompanySwitcher } from "@/components/company-switcher"
-import { UserSwitcher } from "@/components/user-switcher"
+import { UserMenu } from "@/components/user-menu"
 import {
   Sidebar,
   SidebarContent,
@@ -233,7 +233,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarFooter className="px-3 pb-3">
           <SidebarMenu>
             <SidebarMenuItem>
-              <UserSwitcher />
+              <UserMenu />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>

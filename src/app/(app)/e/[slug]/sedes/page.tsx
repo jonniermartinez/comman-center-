@@ -47,7 +47,7 @@ import {
   createBranch,
   restoreBranch,
   setPrimaryBranch,
-} from "@/lib/store/actions"
+} from "@/lib/data/branches-actions"
 import {
   useCanManage,
   useCompanyBranches,
@@ -166,9 +166,10 @@ export default function SedesPage() {
                       <DropdownMenuContent align="end">
                         {!archivada && !branch.is_primary && (
                           <DropdownMenuItem
-                            onSelect={() => {
-                              setPrimaryBranch(branch.id)
-                              toast.success(`${branch.name} es ahora la sede principal`)
+                            onSelect={async () => {
+                              const r = await setPrimaryBranch(branch.id)
+                              if (r.ok) toast.success(`${branch.name} es ahora la sede principal`)
+                              else toast.error(r.error)
                             }}
                           >
                             <Star className="size-4" />
@@ -184,9 +185,10 @@ export default function SedesPage() {
                         <DropdownMenuSeparator />
                         {archivada ? (
                           <DropdownMenuItem
-                            onSelect={() => {
-                              restoreBranch(branch.id)
-                              toast.success(`${branch.name} reactivada`)
+                            onSelect={async () => {
+                              const r = await restoreBranch(branch.id)
+                              if (r.ok) toast.success(`${branch.name} reactivada`)
+                              else toast.error(r.error)
                             }}
                           >
                             <ArchiveRestore className="size-4" />
@@ -195,8 +197,8 @@ export default function SedesPage() {
                         ) : (
                           <DropdownMenuItem
                             variant="destructive"
-                            onSelect={() => {
-                              const r = archiveBranch(branch.id)
+                            onSelect={async () => {
+                              const r = await archiveBranch(branch.id)
                               if (r.ok) {
                                 toast.success(`${branch.name} archivada`, {
                                   description: "Sus registros históricos se conservan.",
@@ -344,8 +346,12 @@ function NuevaSedeDialog({
           </Button>
           <Button
             disabled={!valido}
-            onClick={() => {
-              createBranch({ company_id: companyId, name, city, department })
+            onClick={async () => {
+              const r = await createBranch({ company_id: companyId, name, city, department })
+              if (!r.ok) {
+                toast.error(r.error)
+                return
+              }
               toast.success(`Sede ${name} creada`)
               setName("")
               setOpen(false)

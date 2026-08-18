@@ -249,7 +249,7 @@ export default function DashboardPage() {
             </div>
             {branches.length > 1 && (
               <Select value={sede} onValueChange={setSede}>
-                <SelectTrigger className="w-44">
+                <SelectTrigger className="w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -263,7 +263,7 @@ export default function DashboardPage() {
               </Select>
             )}
             <Select value={responsable} onValueChange={setResponsable}>
-              <SelectTrigger className="w-44">
+              <SelectTrigger className="w-56">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

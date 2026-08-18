@@ -49,7 +49,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { initials } from "@/lib/format"
-import { assignUserToCompany, unassignUserFromCompany } from "@/lib/store/actions"
+import { assignUserToCompany, unassignUserFromCompany } from "@/lib/data/branches-actions"
 import {
   useCanManage,
   useCompanyBranches,
@@ -180,9 +180,13 @@ export default function UsuariosEmpresaPage() {
                 </Button>
                 <Button
                   disabled={!pick}
-                  onClick={() => {
+                  onClick={async () => {
                     const sedeId = branch === "empresa" ? null : branch
-                    assignUserToCompany(company.id, pick, role, sedeId)
+                    const r = await assignUserToCompany(company.id, pick, role, sedeId)
+                    if (!r.ok) {
+                      toast.error(r.error)
+                      return
+                    }
                     const nombre = db.profiles.find((p) => p.id === pick)?.full_name
                     const sedeNombre = branches.find((b) => b.id === sedeId)?.name
                     toast.success(`${nombre} asignado a ${company.name}`, {
@@ -246,14 +250,15 @@ export default function UsuariosEmpresaPage() {
                     <TableCell>
                       <Select
                         value={member.branchId ?? "empresa"}
-                        onValueChange={(v) =>
-                          assignUserToCompany(
+                        onValueChange={async (v) => {
+                          const r = await assignUserToCompany(
                             company.id,
                             member.id,
                             member.companyRole,
                             v === "empresa" ? null : v,
                           )
-                        }
+                          if (!r.ok) toast.error(r.error)
+                        }}
                       >
                         <SelectTrigger size="sm" className="w-40">
                           <SelectValue />
@@ -274,14 +279,15 @@ export default function UsuariosEmpresaPage() {
                     <TableCell>
                       <Select
                         value={member.companyRole}
-                        onValueChange={(v) =>
-                          assignUserToCompany(
+                        onValueChange={async (v) => {
+                          const r = await assignUserToCompany(
                             company.id,
                             member.id,
                             v as Exclude<UserRole, "super_admin">,
                             member.branchId,
                           )
-                        }
+                          if (!r.ok) toast.error(r.error)
+                        }}
                       >
                         <SelectTrigger size="sm" className="w-36">
                           <SelectValue />
@@ -323,9 +329,13 @@ export default function UsuariosEmpresaPage() {
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => {
-                                unassignUserFromCompany(company.id, member.id)
-                                toast.success(`${member.full_name} quitado de ${company.name}`)
+                              onClick={async () => {
+                                const r = await unassignUserFromCompany(company.id, member.id)
+                                if (r.ok) {
+                                  toast.success(`${member.full_name} quitado de ${company.name}`)
+                                } else {
+                                  toast.error(r.error)
+                                }
                               }}
                             >
                               Quitar
