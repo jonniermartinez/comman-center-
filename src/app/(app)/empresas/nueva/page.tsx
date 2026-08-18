@@ -59,7 +59,7 @@ export default function NuevaEmpresaPage() {
   const [department, setDepartment] = useState("Valle del Cauca")
   const [crmLabel, setCrmLabel] = useState("")
   const [accent, setAccent] = useState(COLORES[0])
-  const [modules, setModules] = useState<ModuleCode[]>(["kpi_diario", "gestion_diaria", "reporte_ventas"])
+  const [modules, setModules] = useState<ModuleCode[]>(["ventas", "pagos", "actividad_diaria", "agendas", "caja"])
   const [financing, setFinancing] = useState<string[]>(db.financing_types.map((f) => f.code))
   const [payments, setPayments] = useState<string[]>(db.payment_methods.map((p) => p.code))
   const [assignments, setAssignments] = useState<Assignment[]>([])
@@ -393,7 +393,7 @@ export default function NuevaEmpresaPage() {
 
           {step === 4 && (
             <>
-              {!modules.includes("reporte_ventas") && (
+              {!modules.includes("ventas") && (
                 <Alert>
                   <Info />
                   <AlertDescription>
