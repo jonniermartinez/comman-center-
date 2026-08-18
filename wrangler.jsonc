@@ -1,6 +1,9 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "command-center",
+  // Cuenta "Command center". Fija el destino para que un despliegue no pueda
+  // salir por error a otra de las cuentas de la sesión de wrangler.
+  "account_id": "1f5451cb956ae09fe7a1d8074cef2912",
   "main": ".open-next/worker.js",
   // nodejs_compat es obligatorio para el runtime de Next.js sobre Workers.
   "compatibility_date": "2026-08-17",
