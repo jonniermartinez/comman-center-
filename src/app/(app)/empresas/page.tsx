@@ -12,11 +12,14 @@ import {
   MoreHorizontal,
   Plus,
   Settings,
+  Trash2,
 } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 import { toast } from "sonner"
 
+import { CompanyAvatar } from "@/components/company-avatar"
+import { DeleteCompanyDialog } from "@/components/delete-company-dialog"
 import { NoAccess } from "@/components/no-access"
 import { PageHeader } from "@/components/page-header"
 import { OPERATOR_NAME } from "@/lib/branding"
@@ -35,9 +38,8 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { formatCOPShort, formatNumber, formatPercent, todayISO } from "@/lib/format"
 import { captureStatus, companyMonthTotals, monthLabel, monthOf } from "@/lib/kpi"
-import { archiveCompany, restoreCompany } from "@/lib/store/actions"
+import { archiveCompany } from "@/lib/data/companies-actions"
 import { useDb, useIsSuperAdmin, useVisibleCompanies } from "@/lib/store/hooks"
-import { REFERENCE_DATE } from "@/lib/store/seed"
 import type { Company } from "@/lib/store/types"
 
 /**
@@ -51,11 +53,7 @@ export default function EmpresasPage() {
   const [showArchived, setShowArchived] = useState(false)
   const companies = useVisibleCompanies(showArchived)
 
-  // Mientras los datos son de demo, "hoy" es la fecha del Excel para que las
-  // tarjetas no salgan vacías. Con datos reales se usa la fecha del sistema.
-  const today = db.daily_kpi.some((k) => k.report_date === todayISO())
-    ? todayISO()
-    : REFERENCE_DATE
+  const today = todayISO()
   const month = monthOf(today)
 
   const consolidado = companies
@@ -78,12 +76,6 @@ export default function EmpresasPage() {
   if (!isSuperAdmin && companies.length === 0) {
     return <NoAccess />
   }
-
-  const sinRegistrar = companies.filter((c) => {
-    if (c.status !== "activa") return false
-    const status = captureStatus(db, c.id, today)
-    return status.length > 0 && status.some((s) => !s.kpi)
-  }).length
 
   return (
     <>
@@ -148,17 +140,6 @@ export default function EmpresasPage() {
         ]}
       />
 
-      {sinRegistrar > 0 && (
-        <div className="mb-6 flex items-center gap-2 border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
-          <AlertCircle className="size-4 shrink-0 text-amber-600" />
-          <span>
-            {sinRegistrar === 1
-              ? "1 empresa tiene asesores sin registrar el KPI de hoy."
-              : `${sinRegistrar} empresas tienen asesores sin registrar el KPI de hoy.`}
-          </span>
-        </div>
-      )}
-
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {companies.map((company) => (
           <CompanyCard
@@ -221,17 +202,12 @@ function CompanyCard({
   const status = captureStatus(db, company.id, today)
   const registrados = status.filter((s) => s.kpi).length
   const archivada = company.status === "archivada"
+  const [borrando, setBorrando] = useState(false)
 
   return (
     <Card className={archivada ? "opacity-60" : undefined}>
       <CardHeader className="flex-row items-start gap-3 space-y-0">
-        <span
-          aria-hidden
-          className="flex size-10 shrink-0 items-center justify-center rounded-sm text-sm font-bold text-white"
-          style={{ backgroundColor: company.accent_color }}
-        >
-          {company.name.slice(0, 2).toUpperCase()}
-        </span>
+        <CompanyAvatar company={company} size={40} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h2 className="truncate font-semibold">{company.name}</h2>
@@ -266,9 +242,10 @@ function CompanyCard({
               <DropdownMenuSeparator />
               {archivada ? (
                 <DropdownMenuItem
-                  onSelect={() => {
-                    restoreCompany(company.id)
-                    toast.success(`${company.name} reactivada`)
+                  onSelect={async () => {
+                    const r = await archiveCompany(company.id, false)
+                    if (r.ok) toast.success(`${company.name} reactivada`)
+                    else toast.error(r.error)
                   }}
                 >
                   <ArchiveRestore className="size-4" />
@@ -277,19 +254,37 @@ function CompanyCard({
               ) : (
                 <DropdownMenuItem
                   variant="destructive"
-                  onSelect={() => {
-                    archiveCompany(company.id)
-                    toast.success(`${company.name} archivada`, {
-                      description: "Los registros históricos se conservan.",
-                    })
+                  onSelect={async () => {
+                    const r = await archiveCompany(company.id, true)
+                    if (r.ok) {
+                      toast.success(`${company.name} archivada`, {
+                        description: "Los registros históricos se conservan.",
+                      })
+                    } else {
+                      toast.error(r.error)
+                    }
                   }}
                 >
                   Archivar empresa
                 </DropdownMenuItem>
               )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={() => setBorrando(true)}>
+                <Trash2 className="size-4" />
+                Eliminar definitivamente
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+
+        <DeleteCompanyDialog
+          companyId={company.id}
+          companyName={company.name}
+          open={borrando}
+          onOpenChange={setBorrando}
+          // Ya estamos en el listado: no hay a dónde navegar después.
+          onDeleted={() => {}}
+        />
       </CardHeader>
 
       <CardContent className="space-y-3">

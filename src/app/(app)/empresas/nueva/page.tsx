@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { slugify } from "@/lib/format"
-import { createCompany } from "@/lib/store/actions"
+import { createCompany } from "@/lib/data/companies-actions"
 import { useDb, useIsSuperAdmin } from "@/lib/store/hooks"
 import { MODULES, type ModuleCode, type UserRole } from "@/lib/store/types"
 import { cn } from "@/lib/utils"
@@ -104,8 +104,8 @@ export default function NuevaEmpresaPage() {
     set(list.includes(value) ? list.filter((x) => x !== value) : [...list, value])
   }
 
-  function submit() {
-    const id = createCompany({
+  async function submit() {
+    const resultado = await createCompany({
       name,
       nit,
       city,
@@ -123,11 +123,14 @@ export default function NuevaEmpresaPage() {
       // Un coordinador sin sede (-1) supervisa la empresa completa.
       assignments: assignments.map((a) => ({ ...a, branch_index: Math.max(0, a.branch_index) })),
     })
-    const slug = db.companies.find((c) => c.id === id)?.slug ?? slugify(name)
+    if (!resultado.ok) {
+      toast.error(resultado.error ?? "No se pudo crear la empresa.")
+      if (!resultado.slug) return
+    }
     toast.success(`${name} creada`, {
       description: `${sedes.length} sede(s), ${modules.length} módulo(s) y ${assignments.length} comercial(es).`,
     })
-    router.push(`/e/${slug}`)
+    router.push(`/e/${resultado.slug}`)
   }
 
   return (
