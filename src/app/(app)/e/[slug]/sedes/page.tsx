@@ -41,7 +41,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { formatCOPShort, formatNumber, formatPercent } from "@/lib/format"
-import { branchMonthTotals, monthLabel, monthOf } from "@/lib/kpi"
+import { monthLabel, monthOf } from "@/lib/kpi"
+import { useBranchMonthly } from "@/lib/data/client-queries"
 import {
   archiveBranch,
   createBranch,
@@ -65,7 +66,7 @@ export default function SedesPage() {
   const branches = useCompanyBranches(company.id, verArchivadas)
 
   const month = monthOf(today)
-  const porSede = branchMonthTotals(db, company.id, month)
+  const { datos: porSede } = useBranchMonthly(company.id, month)
 
   if (!canManage) {
     return (
@@ -114,23 +115,12 @@ export default function SedesPage() {
             icon: Users,
             hint: "En toda la empresa",
           },
-          {
-            label: `Ventas ${monthLabel(month)}`,
-            value: porSede.reduce((a, x) => a + x.ventas.ventas, 0),
-            hint: "Suma de las sedes",
-          },
-          {
-            label: `Facturación ${monthLabel(month)}`,
-            value: porSede.reduce((a, x) => a + x.ventas.facturacion, 0),
-            unit: "moneda",
-            hint: "Suma de las sedes",
-          },
         ]}
       />
 
       <div className="grid gap-4 md:grid-cols-2">
         {branches.map((branch) => {
-          const datos = porSede.find((x) => x.branch.id === branch.id)
+          const datos = porSede.find((x) => x.branch_id === branch.id)
           const archivada = branch.status === "archivada"
 
           return (
@@ -220,14 +210,14 @@ export default function SedesPage() {
 
               <div className="grid grid-cols-2 gap-4 border-t pt-4 sm:grid-cols-4">
                 <Dato label="Comerciales" value={formatNumber(datos?.comerciales ?? 0)} />
-                <Dato label="Ventas del mes" value={formatNumber(datos?.ventas.ventas ?? 0)} />
+                <Dato label="Ventas del mes" value={formatNumber(datos?.ventas_mes ?? 0)} />
                 <Dato
                   label="Facturación"
-                  value={formatCOPShort(datos?.ventas.facturacion ?? 0)}
+                  value={formatCOPShort(datos?.facturacion_mes ?? 0)}
                 />
                 <Dato
                   label="Contactabilidad"
-                  value={formatPercent(datos?.ratios.ratio_contactabilidad ?? null)}
+                  value={formatPercent(datos?.ratio_contactabilidad ?? null)}
                 />
               </div>
 
@@ -276,9 +266,6 @@ function BranchTeam({ companyId, branchId }: { companyId: string; branchId: stri
                 {m.full_name.slice(0, 1)}
               </span>
               {m.full_name.split(" ")[0]}
-              {m.companyRole === "coordinador" && (
-                <span className="text-xs text-muted-foreground">coord.</span>
-              )}
             </span>
           ))}
         </div>
