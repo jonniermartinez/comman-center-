@@ -46,3 +46,8 @@ next-env.d.ts
 .open-next/
 .wrangler/
 cloudflare-env.d.ts
+
+# Skills instaladas por herramientas de agentes: se reinstalan solas.
+/.agents/
+/.claude/
+skills-lock.json
