@@ -11,6 +11,23 @@ export interface CompanyContext {
   branches: { id: string; name: string; is_primary: boolean }[]
   staff: { id: string; full_name: string }[]
   modules: string[]
+  /** Puede registrar a nombre de cualquiera y corregir lo de los demás. */
+  canManage: boolean
+  /**
+   * La persona del equipo que es el usuario en sesión, si está enlazada.
+   *
+   * Un comercial registra lo suyo; sin este enlace la cuenta existe pero el
+   * sistema no sabe cuál de los 128 comerciales es, y no puede registrar nada
+   * a su nombre.
+   */
+  myStaffId: string | null
+  /** Catálogos para los formularios de alta. */
+  financiaciones: { code: string; name: string }[]
+  productos: { code: string; name: string }[]
+  escuelas: { code: string; name: string }[]
+  estados: { code: string; name: string }[]
+  mediosPago: { code: string; name: string }[]
+  conceptosCaja: { code: string; name: string }[]
 }
 
 /**
@@ -31,7 +48,7 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
 
   if (!company) return null
 
-  const [branches, staff, modules] = await Promise.all([
+  const [branches, staff, modules, sesion, financiaciones, productos, escuelas, estados, medios, conceptos] = await Promise.all([
     supabase
       .from("branches")
       .select("id, name, is_primary")
@@ -44,7 +61,21 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
       .select("staff(id, full_name, active)")
       .eq("company_id", company.id),
     supabase.from("company_modules").select("module_code").eq("company_id", company.id),
+    supabase.rpc("can_manage_company", { target_company: company.id }),
+    supabase.from("financing_types").select("code, name").order("sort_order"),
+    supabase.from("products").select("code, name").order("sort_order"),
+    supabase.from("schools").select("code, name").order("sort_order"),
+    supabase.from("sale_states").select("code, name").order("sort_order"),
+    supabase.from("payment_methods").select("code, name").order("sort_order"),
+    supabase.from("cash_concepts").select("code, name").order("sort_order"),
   ])
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const { data: yo } = user
+    ? await supabase.from("staff").select("id").eq("profile_id", user.id).maybeSingle()
+    : { data: null }
 
   return {
     ...company,
@@ -55,6 +86,14 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
       .map((s) => ({ id: s.id, full_name: s.full_name }))
       .sort((a, b) => a.full_name.localeCompare(b.full_name)),
     modules: (modules.data ?? []).map((m) => m.module_code),
+    canManage: Boolean(sesion.data),
+    myStaffId: yo?.id ?? null,
+    financiaciones: financiaciones.data ?? [],
+    productos: productos.data ?? [],
+    escuelas: escuelas.data ?? [],
+    estados: estados.data ?? [],
+    mediosPago: medios.data ?? [],
+    conceptosCaja: conceptos.data ?? [],
   }
 }
 
