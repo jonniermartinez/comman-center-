@@ -12,4 +12,13 @@ import { defineCloudflareConfig } from "@opennextjs/cloudflare"
  * entre Supabase y haya páginas con revalidación, acá se agrega el caché con R2
  * o KV.
  */
-export default defineCloudflareConfig()
+export default {
+  ...defineCloudflareConfig(),
+
+  // Cloudflare Workers Builds ejecuta `npm run build`, que acá es
+  // `opennextjs-cloudflare build`. Ese comando, a su vez, construye el Next
+  // llamando por defecto a `npm run build` otra vez: recursión infinita que
+  // agota el límite de 20 minutos del build. Apuntarlo a `build:next` corta
+  // el ciclo.
+  buildCommand: "npm run build:next",
+}
