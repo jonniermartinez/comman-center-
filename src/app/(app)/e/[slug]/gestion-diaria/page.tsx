@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react"
 import { notFound } from "next/navigation"
 
-import { NuevaJornada } from "@/components/captura/nueva-jornada"
+import { NuevaJornada, type JornadaExistente } from "@/components/captura/nueva-jornada"
 import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
@@ -101,6 +101,7 @@ export default async function GestionDiariaPage({
             <TableHead className="text-right">Atención</TableHead>
             <TableHead className="w-36 text-right">Cola del CRM</TableHead>
             <TableHead className="text-right">Contactab.</TableHead>
+            <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -145,10 +146,21 @@ export default async function GestionDiariaPage({
               <TableCell className="text-right tabular-nums text-muted-foreground">
                 {formatPercent(r.ratio_contactabilidad === null ? null : Number(r.ratio_contactabilidad))}
               </TableCell>
+              <TableCell>
+                <NuevaJornada
+                  companyId={company.id}
+                  branches={company.branches}
+                  staff={company.staff}
+                  horaEntrada={company.hora_entrada}
+                  canManage={company.canManage}
+                  myStaffId={company.myStaffId}
+                  registro={r as unknown as JornadaExistente}
+                />
+              </TableCell>
             </TableRow>
           ))}
 
-          {pagina.rows.length === 0 && <EmptyRow colSpan={10} filtrando={filtrando} />}
+          {pagina.rows.length === 0 && <EmptyRow colSpan={11} filtrando={filtrando} />}
         </TableBody>
       </Table>
     </RecordsScaffold>

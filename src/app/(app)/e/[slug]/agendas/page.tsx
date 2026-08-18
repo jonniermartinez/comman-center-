@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 
-import { NuevaAgenda } from "@/components/captura/nueva-agenda"
+import { NuevaAgenda, type AgendaExistente } from "@/components/captura/nueva-agenda"
 import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
@@ -62,6 +62,7 @@ export default async function AgendasPage({
             <TableHead>Responsable</TableHead>
             <TableHead className="w-32">Resultado</TableHead>
             <TableHead>Observación</TableHead>
+            <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -93,10 +94,20 @@ export default async function AgendasPage({
               <TableCell className="max-w-72 truncate text-xs text-muted-foreground">
                 {a.observacion ?? ""}
               </TableCell>
+              <TableCell>
+                <NuevaAgenda
+                  companyId={company.id}
+                  branches={company.branches}
+                  staff={company.staff}
+                  canManage={company.canManage}
+                  myStaffId={company.myStaffId}
+                  registro={a as unknown as AgendaExistente}
+                />
+              </TableCell>
             </TableRow>
           ))}
 
-          {pagina.rows.length === 0 && <EmptyRow colSpan={7} filtrando={filtrando} />}
+          {pagina.rows.length === 0 && <EmptyRow colSpan={8} filtrando={filtrando} />}
         </TableBody>
       </Table>
     </RecordsScaffold>

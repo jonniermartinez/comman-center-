@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 
-import { NuevoPago } from "@/components/captura/nuevo-pago"
+import { NuevoPago, type PagoExistente } from "@/components/captura/nuevo-pago"
 import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
@@ -77,6 +77,7 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
             <TableHead className="w-32">Medio de pago</TableHead>
             <TableHead className="w-24">Recibo</TableHead>
             <TableHead className="text-right">Valor</TableHead>
+            <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -118,10 +119,18 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
               <TableCell className="text-right font-medium tabular-nums">
                 {formatCOP(Number(p.amount))}
               </TableCell>
+              <TableCell>
+                <NuevoPago
+                  companyId={company.id}
+                  branches={company.branches}
+                  mediosPago={company.mediosPago}
+                  registro={p as unknown as PagoExistente}
+                />
+              </TableCell>
             </TableRow>
           ))}
 
-          {pagina.rows.length === 0 && <EmptyRow colSpan={6} filtrando={filtrando} />}
+          {pagina.rows.length === 0 && <EmptyRow colSpan={7} filtrando={filtrando} />}
         </TableBody>
       </Table>
     </RecordsScaffold>

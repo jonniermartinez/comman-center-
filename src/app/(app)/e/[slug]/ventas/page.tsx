@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 
-import { NuevaVenta } from "@/components/captura/nueva-venta"
+import { NuevaVenta, type VentaExistente } from "@/components/captura/nueva-venta"
 import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
@@ -96,6 +96,7 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
             <TableHead className="text-right">Valor</TableHead>
             <TableHead className="text-right">Recaudo</TableHead>
             <TableHead className="text-right">Saldo</TableHead>
+            <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -136,10 +137,24 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
               >
                 {formatCOP(Number(v.saldo))}
               </TableCell>
+              <TableCell>
+                <NuevaVenta
+                  companyId={company.id}
+                  branches={company.branches}
+                  staff={company.staff}
+                  financiaciones={company.financiaciones}
+                  productos={company.productos}
+                  escuelas={company.escuelas}
+                  estados={company.estados}
+                  canManage={company.canManage}
+                  myStaffId={company.myStaffId}
+                  registro={v as unknown as VentaExistente}
+                />
+              </TableCell>
             </TableRow>
           ))}
 
-          {pagina.rows.length === 0 && <EmptyRow colSpan={9} filtrando={filtrando} />}
+          {pagina.rows.length === 0 && <EmptyRow colSpan={10} filtrando={filtrando} />}
         </TableBody>
       </Table>
     </RecordsScaffold>

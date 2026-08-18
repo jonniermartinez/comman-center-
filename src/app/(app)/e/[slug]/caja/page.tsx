@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 
-import { NuevoMovimiento } from "@/components/captura/nuevo-movimiento"
+import { NuevoMovimiento, type MovimientoExistente } from "@/components/captura/nuevo-movimiento"
 import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
@@ -85,6 +85,7 @@ export default async function CajaPage({ params, searchParams }: PageProps<"/e/[
             <TableHead className="w-32">Medio</TableHead>
             <TableHead className="w-24">Factura</TableHead>
             <TableHead className="text-right">Valor</TableHead>
+            <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -117,10 +118,22 @@ export default async function CajaPage({ params, searchParams }: PageProps<"/e/[
               >
                 {formatCOP(Math.abs(Number(m.amount)))}
               </TableCell>
+              <TableCell>
+                {company.canManage && (
+                  <NuevoMovimiento
+                    companyId={company.id}
+                    branches={company.branches}
+                    staff={company.staff}
+                    conceptos={company.conceptosCaja}
+                    mediosPago={company.mediosPago}
+                    registro={m as unknown as MovimientoExistente}
+                  />
+                )}
+              </TableCell>
             </TableRow>
           ))}
 
-          {pagina.rows.length === 0 && <EmptyRow colSpan={7} filtrando={filtrando} />}
+          {pagina.rows.length === 0 && <EmptyRow colSpan={8} filtrando={filtrando} />}
         </TableBody>
       </Table>
     </RecordsScaffold>
