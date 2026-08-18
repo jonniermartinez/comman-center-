@@ -2,16 +2,17 @@
 
 import {
   BarChart3,
+  CalendarClock,
   ChevronRight,
   ClipboardList,
   History,
   LayoutGrid,
   MapPin,
-  Phone,
   Receipt,
   Settings,
   Target,
   Users,
+  Wallet,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -67,9 +68,11 @@ function tituloDe(pathname: string, conAcceso: boolean): string {
 
   const seccion = pathname.split("/")[3]
   const titulos: Record<string, string> = {
-    "kpi-diario": "KPI Diario",
+    ventas: "Ventas",
+    pagos: "Pagos",
     "gestion-diaria": "Gestión Diaria",
-    "reporte-ventas": "Reporte de Ventas",
+    agendas: "Agendas",
+    caja: "Ingreso y Gasto",
     objetivos: "Objetivos",
     sedes: "Sedes",
     usuarios: "Equipo",
@@ -103,9 +106,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const sinAcceso = !isSuperAdmin && visibles.length === 0
 
   const capturaItems = ([
-    { href: `${base}/kpi-diario`, label: "KPI Diario", icon: Phone, module: "kpi_diario" },
-    { href: `${base}/gestion-diaria`, label: "Gestión Diaria", icon: ClipboardList, module: "gestion_diaria" },
-    { href: `${base}/reporte-ventas`, label: "Reporte de Ventas", icon: Receipt, module: "reporte_ventas" },
+    { href: `${base}/ventas`, label: "Ventas", icon: Receipt, module: "ventas" },
+    { href: `${base}/pagos`, label: "Pagos", icon: Wallet, module: "pagos" },
+    { href: `${base}/gestion-diaria`, label: "Gestión Diaria", icon: ClipboardList, module: "actividad_diaria" },
+    { href: `${base}/agendas`, label: "Agendas", icon: CalendarClock, module: "agendas" },
+    { href: `${base}/caja`, label: "Ingreso y Gasto", icon: Wallet, module: "caja" },
   ] satisfies NavItem[]).filter((item) => !item.module || modules.includes(item.module))
 
   const isActive = (href: string) =>
@@ -160,7 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {capturaItems.length > 0 && (
                 <SidebarGroup className="p-0">
-                  <GroupLabel>Registrar</GroupLabel>
+                  <GroupLabel>Operación</GroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
                       {capturaItems.map((item) => (
