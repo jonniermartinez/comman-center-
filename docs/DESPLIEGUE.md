@@ -1,7 +1,10 @@
 # Despliegue en Cloudflare
 
 Cuenta destino: **Command center** — `1f5451cb956ae09fe7a1d8074cef2912`
-Worker: `command-center` · Subdominio: `commandcentergenelypse.workers.dev`
+Worker: `comman-center` · Subdominio: `commandcentergenelypse.workers.dev`
+
+Ojo con el nombre: es **comman**-center, sin la «d». Sale del nombre de la
+carpeta del proyecto y es el que forma la URL de producción.
 
 El proyecto ya está configurado: `wrangler.jsonc` fija la cuenta y el nombre del
 worker, `open-next.config.ts` tiene el adaptador, y `.nvmrc` fija Node 22 para
@@ -33,7 +36,7 @@ Sirve para comprobar que todo funciona antes de automatizar:
 npm run deploy
 ```
 
-Queda en `https://command-center.commandcentergenelypse.workers.dev`.
+Queda en `https://comman-center.commandcentergenelypse.workers.dev`.
 
 ## Paso 3 · Repositorio en GitHub
 
