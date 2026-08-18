@@ -359,3 +359,210 @@ export async function setUserCompanies(
   refrescar()
   return { ok: true }
 }
+
+/**
+ * Dominio de los correos provisionales.
+ *
+ * `.invalid` está reservado por la RFC 2606 justamente para esto: no existe ni
+ * puede existir, así que ninguna de estas direcciones va a chocar con la de una
+ * persona real ni va a mandar correo a un desconocido por un dedazo.
+ */
+const DOMINIO_PROVISIONAL = "invalid"
+
+/** Usuario a partir del nombre: "Patiño Erika" → "patino.erika". */
+function usuarioDesde(nombre: string) {
+  return nombre
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.+|\.+$/g, "")
+}
+
+/** Contraseña temporal legible: se dicta por teléfono sin equivocarse. */
+function claveTemporal() {
+  const silabas = ["ta", "re", "mi", "sol", "lu", "pa", "ce", "no", "vi", "ka"]
+  const palabra = Array.from(
+    { length: 3 },
+    () => silabas[Math.floor(Math.random() * silabas.length)],
+  ).join("")
+  const numero = Math.floor(1000 + Math.random() * 9000)
+  return `${palabra.charAt(0).toUpperCase()}${palabra.slice(1)}${numero}*`
+}
+
+export interface CuentaCreada {
+  staff_id: string
+  full_name: string
+  usuario: string
+  clave: string
+}
+
+/**
+ * Crea las cuentas del equipo de una empresa sin esperar los correos.
+ *
+ * Entran con un usuario provisional y una contraseña temporal, y quedan
+ * enlazadas con la persona: desde el primer momento cada quien ve **su**
+ * histórico, porque lo que ata los registros es el identificador de la persona,
+ * no su correo.
+ *
+ * Cuando llegue el correo real se cambia con `changeUserEmail` y no se rompe
+ * nada: el identificador de la cuenta no cambia.
+ */
+export async function createStaffAccounts(
+  companyId: string,
+  staffIds?: string[],
+): Promise<Result & { cuentas?: CuentaCreada[] }> {
+  const session = await requireSuperAdmin()
+  if (!hasAdminKey()) {
+    return { ok: false, error: "Falta SUPABASE_SERVICE_ROLE_KEY en el entorno." }
+  }
+
+  const supabase = await createClient()
+  const admin = createAdminClient()
+
+  const { data: empresa } = await supabase
+    .from("companies")
+    .select("slug")
+    .eq("id", companyId)
+    .single()
+  if (!empresa) return { ok: false, error: "La empresa no existe." }
+
+  const { data: equipo } = await supabase
+    .from("company_staff")
+    .select("staff_id, branch_id, staff(id, full_name, profile_id, active)")
+    .eq("company_id", companyId)
+
+  const pendientes = (equipo ?? [])
+    .filter((cs) => cs.staff?.active && !cs.staff.profile_id)
+    .filter((cs) => !staffIds?.length || staffIds.includes(cs.staff_id))
+
+  if (pendientes.length === 0) {
+    return { ok: true, cuentas: [] }
+  }
+
+  const cuentas: CuentaCreada[] = []
+  const usados = new Set<string>()
+
+  for (const cs of pendientes) {
+    const persona = cs.staff!
+    let usuario = usuarioDesde(persona.full_name)
+    // Dos personas distintas pueden reducirse al mismo usuario; se desempata.
+    let intento = 1
+    while (usados.has(usuario)) usuario = `${usuarioDesde(persona.full_name)}${++intento}`
+    usados.add(usuario)
+
+    const correo = `${usuario}@${empresa.slug}.${DOMINIO_PROVISIONAL}`
+    const clave = claveTemporal()
+
+    const { data, error } = await admin.auth.admin.createUser({
+      email: correo,
+      password: clave,
+      // Sin esto la cuenta nace "invitada" y no puede entrar hasta confirmar un
+      // correo que nunca va a llegar.
+      email_confirm: true,
+      user_metadata: { full_name: persona.full_name, role: "asesor" },
+    })
+
+    if (error || !data.user) {
+      console.error("crear cuenta", persona.full_name, error?.message)
+      continue
+    }
+
+    await Promise.all([
+      supabase.from("staff").update({ profile_id: data.user.id }).eq("id", persona.id),
+      supabase.from("company_users").upsert(
+        {
+          company_id: companyId,
+          user_id: data.user.id,
+          role: "asesor" as const,
+          branch_id: cs.branch_id,
+          removed_at: null,
+          assigned_by: session.profile.id,
+        },
+        { onConflict: "company_id,user_id" },
+      ),
+    ])
+
+    cuentas.push({ staff_id: persona.id, full_name: persona.full_name, usuario: correo, clave })
+  }
+
+  await logAudit({
+    actor_id: session.profile.id,
+    actor_name: session.profile.full_name,
+    action: "create",
+    entity: "profiles",
+    company_id: companyId,
+    after: { cuentas_creadas: cuentas.length },
+  })
+
+  refrescar()
+  return { ok: true, cuentas }
+}
+
+/**
+ * Cambia el correo de una cuenta.
+ *
+ * Es lo que se hace cuando llega el correo real de alguien que entró con uno
+ * provisional. No toca el identificador de la cuenta, así que su histórico, sus
+ * empresas y sus metas siguen exactamente donde estaban.
+ */
+export async function changeUserEmail(userId: string, email: string): Promise<Result> {
+  const session = await requireSuperAdmin()
+  if (!hasAdminKey()) {
+    return { ok: false, error: "Falta SUPABASE_SERVICE_ROLE_KEY en el entorno." }
+  }
+
+  const limpio = email.trim().toLowerCase()
+  if (!/.+@.+\..+/.test(limpio)) return { ok: false, error: "El correo no es válido." }
+
+  const admin = createAdminClient()
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    email: limpio,
+    email_confirm: true,
+  })
+  if (error) return { ok: false, error: error.message }
+
+  await logAudit({
+    actor_id: session.profile.id,
+    actor_name: session.profile.full_name,
+    action: "update",
+    entity: "profiles",
+    entity_id: userId,
+    after: { email: limpio },
+  })
+
+  refrescar()
+  return { ok: true }
+}
+
+/**
+ * Pone una contraseña temporal nueva.
+ *
+ * Hace falta mientras haya cuentas con correo provisional: no pueden recuperar
+ * la contraseña por email porque ese buzón no existe.
+ */
+export async function resetUserPassword(
+  userId: string,
+): Promise<Result & { clave?: string }> {
+  const session = await requireSuperAdmin()
+  if (!hasAdminKey()) {
+    return { ok: false, error: "Falta SUPABASE_SERVICE_ROLE_KEY en el entorno." }
+  }
+
+  const clave = claveTemporal()
+  const admin = createAdminClient()
+  const { error } = await admin.auth.admin.updateUserById(userId, { password: clave })
+  if (error) return { ok: false, error: error.message }
+
+  await logAudit({
+    actor_id: session.profile.id,
+    actor_name: session.profile.full_name,
+    action: "update",
+    entity: "profiles",
+    entity_id: userId,
+    after: { password: "restablecida" },
+  })
+
+  return { ok: true, clave }
+}
