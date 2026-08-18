@@ -44,6 +44,18 @@ export function StatStrip({ items, className }: { items: StatItem[]; className?:
       {items.map((item, i) => {
         const tieneMeta = typeof item.target === "number" && item.target > 0
         const ratio = tieneMeta ? item.value / item.target! : null
+        const texto = formatByUnit(item.value, item.unit ?? "cantidad")
+
+        // El tamaño lo decide lo que mide la cifra, no la unidad. Un importe en
+        // pesos puede tener quince dígitos y a 28px se sale de su columna y se
+        // pega con la de al lado; un contador de dos dígitos se ve pequeño si
+        // se encoge todo por igual.
+        const tamano =
+          texto.length <= 8
+            ? "text-xl lg:text-[28px]"
+            : texto.length <= 12
+              ? "text-lg lg:text-2xl"
+              : "text-base lg:text-xl"
 
         return (
           <div key={item.label} className="flex items-start">
@@ -53,8 +65,17 @@ export function StatStrip({ items, className }: { items: StatItem[]; className?:
                 <span className="truncate text-xs font-medium sm:text-sm">{item.label}</span>
               </div>
 
-              <p className="text-xl font-semibold leading-tight tracking-tight tabular-nums lg:text-[28px]">
-                {formatByUnit(item.value, item.unit ?? "cantidad")}
+              <p
+                // El valor exacto queda al pasar el cursor: si aun así no cabe,
+                // se corta con puntos suspensivos y no se monta sobre la
+                // columna vecina.
+                title={texto}
+                className={cn(
+                  "truncate font-semibold leading-tight tracking-tight tabular-nums",
+                  tamano,
+                )}
+              >
+                {texto}
               </p>
 
               {tieneMeta ? (
