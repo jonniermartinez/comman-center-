@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, Save } from "lucide-react"
+import { Pencil, Plus, Save } from "lucide-react"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
@@ -29,33 +29,55 @@ import { todayISO } from "@/lib/format"
  * El monto se digita siempre en positivo y el tipo decide el signo al guardar:
  * pedirle a alguien que escriba "-717000" es pedirle que se equivoque.
  */
+/** Un movimiento ya registrado, como lo devuelve el listado. */
+export interface MovimientoExistente {
+  id: string
+  branch_id: string
+  report_date: string
+  kind: string
+  concept_code: string | null
+  method_code: string | null
+  staff_id: string | null
+  nombre: string | null
+  factura: string | null
+  amount: number
+  observacion: string | null
+}
+
 export function NuevoMovimiento({
   companyId,
   branches,
   staff,
   conceptos,
   mediosPago,
+  registro,
 }: {
   companyId: string
   branches: { id: string; name: string; is_primary: boolean }[]
   staff: { id: string; full_name: string }[]
   conceptos: { code: string; name: string }[]
   mediosPago: { code: string; name: string }[]
+  /** Si viene, el formulario corrige ese movimiento. */
+  registro?: MovimientoExistente
 }) {
   const hoy = todayISO()
+  const editando = !!registro
   const [open, setOpen] = useState(false)
-  const [tipo, setTipo] = useState<"entrada" | "salida">("salida")
-  const [fecha, setFecha] = useState(hoy)
-  const [branchId, setBranchId] = useState(
-    branches.find((b) => b.is_primary)?.id ?? branches[0]?.id ?? "",
+  const [tipo, setTipo] = useState<"entrada" | "salida">(
+    registro?.kind === "entrada" ? "entrada" : "salida",
   )
-  const [concepto, setConcepto] = useState("")
-  const [medio, setMedio] = useState("")
-  const [staffId, setStaffId] = useState("")
-  const [nombre, setNombre] = useState("")
-  const [factura, setFactura] = useState("")
-  const [monto, setMonto] = useState(0)
-  const [observacion, setObservacion] = useState("")
+  const [fecha, setFecha] = useState(registro?.report_date ?? hoy)
+  const [branchId, setBranchId] = useState(
+    registro?.branch_id ?? branches.find((b) => b.is_primary)?.id ?? branches[0]?.id ?? "",
+  )
+  const [concepto, setConcepto] = useState(registro?.concept_code ?? "")
+  const [medio, setMedio] = useState(registro?.method_code ?? "")
+  const [staffId, setStaffId] = useState(registro?.staff_id ?? "")
+  const [nombre, setNombre] = useState(registro?.nombre ?? "")
+  const [factura, setFactura] = useState(registro?.factura ?? "")
+  // El monto se muestra siempre en positivo: el signo lo pone el tipo.
+  const [monto, setMonto] = useState(Math.abs(Number(registro?.amount ?? 0)))
+  const [observacion, setObservacion] = useState(registro?.observacion ?? "")
   const [pendiente, startTransition] = useTransition()
 
   const persona = staff.find((s) => s.id === staffId)
@@ -64,15 +86,22 @@ export function NuevoMovimiento({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="size-4" />
-          Nuevo movimiento
-        </Button>
+        {editando ? (
+          <Button variant="ghost" size="icon" className="size-8">
+            <Pencil className="size-4" />
+            <span className="sr-only">Editar el movimiento del {registro.report_date}</span>
+          </Button>
+        ) : (
+          <Button>
+            <Plus className="size-4" />
+            Nuevo movimiento
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Nuevo movimiento de caja</DialogTitle>
+          <DialogTitle>{editando ? "Editar movimiento" : "Nuevo movimiento de caja"}</DialogTitle>
           <DialogDescription>Una entrada o una salida de dinero del punto.</DialogDescription>
         </DialogHeader>
 
@@ -153,6 +182,7 @@ export function NuevoMovimiento({
             onClick={() =>
               startTransition(async () => {
                 const r = await saveCashMovement({
+                  id: registro?.id,
                   company_id: companyId,
                   branch_id: branchId,
                   report_date: fecha,
@@ -170,11 +200,19 @@ export function NuevoMovimiento({
                   toast.error(r.error ?? "No se pudo guardar el movimiento.")
                   return
                 }
-                toast.success(tipo === "entrada" ? "Entrada registrada" : "Salida registrada")
-                setMonto(0)
-                setNombre("")
-                setFactura("")
-                setObservacion("")
+                toast.success(
+                  editando
+                    ? "Movimiento actualizado"
+                    : tipo === "entrada"
+                      ? "Entrada registrada"
+                      : "Salida registrada",
+                )
+                if (!editando) {
+                  setMonto(0)
+                  setNombre("")
+                  setFactura("")
+                  setObservacion("")
+                }
                 setOpen(false)
               })
             }
