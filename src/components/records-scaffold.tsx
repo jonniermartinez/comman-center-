@@ -1,74 +1,86 @@
-"use client"
-
-import { Plus } from "lucide-react"
+import Link from "next/link"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 import { PageHeader } from "@/components/page-header"
-import { TablePagination } from "@/components/table-pagination"
 import { Button } from "@/components/ui/button"
 
 /**
- * Estructura común de los módulos de captura.
+ * Estructura común de los módulos de registros.
  *
- * Los tres funcionan igual: lo primero que se ve es **lo ya registrado**, y
- * capturar es una acción puntual que abre un formulario en una ventana. Antes
- * la pantalla era el formulario y los registros no se veían: para corregir algo
- * había que adivinar la combinación de fecha, responsable y jornada.
+ * Lo primero que se ve es lo ya registrado, con sus filtros y su paginación.
+ * La paginación son enlaces, no estado del cliente: la página está en la URL,
+ * así que compartir un enlace o volver atrás funciona como uno espera.
  */
 export function RecordsScaffold({
   title,
   description,
-  newLabel = "Nuevo registro",
-  onNew,
+  actions,
   filters,
+  summary,
   total,
   page,
   pageSize,
-  onPageChange,
+  hrefPagina,
   children,
   footer,
 }: {
   title: string
   description: string
-  newLabel?: string
-  onNew: () => void
+  actions?: React.ReactNode
   filters?: React.ReactNode
+  /** Franja de totales del rango filtrado. */
+  summary?: React.ReactNode
   total: number
   page: number
   pageSize: number
-  onPageChange: (page: number) => void
-  /** La tabla de registros. */
+  /** Construye el enlace a otra página conservando los filtros. */
+  hrefPagina: (page: number) => string
   children: React.ReactNode
-  /** Contenido extra debajo del listado (resúmenes calculados, por ejemplo). */
   footer?: React.ReactNode
 }) {
-  return (
-    <div className="mx-auto max-w-6xl">
-      <PageHeader
-        title={title}
-        description={description}
-        actions={
-          <Button onClick={onNew}>
-            <Plus className="size-4" />
-            {newLabel}
-          </Button>
-        }
-      />
+  const paginas = Math.max(1, Math.ceil(total / pageSize))
+  const desde = total === 0 ? 0 : page * pageSize + 1
+  const hasta = Math.min(total, (page + 1) * pageSize)
 
-      {filters && <div className="mb-4 flex flex-wrap items-end gap-3">{filters}</div>}
+  return (
+    <div className="mx-auto max-w-7xl">
+      <PageHeader title={title} description={description} actions={actions} />
+
+      {filters}
+      {summary}
 
       <div className="overflow-hidden rounded-xl border bg-card">
-        <div className="border-b px-4 py-3 text-sm text-muted-foreground tabular-nums">
-          {total} {total === 1 ? "registro" : "registros"}
+        <div className="border-b px-4 py-3 text-sm tabular-nums text-muted-foreground">
+          {total.toLocaleString("es-CO")} {total === 1 ? "registro" : "registros"}
         </div>
 
         <div className="overflow-x-auto">{children}</div>
 
-        <TablePagination
-          page={page}
-          pageSize={pageSize}
-          total={total}
-          onPageChange={onPageChange}
-        />
+        {total > pageSize && (
+          <div className="flex items-center justify-between gap-3 border-t px-4 py-3 text-sm">
+            <p className="tabular-nums text-muted-foreground">
+              {desde.toLocaleString("es-CO")}–{hasta.toLocaleString("es-CO")} de{" "}
+              {total.toLocaleString("es-CO")}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" size="sm" disabled={page === 0}>
+                <Link href={hrefPagina(Math.max(0, page - 1))} aria-disabled={page === 0}>
+                  <ChevronLeft className="size-4" />
+                  Anterior
+                </Link>
+              </Button>
+              <span className="tabular-nums text-muted-foreground">
+                {page + 1} / {paginas.toLocaleString("es-CO")}
+              </span>
+              <Button asChild variant="outline" size="sm">
+                <Link href={hrefPagina(Math.min(paginas - 1, page + 1))}>
+                  Siguiente
+                  <ChevronRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {footer}
@@ -76,14 +88,14 @@ export function RecordsScaffold({
   )
 }
 
-/** Fila vacía de una tabla de registros, con el mismo mensaje en los tres módulos. */
+/** Fila vacía, con el mismo mensaje en todos los módulos. */
 export function EmptyRow({ colSpan, filtrando }: { colSpan: number; filtrando: boolean }) {
   return (
     <tr>
       <td colSpan={colSpan} className="py-10 text-center text-sm text-muted-foreground">
         {filtrando
           ? "Ningún registro coincide con el filtro."
-          : "Todavía no hay registros. Crea el primero con «Nuevo registro»."}
+          : "Todavía no hay registros en este módulo."}
       </td>
     </tr>
   )
