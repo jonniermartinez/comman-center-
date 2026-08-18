@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, Save } from "lucide-react"
+import { Pencil, Plus, Save } from "lucide-react"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
@@ -29,30 +29,47 @@ const RESULTADOS = ["Venta", "Seguimiento 1", "Seguimiento 2", "Seguimiento 3"]
  * A diferencia del resto de la captura, acá sí se pueden poner fechas futuras:
  * una agenda es precisamente un compromiso para más adelante.
  */
+/** Una agenda ya registrada, como la devuelve el listado. */
+export interface AgendaExistente {
+  id: string
+  branch_id: string
+  scheduled_at: string
+  scheduled_time: string | null
+  staff_id: string | null
+  nombre: string | null
+  celular: string | null
+  resultado: string | null
+  observacion: string | null
+}
+
 export function NuevaAgenda({
   companyId,
   branches,
   staff,
   canManage,
   myStaffId,
+  registro,
 }: {
   companyId: string
   branches: { id: string; name: string; is_primary: boolean }[]
   staff: { id: string; full_name: string }[]
   canManage: boolean
   myStaffId: string | null
+  /** Si viene, el formulario corrige esa agenda. */
+  registro?: AgendaExistente
 }) {
+  const editando = !!registro
   const [open, setOpen] = useState(false)
-  const [fecha, setFecha] = useState(todayISO())
-  const [hora, setHora] = useState("")
+  const [fecha, setFecha] = useState(registro?.scheduled_at ?? todayISO())
+  const [hora, setHora] = useState(registro?.scheduled_time?.slice(0, 5) ?? "")
   const [branchId, setBranchId] = useState(
-    branches.find((b) => b.is_primary)?.id ?? branches[0]?.id ?? "",
+    registro?.branch_id ?? branches.find((b) => b.is_primary)?.id ?? branches[0]?.id ?? "",
   )
-  const [staffId, setStaffId] = useState(myStaffId ?? "")
-  const [nombre, setNombre] = useState("")
-  const [celular, setCelular] = useState("")
-  const [resultado, setResultado] = useState("")
-  const [observacion, setObservacion] = useState("")
+  const [staffId, setStaffId] = useState(registro?.staff_id ?? myStaffId ?? "")
+  const [nombre, setNombre] = useState(registro?.nombre ?? "")
+  const [celular, setCelular] = useState(registro?.celular ?? "")
+  const [resultado, setResultado] = useState(registro?.resultado ?? "")
+  const [observacion, setObservacion] = useState(registro?.observacion ?? "")
   const [pendiente, startTransition] = useTransition()
 
   const persona = staff.find((s) => s.id === staffId)
@@ -61,15 +78,22 @@ export function NuevaAgenda({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="size-4" />
-          Nueva agenda
-        </Button>
+        {editando ? (
+          <Button variant="ghost" size="icon" className="size-8">
+            <Pencil className="size-4" />
+            <span className="sr-only">Editar la agenda de {registro.nombre}</span>
+          </Button>
+        ) : (
+          <Button>
+            <Plus className="size-4" />
+            Nueva agenda
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Nueva agenda</DialogTitle>
+          <DialogTitle>{editando ? "Editar agenda" : "Nueva agenda"}</DialogTitle>
           <DialogDescription>Una cita concertada con un cliente.</DialogDescription>
         </DialogHeader>
 
@@ -138,6 +162,7 @@ export function NuevaAgenda({
             onClick={() =>
               startTransition(async () => {
                 const r = await saveAppointment({
+                  id: registro?.id,
                   company_id: companyId,
                   branch_id: branchId,
                   scheduled_at: fecha,
@@ -153,16 +178,20 @@ export function NuevaAgenda({
                   toast.error(r.error ?? "No se pudo guardar la agenda.")
                   return
                 }
-                toast.success("Agenda registrada", { description: nombre })
-                setNombre("")
-                setCelular("")
-                setObservacion("")
+                toast.success(editando ? "Agenda actualizada" : "Agenda registrada", {
+                  description: nombre,
+                })
+                if (!editando) {
+                  setNombre("")
+                  setCelular("")
+                  setObservacion("")
+                }
                 setOpen(false)
               })
             }
           >
             <Save className="size-4" />
-            {pendiente ? "Guardando…" : "Guardar agenda"}
+            {pendiente ? "Guardando…" : editando ? "Guardar cambios" : "Guardar agenda"}
           </Button>
         </DialogFooter>
       </DialogContent>
