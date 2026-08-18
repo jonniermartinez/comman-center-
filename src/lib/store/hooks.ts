@@ -3,7 +3,7 @@
 import { useSession } from "@/lib/auth/session-context"
 import { todayISO } from "@/lib/format"
 import { useRemote } from "./remote"
-import type { Branch, Company, Database, ModuleCode, Profile, UserRole } from "./types"
+import type { Branch, Company, Database, ModuleCode, Profile, Staff, UserRole } from "./types"
 
 /**
  * La base como la ven las pantallas: lo que Supabase devolvió para esta sesión.
@@ -76,35 +76,43 @@ export function useCompanyModules(companyId?: string): ModuleCode[] {
     .map((m) => m.module_code)
 }
 
-export type Member = Profile & {
-  companyRole: Exclude<UserRole, "super_admin">
+export type Member = Staff & {
   branchId: string | null
   branchName: string | null
 }
 
 /**
- * Comerciales asignados y activos de una empresa, con su sede.
- * `branchId` filtra a una sede concreta.
+ * Comerciales de una empresa: quienes pueden figurar como responsables.
+ *
+ * Salen de `staff`, no de los usuarios con cuenta. En el histórico hay 123
+ * personas y apenas un puñado va a tener login: exigir cuenta para poder
+ * registrar a nombre de alguien dejaría fuera a casi todo el equipo.
  */
 export function useCompanyMembers(companyId?: string, branchId?: string | null): Member[] {
   const db = useDb()
   if (!companyId) return []
-  return db.company_users
-    .filter((cu) => cu.company_id === companyId && !cu.removed_at)
-    .filter((cu) => !branchId || cu.branch_id === branchId)
-    .map((cu) => {
-      const profile = db.profiles.find((p) => p.id === cu.user_id)
-      if (!profile) return null
-      const branch = db.branches.find((b) => b.id === cu.branch_id)
+  return db.company_staff
+    .filter((cs) => cs.company_id === companyId)
+    .filter((cs) => !branchId || cs.branch_id === branchId)
+    .map((cs) => {
+      const persona = db.staff.find((s) => s.id === cs.staff_id)
+      if (!persona || !persona.active) return null
+      const branch = db.branches.find((b) => b.id === cs.branch_id)
       return {
-        ...profile,
-        companyRole: cu.role,
-        branchId: cu.branch_id ?? null,
+        ...persona,
+        branchId: cs.branch_id ?? null,
         branchName: branch?.name ?? null,
       }
     })
     .filter((x): x is Member => !!x)
     .sort((a, b) => a.full_name.localeCompare(b.full_name))
+}
+
+/** La persona del equipo enlazada con el usuario en sesión, si la hay. */
+export function useMyStaff(): Staff | undefined {
+  const db = useDb()
+  const me = useCurrentUser()
+  return db.staff.find((s) => s.profile_id === me.id)
 }
 
 /** Sedes activas de una empresa. La principal va primero. */
@@ -129,7 +137,7 @@ export function useMyBranch(companyId?: string): string | null {
   return cu?.branch_id ?? null
 }
 
-/** Catálogo activo (financiaciones o medios de recaudo) de una empresa, ordenado. */
+/** Catálogo activo (financiaciones o medios de pago) de una empresa, ordenado. */
 export function useCompanyCatalog(companyId: string | undefined, kind: "financing" | "payment") {
   const db = useDb()
   if (!companyId) return []
