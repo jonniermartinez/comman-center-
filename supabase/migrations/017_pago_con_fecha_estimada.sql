@@ -1,0 +1,1 @@
+-- Ver la migración aplicada en Supabase con el mismo nombre. Se regenera con: supabase db pull

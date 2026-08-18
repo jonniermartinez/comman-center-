@@ -1,0 +1,18 @@
+-- Ver la migración aplicada en Supabase con el mismo nombre (011).
+-- El archivo completo se regenera con:  supabase db pull
+--
+-- Resumen: crea el modelo que realmente tiene el Excel —una fila por venta y
+-- una por pago, no totales por día— junto con las personas del equipo y los
+-- catálogos que salen de los archivos.
+--
+--   staff, company_staff            personas responsables (123 en el histórico,
+--                                   casi ninguna con cuenta de acceso)
+--   channels, ad_categories,        catálogos que traen los archivos, con el
+--   schools, medical_centers,       valor normalizado como código
+--   products, sale_states,
+--   sale_types, id_types,
+--   cash_concepts
+--   sales                           créditos vendidos (hoja "Base")
+--   payments                        abonos (hoja "Pagos")
+--   cash_movements                  caja (hoja "Control Ingreso - Gasto")
+--   appointments                    citas (hoja "AGENDAS")
