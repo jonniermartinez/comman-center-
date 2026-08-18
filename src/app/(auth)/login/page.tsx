@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { LoginForm } from "./login-form"
+import { SessionBounce } from "./session-bounce"
 import { signOut } from "@/lib/auth/actions"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -26,6 +27,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {error !== "sin-perfil" && <SessionBounce next={typeof next === "string" ? next : undefined} />}
         {mensaje && (
           <Alert variant="destructive">
             <AlertDescription className="flex-col items-start gap-2">

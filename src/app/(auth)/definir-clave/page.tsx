@@ -10,18 +10,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
  */
 export default async function DefinirClavePage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Mismo criterio que en el resto del servidor: se verifica el token, no se
+  // pide refresco (ver src/lib/auth/session.ts).
+  const { data } = await supabase.auth.getClaims()
+  const correo = data?.claims?.email
 
-  if (!user) redirect("/login?error=enlace-expirado")
+  if (!correo) redirect("/login?error=enlace-expirado")
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Define tu contraseña</CardTitle>
         <CardDescription>
-          Es la que usarás para entrar. Cuenta: {user.email}
+          Es la que usarás para entrar. Cuenta: {correo}
         </CardDescription>
       </CardHeader>
       <CardContent>

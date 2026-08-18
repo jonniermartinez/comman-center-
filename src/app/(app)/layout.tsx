@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 
 import { AppShell } from "@/components/app-shell"
+import { SessionKeeper } from "@/components/session-keeper"
 import { requireSession } from "@/lib/auth/session"
 import { SessionProvider } from "@/lib/auth/session-context"
 import { loadSnapshot } from "@/lib/data/snapshot"
@@ -41,6 +42,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       }}
     >
       <RemoteProvider value={snapshot}>
+        <SessionKeeper />
         <AppShell>{children}</AppShell>
       </RemoteProvider>
     </SessionProvider>

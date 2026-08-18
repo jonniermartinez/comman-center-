@@ -31,10 +31,12 @@ export interface Session {
 export async function getSession(): Promise<Session | null> {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
+  // getClaims verifica la firma del token contra las llaves del proyecto, en
+  // local. No se usa getUser porque, con el token vencido, dispara un refresco
+  // que este contexto no puede persistir —un Server Component no escribe
+  // cookies— y el refresh token rotaría dejando la sesión del navegador rota.
+  const { data: verificado } = await supabase.auth.getClaims()
+  if (!verificado?.claims?.sub) return null
 
   const { data } = await supabase.rpc("me")
   const payload = data as { profile: Profile; assignments?: Assignment[]; companies?: Assignment[] } | null
