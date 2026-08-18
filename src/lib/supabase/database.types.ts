@@ -17,6 +17,137 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_categories: {
+        Row: {
+          code: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      appointments: {
+        Row: {
+          branch_id: string
+          celular: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          nombre: string | null
+          observacion: string | null
+          responsable_nombre: string | null
+          resultado: string | null
+          scheduled_at: string
+          scheduled_time: string | null
+          source: string
+          source_file: string | null
+          source_row: number | null
+          staff_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          branch_id: string
+          celular?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nombre?: string | null
+          observacion?: string | null
+          responsable_nombre?: string | null
+          resultado?: string | null
+          scheduled_at: string
+          scheduled_time?: string | null
+          source?: string
+          source_file?: string | null
+          source_row?: number | null
+          staff_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          branch_id?: string
+          celular?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nombre?: string | null
+          observacion?: string | null
+          responsable_nombre?: string | null
+          resultado?: string | null
+          scheduled_at?: string
+          scheduled_time?: string | null
+          source?: string
+          source_file?: string | null
+          source_row?: number | null
+          staff_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_user_activity"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "appointments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_user_activity"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -76,136 +207,6 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "audit_log_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-        ]
-      }
-      billing_entries: {
-        Row: {
-          amount: number
-          branch_id: string
-          company_id: string
-          created_at: string
-          created_by: string | null
-          financing_code: string
-          id: string
-          report_date: string
-          responsable_nombre: string | null
-          updated_at: string
-          updated_by: string | null
-          user_id: string | null
-        }
-        Insert: {
-          amount?: number
-          branch_id: string
-          company_id: string
-          created_at?: string
-          created_by?: string | null
-          financing_code: string
-          id?: string
-          report_date: string
-          responsable_nombre?: string | null
-          updated_at?: string
-          updated_by?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          amount?: number
-          branch_id?: string
-          company_id?: string
-          created_at?: string
-          created_by?: string | null
-          financing_code?: string
-          id?: string
-          report_date?: string
-          responsable_nombre?: string | null
-          updated_at?: string
-          updated_by?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "billing_entries_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "billing_entries_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_branch_monthly"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "billing_entries_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "billing_entries_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
-            foreignKeyName: "billing_entries_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "billing_entries_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_user_activity"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "billing_entries_financing_code_fkey"
-            columns: ["financing_code"]
-            isOneToOne: false
-            referencedRelation: "financing_types"
-            referencedColumns: ["code"]
-          },
-          {
-            foreignKeyName: "billing_entries_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "billing_entries_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "v_user_activity"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "billing_entries_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "billing_entries_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_user_activity"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       branches: {
@@ -254,13 +255,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "branches_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
             foreignKeyName: "branches_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -276,128 +270,180 @@ export type Database = {
           },
         ]
       }
-      collection_entries: {
+      cash_concepts: {
+        Row: {
+          code: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      cash_movements: {
         Row: {
           amount: number
           branch_id: string
           company_id: string
+          concept_code: string | null
           created_at: string
           created_by: string | null
+          factura: string | null
           id: string
-          method_code: string
+          identificacion: string | null
+          kind: string
+          method_code: string | null
+          nombre: string | null
+          observacion: string | null
+          period_month: string
           report_date: string
           responsable_nombre: string | null
+          source: string
+          source_file: string | null
+          source_row: number | null
+          staff_id: string | null
           updated_at: string
           updated_by: string | null
-          user_id: string | null
         }
         Insert: {
-          amount?: number
+          amount: number
           branch_id: string
           company_id: string
+          concept_code?: string | null
           created_at?: string
           created_by?: string | null
+          factura?: string | null
           id?: string
-          method_code: string
+          identificacion?: string | null
+          kind: string
+          method_code?: string | null
+          nombre?: string | null
+          observacion?: string | null
+          period_month: string
           report_date: string
           responsable_nombre?: string | null
+          source?: string
+          source_file?: string | null
+          source_row?: number | null
+          staff_id?: string | null
           updated_at?: string
           updated_by?: string | null
-          user_id?: string | null
         }
         Update: {
           amount?: number
           branch_id?: string
           company_id?: string
+          concept_code?: string | null
           created_at?: string
           created_by?: string | null
+          factura?: string | null
           id?: string
-          method_code?: string
+          identificacion?: string | null
+          kind?: string
+          method_code?: string | null
+          nombre?: string | null
+          observacion?: string | null
+          period_month?: string
           report_date?: string
           responsable_nombre?: string | null
+          source?: string
+          source_file?: string | null
+          source_row?: number | null
+          staff_id?: string | null
           updated_at?: string
           updated_by?: string | null
-          user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "collection_entries_branch_id_fkey"
+            foreignKeyName: "cash_movements_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "collection_entries_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_branch_monthly"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "collection_entries_company_id_fkey"
+            foreignKeyName: "cash_movements_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "collection_entries_company_id_fkey"
-            columns: ["company_id"]
+            foreignKeyName: "cash_movements_concept_code_fkey"
+            columns: ["concept_code"]
             isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
+            referencedRelation: "cash_concepts"
+            referencedColumns: ["code"]
           },
           {
-            foreignKeyName: "collection_entries_created_by_fkey"
+            foreignKeyName: "cash_movements_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "collection_entries_created_by_fkey"
+            foreignKeyName: "cash_movements_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "v_user_activity"
             referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "collection_entries_method_code_fkey"
+            foreignKeyName: "cash_movements_method_code_fkey"
             columns: ["method_code"]
             isOneToOne: false
             referencedRelation: "payment_methods"
             referencedColumns: ["code"]
           },
           {
-            foreignKeyName: "collection_entries_updated_by_fkey"
+            foreignKeyName: "cash_movements_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "collection_entries_updated_by_fkey"
+            foreignKeyName: "cash_movements_updated_by_fkey"
             columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "v_user_activity"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "collection_entries_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "collection_entries_user_id_fkey"
-            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "v_user_activity"
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      channels: {
+        Row: {
+          code: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
       }
       companies: {
         Row: {
@@ -408,6 +454,7 @@ export type Database = {
           created_by: string | null
           crm_label: string | null
           department: string | null
+          hora_entrada: string
           id: string
           logo_url: string | null
           name: string
@@ -424,6 +471,7 @@ export type Database = {
           created_by?: string | null
           crm_label?: string | null
           department?: string | null
+          hora_entrada?: string
           id?: string
           logo_url?: string | null
           name: string
@@ -440,6 +488,7 @@ export type Database = {
           created_by?: string | null
           crm_label?: string | null
           department?: string | null
+          hora_entrada?: string
           id?: string
           logo_url?: string | null
           name?: string
@@ -493,13 +542,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "company_financing_types_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
             foreignKeyName: "company_financing_types_financing_code_fkey"
             columns: ["financing_code"]
             isOneToOne: false
@@ -534,13 +576,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "company_modules_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "company_modules_enabled_by_fkey"
@@ -593,18 +628,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "company_payment_methods_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
             foreignKeyName: "company_payment_methods_method_code_fkey"
             columns: ["method_code"]
             isOneToOne: false
             referencedRelation: "payment_methods"
             referencedColumns: ["code"]
+          },
+        ]
+      }
+      company_staff: {
+        Row: {
+          branch_id: string | null
+          company_id: string
+          staff_id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id: string
+          staff_id: string
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_staff_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_staff_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_staff_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -659,25 +727,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "company_users_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_branch_monthly"
-            referencedColumns: ["branch_id"]
-          },
-          {
             foreignKeyName: "company_users_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "company_users_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "company_users_user_id_fkey"
@@ -695,268 +749,197 @@ export type Database = {
           },
         ]
       }
-      daily_kpi: {
+      daily_activity: {
         Row: {
-          agendas_dia: number
-          atencion_agendas: number
+          agenda_cancela: number
+          agenda_confirmada: number
+          agenda_no_contesta: number
+          agenda_posible: number
+          agenda_reprograma: number
+          atencion_agenda: number
+          atencion_asociado: number
+          atencion_certificados: number
+          atencion_declinado: number
+          atencion_enrolamiento: number
+          atencion_renovacion: number
+          atencion_seguimiento: number
+          atencion_venta: number
           branch_id: string
-          clientes_atendidos: number
+          caducadas_final: number
+          caducadas_inicial: number
+          caducadas_medio: number
+          chats_final: number
+          chats_inicial: number
+          chats_medio: number
           company_id: string
           created_at: string
           created_by: string | null
+          hora_llegada: string | null
+          hora_salida: string | null
           id: string
-          jornada: Database["public"]["Enums"]["jornada"]
           llamada_agenda: number
-          llamadas_contestadas: number
-          llamadas_realizadas: number
+          llamada_contestada: number
+          llamada_efectiva: number
+          llamada_no_contestada: number
+          llamada_no_interesado: number
+          llamada_postventa: number
+          llamada_seguimiento: number
           notas: string | null
+          period_month: string
           report_date: string
           responsable_nombre: string
+          source: string
+          source_file: string | null
+          source_row: number | null
+          staff_id: string
+          tareas_final: number
+          tareas_inicial: number
+          tareas_medio: number
           updated_at: string
           updated_by: string | null
-          user_id: string
-          ventas_efectivas: number
-          ventas_exitosas: number
         }
         Insert: {
-          agendas_dia?: number
-          atencion_agendas?: number
+          agenda_cancela?: number
+          agenda_confirmada?: number
+          agenda_no_contesta?: number
+          agenda_posible?: number
+          agenda_reprograma?: number
+          atencion_agenda?: number
+          atencion_asociado?: number
+          atencion_certificados?: number
+          atencion_declinado?: number
+          atencion_enrolamiento?: number
+          atencion_renovacion?: number
+          atencion_seguimiento?: number
+          atencion_venta?: number
           branch_id: string
-          clientes_atendidos?: number
+          caducadas_final?: number
+          caducadas_inicial?: number
+          caducadas_medio?: number
+          chats_final?: number
+          chats_inicial?: number
+          chats_medio?: number
           company_id: string
           created_at?: string
           created_by?: string | null
+          hora_llegada?: string | null
+          hora_salida?: string | null
           id?: string
-          jornada?: Database["public"]["Enums"]["jornada"]
           llamada_agenda?: number
-          llamadas_contestadas?: number
-          llamadas_realizadas?: number
+          llamada_contestada?: number
+          llamada_efectiva?: number
+          llamada_no_contestada?: number
+          llamada_no_interesado?: number
+          llamada_postventa?: number
+          llamada_seguimiento?: number
           notas?: string | null
+          period_month: string
           report_date: string
           responsable_nombre: string
+          source?: string
+          source_file?: string | null
+          source_row?: number | null
+          staff_id: string
+          tareas_final?: number
+          tareas_inicial?: number
+          tareas_medio?: number
           updated_at?: string
           updated_by?: string | null
-          user_id: string
-          ventas_efectivas?: number
-          ventas_exitosas?: number
         }
         Update: {
-          agendas_dia?: number
-          atencion_agendas?: number
+          agenda_cancela?: number
+          agenda_confirmada?: number
+          agenda_no_contesta?: number
+          agenda_posible?: number
+          agenda_reprograma?: number
+          atencion_agenda?: number
+          atencion_asociado?: number
+          atencion_certificados?: number
+          atencion_declinado?: number
+          atencion_enrolamiento?: number
+          atencion_renovacion?: number
+          atencion_seguimiento?: number
+          atencion_venta?: number
           branch_id?: string
-          clientes_atendidos?: number
+          caducadas_final?: number
+          caducadas_inicial?: number
+          caducadas_medio?: number
+          chats_final?: number
+          chats_inicial?: number
+          chats_medio?: number
           company_id?: string
           created_at?: string
           created_by?: string | null
+          hora_llegada?: string | null
+          hora_salida?: string | null
           id?: string
-          jornada?: Database["public"]["Enums"]["jornada"]
           llamada_agenda?: number
-          llamadas_contestadas?: number
-          llamadas_realizadas?: number
+          llamada_contestada?: number
+          llamada_efectiva?: number
+          llamada_no_contestada?: number
+          llamada_no_interesado?: number
+          llamada_postventa?: number
+          llamada_seguimiento?: number
           notas?: string | null
+          period_month?: string
           report_date?: string
           responsable_nombre?: string
+          source?: string
+          source_file?: string | null
+          source_row?: number | null
+          staff_id?: string
+          tareas_final?: number
+          tareas_inicial?: number
+          tareas_medio?: number
           updated_at?: string
           updated_by?: string | null
-          user_id?: string
-          ventas_efectivas?: number
-          ventas_exitosas?: number
         }
         Relationships: [
           {
-            foreignKeyName: "daily_kpi_branch_id_fkey"
+            foreignKeyName: "daily_activity_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "daily_kpi_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_branch_monthly"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_company_id_fkey"
+            foreignKeyName: "daily_activity_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "daily_kpi_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_created_by_fkey"
+            foreignKeyName: "daily_activity_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "daily_kpi_created_by_fkey"
+            foreignKeyName: "daily_activity_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "v_user_activity"
             referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "daily_kpi_updated_by_fkey"
+            foreignKeyName: "daily_activity_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_activity_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "daily_kpi_updated_by_fkey"
+            foreignKeyName: "daily_activity_updated_by_fkey"
             columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "v_user_activity"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_user_activity"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      daily_management: {
-        Row: {
-          branch_id: string
-          certificados: number
-          chats_por_responder: number
-          company_id: string
-          created_at: string
-          created_by: string | null
-          id: string
-          jornada: Database["public"]["Enums"]["jornada"]
-          notas: string | null
-          report_date: string
-          responsable_nombre: string
-          tareas_caducadas: number
-          tareas_del_dia: number
-          updated_at: string
-          updated_by: string | null
-          user_id: string
-        }
-        Insert: {
-          branch_id: string
-          certificados?: number
-          chats_por_responder?: number
-          company_id: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          jornada?: Database["public"]["Enums"]["jornada"]
-          notas?: string | null
-          report_date: string
-          responsable_nombre: string
-          tareas_caducadas?: number
-          tareas_del_dia?: number
-          updated_at?: string
-          updated_by?: string | null
-          user_id: string
-        }
-        Update: {
-          branch_id?: string
-          certificados?: number
-          chats_por_responder?: number
-          company_id?: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          jornada?: Database["public"]["Enums"]["jornada"]
-          notas?: string | null
-          report_date?: string
-          responsable_nombre?: string
-          tareas_caducadas?: number
-          tareas_del_dia?: number
-          updated_at?: string
-          updated_by?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "daily_management_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_management_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_branch_monthly"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "daily_management_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_management_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
-            foreignKeyName: "daily_management_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_management_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_user_activity"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "daily_management_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_management_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "v_user_activity"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "daily_management_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_management_user_id_fkey"
-            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "v_user_activity"
             referencedColumns: ["user_id"]
@@ -964,6 +947,42 @@ export type Database = {
         ]
       }
       financing_types: {
+        Row: {
+          code: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      id_types: {
+        Row: {
+          code: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      medical_centers: {
         Row: {
           code: string
           name: string
@@ -1072,13 +1091,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "objectives_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
             foreignKeyName: "objectives_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -1147,6 +1159,156 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          branch_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          date_estimated: boolean
+          id: string
+          method_code: string | null
+          observacion: string | null
+          period_month: string
+          recibo: string | null
+          ref_credito: string | null
+          report_date: string
+          sale_id: string | null
+          source: string
+          source_file: string | null
+          source_row: number | null
+          titular_id: string | null
+          titular_nombre: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount: number
+          branch_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          date_estimated?: boolean
+          id?: string
+          method_code?: string | null
+          observacion?: string | null
+          period_month: string
+          recibo?: string | null
+          ref_credito?: string | null
+          report_date: string
+          sale_id?: string | null
+          source?: string
+          source_file?: string | null
+          source_row?: number | null
+          titular_id?: string | null
+          titular_nombre?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          branch_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          date_estimated?: boolean
+          id?: string
+          method_code?: string | null
+          observacion?: string | null
+          period_month?: string
+          recibo?: string | null
+          ref_credito?: string | null
+          report_date?: string
+          sale_id?: string | null
+          source?: string
+          source_file?: string | null
+          source_row?: number | null
+          titular_id?: string | null
+          titular_nombre?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_user_activity"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "payments_method_code_fkey"
+            columns: ["method_code"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "payments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_user_activity"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          code: string
+          is_renovacion: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          is_renovacion?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          is_renovacion?: boolean
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1201,129 +1363,417 @@ export type Database = {
           },
         ]
       }
-      sales_entries: {
+      sale_states: {
         Row: {
-          branch_id: string
-          company_id: string
-          created_at: string
-          created_by: string | null
-          financing_code: string
-          id: string
-          kind: Database["public"]["Enums"]["venta_kind"]
-          licencias: number
-          report_date: string
-          responsable_nombre: string | null
-          updated_at: string
-          updated_by: string | null
-          user_id: string | null
-          ventas: number
+          code: string
+          name: string
+          sort_order: number
         }
         Insert: {
-          branch_id: string
-          company_id: string
-          created_at?: string
-          created_by?: string | null
-          financing_code: string
-          id?: string
-          kind?: Database["public"]["Enums"]["venta_kind"]
-          licencias?: number
-          report_date: string
-          responsable_nombre?: string | null
-          updated_at?: string
-          updated_by?: string | null
-          user_id?: string | null
-          ventas?: number
+          code: string
+          name: string
+          sort_order?: number
         }
         Update: {
-          branch_id?: string
-          company_id?: string
+          code?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      sale_types: {
+        Row: {
+          code: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      sales: {
+        Row: {
+          ad_category_code: string | null
+          adicion: number
+          branch_id: string
+          cantidad_comision: number
+          cantidad_final: number
+          channel_code: string | null
+          ciudad: string | null
+          company_id: string
+          consecutivo_examen: string | null
+          contrato: string | null
+          costo_carta: number
+          costo_examen: number
+          created_at: string
+          created_by: string | null
+          credito_celular: string | null
+          credito_id: string | null
+          credito_nombre: string | null
+          credito_tipo_id: string | null
+          cuenta_devolucion: string | null
+          departamento: string | null
+          descuento: number
+          devolucion_lamina: string | null
+          documentos: string | null
+          evento: string | null
+          fecha_certificado: string | null
+          fecha_devolucion: string | null
+          fecha_legalizacion: string | null
+          financing_code: string | null
+          id: string
+          id_asociado: string | null
+          id_referido: string | null
+          ingreso_neto: number
+          licencia_celular: string | null
+          licencia_id: string | null
+          licencia_nombre: string | null
+          licencia_tipo_id: string | null
+          medical_center_code: string | null
+          observacion: string | null
+          pagare: string | null
+          pago_evento: string | null
+          period_month: string
+          product_code: string | null
+          recaudo: number
+          ref_credito: string | null
+          report_date: string
+          responsable_nombre: string | null
+          saldo: number
+          sale_type_code: string | null
+          school_code: string | null
+          source: string
+          source_file: string | null
+          source_row: number | null
+          staff_id: string | null
+          state_code: string | null
+          total_comision: number
+          total_costo: number
+          updated_at: string
+          updated_by: string | null
+          valor_comision: number
+          valor_final: number
+          valor_inicial: number
+          valor_lamina: number
+          voucher: string | null
+        }
+        Insert: {
+          ad_category_code?: string | null
+          adicion?: number
+          branch_id: string
+          cantidad_comision?: number
+          cantidad_final?: number
+          channel_code?: string | null
+          ciudad?: string | null
+          company_id: string
+          consecutivo_examen?: string | null
+          contrato?: string | null
+          costo_carta?: number
+          costo_examen?: number
           created_at?: string
           created_by?: string | null
-          financing_code?: string
+          credito_celular?: string | null
+          credito_id?: string | null
+          credito_nombre?: string | null
+          credito_tipo_id?: string | null
+          cuenta_devolucion?: string | null
+          departamento?: string | null
+          descuento?: number
+          devolucion_lamina?: string | null
+          documentos?: string | null
+          evento?: string | null
+          fecha_certificado?: string | null
+          fecha_devolucion?: string | null
+          fecha_legalizacion?: string | null
+          financing_code?: string | null
           id?: string
-          kind?: Database["public"]["Enums"]["venta_kind"]
-          licencias?: number
-          report_date?: string
+          id_asociado?: string | null
+          id_referido?: string | null
+          ingreso_neto?: number
+          licencia_celular?: string | null
+          licencia_id?: string | null
+          licencia_nombre?: string | null
+          licencia_tipo_id?: string | null
+          medical_center_code?: string | null
+          observacion?: string | null
+          pagare?: string | null
+          pago_evento?: string | null
+          period_month: string
+          product_code?: string | null
+          recaudo?: number
+          ref_credito?: string | null
+          report_date: string
           responsable_nombre?: string | null
+          saldo?: number
+          sale_type_code?: string | null
+          school_code?: string | null
+          source?: string
+          source_file?: string | null
+          source_row?: number | null
+          staff_id?: string | null
+          state_code?: string | null
+          total_comision?: number
+          total_costo?: number
           updated_at?: string
           updated_by?: string | null
-          user_id?: string | null
-          ventas?: number
+          valor_comision?: number
+          valor_final?: number
+          valor_inicial?: number
+          valor_lamina?: number
+          voucher?: string | null
+        }
+        Update: {
+          ad_category_code?: string | null
+          adicion?: number
+          branch_id?: string
+          cantidad_comision?: number
+          cantidad_final?: number
+          channel_code?: string | null
+          ciudad?: string | null
+          company_id?: string
+          consecutivo_examen?: string | null
+          contrato?: string | null
+          costo_carta?: number
+          costo_examen?: number
+          created_at?: string
+          created_by?: string | null
+          credito_celular?: string | null
+          credito_id?: string | null
+          credito_nombre?: string | null
+          credito_tipo_id?: string | null
+          cuenta_devolucion?: string | null
+          departamento?: string | null
+          descuento?: number
+          devolucion_lamina?: string | null
+          documentos?: string | null
+          evento?: string | null
+          fecha_certificado?: string | null
+          fecha_devolucion?: string | null
+          fecha_legalizacion?: string | null
+          financing_code?: string | null
+          id?: string
+          id_asociado?: string | null
+          id_referido?: string | null
+          ingreso_neto?: number
+          licencia_celular?: string | null
+          licencia_id?: string | null
+          licencia_nombre?: string | null
+          licencia_tipo_id?: string | null
+          medical_center_code?: string | null
+          observacion?: string | null
+          pagare?: string | null
+          pago_evento?: string | null
+          period_month?: string
+          product_code?: string | null
+          recaudo?: number
+          ref_credito?: string | null
+          report_date?: string
+          responsable_nombre?: string | null
+          saldo?: number
+          sale_type_code?: string | null
+          school_code?: string | null
+          source?: string
+          source_file?: string | null
+          source_row?: number | null
+          staff_id?: string | null
+          state_code?: string | null
+          total_comision?: number
+          total_costo?: number
+          updated_at?: string
+          updated_by?: string | null
+          valor_comision?: number
+          valor_final?: number
+          valor_inicial?: number
+          valor_lamina?: number
+          voucher?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "sales_entries_branch_id_fkey"
+            foreignKeyName: "sales_ad_category_code_fkey"
+            columns: ["ad_category_code"]
+            isOneToOne: false
+            referencedRelation: "ad_categories"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sales_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "sales_entries_branch_id_fkey"
-            columns: ["branch_id"]
+            foreignKeyName: "sales_channel_code_fkey"
+            columns: ["channel_code"]
             isOneToOne: false
-            referencedRelation: "v_branch_monthly"
-            referencedColumns: ["branch_id"]
+            referencedRelation: "channels"
+            referencedColumns: ["code"]
           },
           {
-            foreignKeyName: "sales_entries_company_id_fkey"
+            foreignKeyName: "sales_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "sales_entries_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
-            foreignKeyName: "sales_entries_created_by_fkey"
+            foreignKeyName: "sales_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "sales_entries_created_by_fkey"
+            foreignKeyName: "sales_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "v_user_activity"
             referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "sales_entries_financing_code_fkey"
+            foreignKeyName: "sales_credito_tipo_id_fkey"
+            columns: ["credito_tipo_id"]
+            isOneToOne: false
+            referencedRelation: "id_types"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sales_financing_code_fkey"
             columns: ["financing_code"]
             isOneToOne: false
             referencedRelation: "financing_types"
             referencedColumns: ["code"]
           },
           {
-            foreignKeyName: "sales_entries_updated_by_fkey"
+            foreignKeyName: "sales_licencia_tipo_id_fkey"
+            columns: ["licencia_tipo_id"]
+            isOneToOne: false
+            referencedRelation: "id_types"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sales_medical_center_code_fkey"
+            columns: ["medical_center_code"]
+            isOneToOne: false
+            referencedRelation: "medical_centers"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sales_product_code_fkey"
+            columns: ["product_code"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sales_sale_type_code_fkey"
+            columns: ["sale_type_code"]
+            isOneToOne: false
+            referencedRelation: "sale_types"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sales_school_code_fkey"
+            columns: ["school_code"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sales_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_state_code_fkey"
+            columns: ["state_code"]
+            isOneToOne: false
+            referencedRelation: "sale_states"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sales_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "sales_entries_updated_by_fkey"
+            foreignKeyName: "sales_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "v_user_activity"
             referencedColumns: ["user_id"]
           },
+        ]
+      }
+      schools: {
+        Row: {
+          code: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      staff: {
+        Row: {
+          active: boolean
+          created_at: string
+          full_name: string
+          id: string
+          profile_id: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          full_name: string
+          id?: string
+          profile_id?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          full_name?: string
+          id?: string
+          profile_id?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "sales_entries_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "staff_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "sales_entries_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "staff_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "v_user_activity"
             referencedColumns: ["user_id"]
@@ -1341,269 +1791,159 @@ export type Database = {
           facturacion_mes: number | null
           is_primary: boolean | null
           licencias_mes: number | null
+          llamada_efectiva: number | null
           llamadas_contestadas: number | null
-          llamadas_realizadas: number | null
           period_month: string | null
           ratio_contactabilidad: number | null
           recaudo_mes: number | null
           status: Database["public"]["Enums"]["company_status"] | null
-          ventas_efectivas: number | null
+          total_llamadas: number | null
           ventas_mes: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "branches_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branches_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-        ]
+        Relationships: []
       }
       v_capture_status: {
         Row: {
-          company_id: string | null
-          gestion_registrada: boolean | null
-          kpi_registrado: boolean | null
-          report_date: string | null
-          responsable_nombre: string | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_users_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "company_users_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
-            foreignKeyName: "company_users_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "company_users_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_user_activity"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      v_daily_kpi: {
-        Row: {
-          agendas_dia: number | null
-          atencion_agendas: number | null
           branch_id: string | null
-          clientes_atendidos: number | null
           company_id: string | null
-          created_at: string | null
-          created_by: string | null
-          id: string | null
-          jornada: Database["public"]["Enums"]["jornada"] | null
-          llamada_agenda: number | null
-          llamadas_contestadas: number | null
-          llamadas_realizadas: number | null
-          notas: string | null
-          ratio_contactabilidad: number | null
-          ratio_conversion_agendas: number | null
-          ratio_conversion_llamada: number | null
-          ratio_venta_presencial: number | null
+          registrado: boolean | null
           report_date: string | null
           responsable_nombre: string | null
-          updated_at: string | null
-          updated_by: string | null
-          user_id: string | null
-          ventas_efectivas: number | null
-          ventas_exitosas: number | null
-          volumen_venta_agendas: number | null
-          volumen_venta_general: number | null
-        }
-        Insert: {
-          agendas_dia?: number | null
-          atencion_agendas?: number | null
-          branch_id?: string | null
-          clientes_atendidos?: number | null
-          company_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          id?: string | null
-          jornada?: Database["public"]["Enums"]["jornada"] | null
-          llamada_agenda?: number | null
-          llamadas_contestadas?: number | null
-          llamadas_realizadas?: number | null
-          notas?: string | null
-          ratio_contactabilidad?: never
-          ratio_conversion_agendas?: never
-          ratio_conversion_llamada?: never
-          ratio_venta_presencial?: never
-          report_date?: string | null
-          responsable_nombre?: string | null
-          updated_at?: string | null
-          updated_by?: string | null
-          user_id?: string | null
-          ventas_efectivas?: number | null
-          ventas_exitosas?: number | null
-          volumen_venta_agendas?: never
-          volumen_venta_general?: never
-        }
-        Update: {
-          agendas_dia?: number | null
-          atencion_agendas?: number | null
-          branch_id?: string | null
-          clientes_atendidos?: number | null
-          company_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          id?: string | null
-          jornada?: Database["public"]["Enums"]["jornada"] | null
-          llamada_agenda?: number | null
-          llamadas_contestadas?: number | null
-          llamadas_realizadas?: number | null
-          notas?: string | null
-          ratio_contactabilidad?: never
-          ratio_conversion_agendas?: never
-          ratio_conversion_llamada?: never
-          ratio_venta_presencial?: never
-          report_date?: string | null
-          responsable_nombre?: string | null
-          updated_at?: string | null
-          updated_by?: string | null
-          user_id?: string | null
-          ventas_efectivas?: number | null
-          ventas_exitosas?: number | null
-          volumen_venta_agendas?: never
-          volumen_venta_general?: never
+          staff_id: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "daily_kpi_branch_id_fkey"
+            foreignKeyName: "company_staff_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "daily_kpi_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_branch_monthly"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_company_id_fkey"
+            foreignKeyName: "company_staff_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "daily_kpi_company_id_fkey"
-            columns: ["company_id"]
+            foreignKeyName: "company_staff_staff_id_fkey"
+            columns: ["staff_id"]
             isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "staff"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_user_activity"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "v_user_activity"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_user_activity"
-            referencedColumns: ["user_id"]
           },
         ]
       }
-      v_daily_management_progress: {
+      v_daily_activity: {
         Row: {
+          agenda_cancela: number | null
+          agenda_confirmada: number | null
+          agenda_no_contesta: number | null
+          agenda_posible: number | null
+          agenda_reprograma: number | null
+          atencion_agenda: number | null
+          atencion_asociado: number | null
+          atencion_certificados: number | null
+          atencion_declinado: number | null
+          atencion_enrolamiento: number | null
+          atencion_renovacion: number | null
+          atencion_seguimiento: number | null
+          atencion_venta: number | null
+          branch_id: string | null
+          caducadas_depuradas: number | null
           caducadas_final: number | null
           caducadas_inicial: number | null
-          certificados: number | null
+          caducadas_medio: number | null
+          chats_depurados: number | null
           chats_final: number | null
           chats_inicial: number | null
+          chats_medio: number | null
           company_id: string | null
+          created_at: string | null
+          created_by: string | null
+          hora_entrada: string | null
+          hora_llegada: string | null
+          hora_salida: string | null
+          id: string | null
+          llamada_agenda: number | null
+          llamada_contestada: number | null
+          llamada_efectiva: number | null
+          llamada_no_contestada: number | null
+          llamada_no_interesado: number | null
+          llamada_postventa: number | null
+          llamada_seguimiento: number | null
+          llamadas_contestadas: number | null
+          llego_tarde: boolean | null
+          notas: string | null
+          period_month: string | null
+          ratio_contactabilidad: number | null
+          ratio_conversion_agendas: number | null
+          ratio_conversion_llamada: number | null
+          ratio_venta_presencial: number | null
           report_date: string | null
           responsable_nombre: string | null
+          source: string | null
+          source_file: string | null
+          source_row: number | null
+          staff_id: string | null
+          tareas_depuradas: number | null
           tareas_final: number | null
           tareas_inicial: number | null
-          user_id: string | null
+          tareas_medio: number | null
+          total_agendas: number | null
+          total_atencion: number | null
+          total_llamadas: number | null
+          updated_at: string | null
+          updated_by: string | null
+          volumen_venta_general: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "daily_management_company_id_fkey"
+            foreignKeyName: "daily_activity_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_activity_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "daily_management_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
-            foreignKeyName: "daily_management_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "daily_activity_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "daily_management_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "daily_activity_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_user_activity"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "daily_activity_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_activity_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_activity_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "v_user_activity"
             referencedColumns: ["user_id"]
@@ -1612,93 +1952,112 @@ export type Database = {
       }
       v_daily_sales: {
         Row: {
+          branch_id: string | null
+          comision: number | null
           company_id: string | null
-          financing_code: string | null
-          financing_name: string | null
-          kind: Database["public"]["Enums"]["venta_kind"] | null
+          facturacion: number | null
           licencias: number | null
+          recaudo_venta: number | null
+          renovaciones: number | null
           report_date: string | null
+          saldo: number | null
           ventas: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "sales_entries_company_id_fkey"
+            foreignKeyName: "sales_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sales_entries_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
-            foreignKeyName: "sales_entries_financing_code_fkey"
-            columns: ["financing_code"]
-            isOneToOne: false
-            referencedRelation: "financing_types"
-            referencedColumns: ["code"]
           },
         ]
       }
-      v_monthly_billing: {
+      v_monthly_activity: {
         Row: {
-          amount: number | null
+          atencion_agenda: number | null
+          atencion_certificados: number | null
+          atencion_renovacion: number | null
+          atencion_venta: number | null
+          branch_id: string | null
+          chats_depurados: number | null
           company_id: string | null
-          financing_code: string | null
+          dias_reportados: number | null
+          dias_tarde: number | null
+          llamada_agenda: number | null
+          llamada_efectiva: number | null
+          llamadas_contestadas: number | null
           period_month: string | null
+          ratio_contactabilidad: number | null
+          ratio_conversion_agendas: number | null
+          ratio_conversion_llamada: number | null
+          ratio_llegadas_tarde: number | null
+          ratio_venta_presencial: number | null
+          responsable_nombre: string | null
+          staff_id: string | null
+          tareas_depuradas: number | null
+          total_agendas: number | null
+          total_atencion: number | null
+          total_llamadas: number | null
+          volumen_venta_general: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "billing_entries_company_id_fkey"
+            foreignKeyName: "daily_activity_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_activity_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "billing_entries_company_id_fkey"
-            columns: ["company_id"]
+            foreignKeyName: "daily_activity_staff_id_fkey"
+            columns: ["staff_id"]
             isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
-            foreignKeyName: "billing_entries_financing_code_fkey"
-            columns: ["financing_code"]
-            isOneToOne: false
-            referencedRelation: "financing_types"
-            referencedColumns: ["code"]
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
           },
         ]
       }
       v_monthly_collection: {
         Row: {
           amount: number | null
+          branch_id: string | null
           company_id: string | null
           method_code: string | null
+          pagos: number | null
           period_month: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "collection_entries_company_id_fkey"
+            foreignKeyName: "payments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "collection_entries_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
-            foreignKeyName: "collection_entries_method_code_fkey"
+            foreignKeyName: "payments_method_code_fkey"
             columns: ["method_code"]
             isOneToOne: false
             referencedRelation: "payment_methods"
@@ -1706,86 +2065,35 @@ export type Database = {
           },
         ]
       }
-      v_monthly_kpi: {
+      v_monthly_sales_by_financing: {
         Row: {
-          agendas_dia: number | null
-          atencion_agendas: number | null
-          clientes_atendidos: number | null
+          branch_id: string | null
           company_id: string | null
-          dias_reportados: number | null
-          llamada_agenda: number | null
-          llamadas_contestadas: number | null
-          llamadas_realizadas: number | null
-          period_month: string | null
-          ratio_contactabilidad: number | null
-          ratio_conversion_agendas: number | null
-          ratio_conversion_llamada: number | null
-          ratio_venta_presencial: number | null
-          responsable_nombre: string | null
-          user_id: string | null
-          ventas_efectivas: number | null
-          ventas_exitosas: number | null
-          volumen_venta_agendas: number | null
-          volumen_venta_general: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "daily_kpi_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_kpi_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_user_activity"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      v_monthly_sales: {
-        Row: {
-          company_id: string | null
+          facturacion: number | null
           financing_code: string | null
           financing_name: string | null
-          kind: Database["public"]["Enums"]["venta_kind"] | null
           licencias: number | null
           period_month: string | null
+          renovaciones: number | null
           ventas: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "sales_entries_company_id_fkey"
+            foreignKeyName: "sales_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "sales_entries_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
-          },
-          {
-            foreignKeyName: "sales_entries_financing_code_fkey"
+            foreignKeyName: "sales_financing_code_fkey"
             columns: ["financing_code"]
             isOneToOne: false
             referencedRelation: "financing_types"
@@ -1797,11 +2105,13 @@ export type Database = {
         Row: {
           company_id: string | null
           company_name: string | null
+          entradas_mes: number | null
           facturacion_mes: number | null
           licencias_mes: number | null
           period_month: string | null
           recaudo_mes: number | null
           renovaciones_mes: number | null
+          salidas_mes: number | null
           ventas_mes: number | null
         }
         Relationships: []
@@ -1825,13 +2135,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "objectives_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "v_monthly_totals"
-            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "objectives_metric_code_fkey"
@@ -1886,7 +2189,9 @@ export type Database = {
       has_company_access: { Args: { target_company: string }; Returns: boolean }
       is_active_user: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      link_payments_to_sales: { Args: never; Returns: number }
       me: { Args: never; Returns: Json }
+      my_company_ids: { Args: never; Returns: string[] }
       my_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
