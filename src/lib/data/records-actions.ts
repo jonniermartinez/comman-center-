@@ -25,6 +25,10 @@ function explicar(mensaje: string): string {
   if (mensaje.includes("fecha futura")) return "No se puede registrar una fecha futura."
   if (mensaje.includes("daily_activity_company_id_branch_id_report_date_staff_id_key"))
     return "Esa persona ya tiene registrada esa fecha."
+  // Pasa al editar una jornada y moverla a una fecha o persona que ya tiene la
+  // suya: el upsert intenta escribir sobre esa otra fila y choca por la llave.
+  if (mensaje.includes("daily_activity_pkey"))
+    return "Ya existe otra jornada de esa persona en esa fecha. Edita esa, o cambia la fecha."
   if (mensaje.includes("row-level security") || mensaje.includes("permission denied"))
     return "No tienes permiso para registrar en esta empresa."
   return mensaje
