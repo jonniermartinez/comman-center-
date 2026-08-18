@@ -99,12 +99,28 @@ la build remota fallará aunque la local funcione.
 
 ## Variables de entorno
 
-En local van en `.env.local` (ver `.env.example`). En Cloudflare, las públicas
-como `vars` en `wrangler.jsonc` y la clave de servicio **como secret**:
+| Archivo | Qué lleva | ¿Se versiona? |
+|---|---|---|
+| `.env.production` | Las públicas: URL del proyecto, clave publicable y URL del sitio | **Sí**. `NEXT_PUBLIC_*` termina dentro del bundle del navegador, así que no son secretas, y tenerlas versionadas hace que la build remota no dependa de configurar nada a mano |
+| `.env.local` | Lo de la máquina de desarrollo, incluida `SUPABASE_SERVICE_ROLE_KEY` | No |
+| Secret del worker | `SUPABASE_SERVICE_ROLE_KEY` en producción | — |
 
 ```bash
 npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 ```
+
+### Cuidado al desplegar desde la máquina local
+
+OpenNext **copia los archivos `.env` al bundle**, `.env.local` incluido. Si
+corres `npm run deploy` desde tu portátil, la clave de servicio queda escrita
+dentro del código desplegado en vez de vivir como secret.
+
+No es catastrófico —la clave tiene que estar disponible en tiempo de ejecución
+de todos modos— pero un secret no se puede leer desde el bundle y una variable
+incrustada sí. Lo correcto es **desplegar desde la build remota**, que clona el
+repo y por tanto no tiene `.env.local`, y registrar la clave como secret. Si
+tienes que desplegar a mano, borra o vacía `SUPABASE_SERVICE_ROLE_KEY` de
+`.env.local` antes de construir.
 
 | Variable | Dónde | Para qué |
 |---|---|---|
@@ -113,6 +129,29 @@ npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 | `SUPABASE_SERVICE_ROLE_KEY` | **solo servidor** | Admin API de Auth (invitar, bloquear) y escritura del log de auditoría. Salta RLS: nunca debe llegar al navegador |
 | `NEXT_PUBLIC_SITE_URL` | servidor | A dónde vuelven los enlaces de los correos de invitación |
 
-Al cambiar de dominio hay que actualizar `NEXT_PUBLIC_SITE_URL` y las *Redirect
-URLs* en Supabase → Authentication → URL Configuration, o los enlaces de
-invitación no regresan a la app.
+Al cambiar de dominio hay que actualizar `NEXT_PUBLIC_SITE_URL` en
+`.env.production` y las *Redirect URLs* en Supabase → Authentication → URL
+Configuration, o los enlaces de invitación no regresan a la app.
+
+## Por qué no hay proxy (middleware)
+
+En Next 16 el antiguo `middleware.ts` se llama `proxy.ts` y **solo corre en el
+runtime de Node**: la opción de runtime ni siquiera se puede declarar en ese
+archivo. OpenNext para Cloudflare no lo soporta y la build falla con
+`Node.js middleware is not currently supported`.
+
+Sus dos tareas se reparten:
+
+- **Renovar el token** lo hace el navegador. El cliente de `@supabase/ssr`
+  guarda la sesión en cookies y la renueva antes de que caduque; basta con tener
+  montado `<SessionKeeper />`, que además refresca la ruta cuando el token
+  cambia para que los Server Components lean con el token nuevo.
+- **Negar el acceso** lo hace el layout con sesión, que es donde siempre debió
+  estar: un proxy que decide permisos es una guarda más que se puede saltar por
+  una ruta no cubierta por su `matcher`. La defensa real siguen siendo las
+  políticas RLS.
+
+Queda un caso: quien vuelve después de una hora con la pestaña cerrada llega con
+la cookie vencida y el servidor lo manda al login. Ahí `<SessionBounce />` deja
+que el navegador renueve con el refresh token y lo entra derecho, sin volver a
+pedirle la contraseña.
