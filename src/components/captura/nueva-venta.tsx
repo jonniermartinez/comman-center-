@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, Save } from "lucide-react"
+import { Pencil, Plus, Save } from "lucide-react"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
@@ -27,6 +27,28 @@ export interface Catalogo {
   name: string
 }
 
+/** Una venta ya registrada, como la devuelve el listado. */
+export interface VentaExistente {
+  id: string
+  branch_id: string
+  report_date: string
+  staff_id: string | null
+  ref_credito: string | null
+  financing_code: string | null
+  product_code: string | null
+  school_code: string | null
+  state_code: string | null
+  licencia_nombre: string | null
+  licencia_id: string | null
+  licencia_celular: string | null
+  valor_inicial: number
+  descuento: number
+  valor_final: number
+  recaudo: number
+  cantidad_final: number
+  observacion: string | null
+}
+
 /**
  * Alta de una venta.
  *
@@ -44,6 +66,7 @@ export function NuevaVenta({
   estados,
   canManage,
   myStaffId,
+  registro,
 }: {
   companyId: string
   branches: { id: string; name: string; is_primary: boolean }[]
@@ -55,26 +78,29 @@ export function NuevaVenta({
   /** Quien administra registra a nombre de cualquiera; el comercial, lo suyo. */
   canManage: boolean
   myStaffId: string | null
+  /** Si viene, el formulario corrige esa venta en vez de crear una. */
+  registro?: VentaExistente
 }) {
   const hoy = todayISO()
+  const editando = !!registro
   const [open, setOpen] = useState(false)
-  const [fecha, setFecha] = useState(hoy)
-  const [staffId, setStaffId] = useState(myStaffId ?? "")
+  const [fecha, setFecha] = useState(registro?.report_date ?? hoy)
+  const [staffId, setStaffId] = useState(registro?.staff_id ?? myStaffId ?? "")
   const [branchId, setBranchId] = useState(
-    branches.find((b) => b.is_primary)?.id ?? branches[0]?.id ?? "",
+    registro?.branch_id ?? branches.find((b) => b.is_primary)?.id ?? branches[0]?.id ?? "",
   )
-  const [nombre, setNombre] = useState("")
-  const [documento, setDocumento] = useState("")
-  const [celular, setCelular] = useState("")
-  const [financiacion, setFinanciacion] = useState("")
-  const [producto, setProducto] = useState("")
-  const [escuela, setEscuela] = useState("")
-  const [estado, setEstado] = useState("")
-  const [valor, setValor] = useState(0)
-  const [descuento, setDescuento] = useState(0)
-  const [recaudo, setRecaudo] = useState(0)
-  const [cantidad, setCantidad] = useState(1)
-  const [observacion, setObservacion] = useState("")
+  const [nombre, setNombre] = useState(registro?.licencia_nombre ?? "")
+  const [documento, setDocumento] = useState(registro?.licencia_id ?? "")
+  const [celular, setCelular] = useState(registro?.licencia_celular ?? "")
+  const [financiacion, setFinanciacion] = useState(registro?.financing_code ?? "")
+  const [producto, setProducto] = useState(registro?.product_code ?? "")
+  const [escuela, setEscuela] = useState(registro?.school_code ?? "")
+  const [estado, setEstado] = useState(registro?.state_code ?? "")
+  const [valor, setValor] = useState(Number(registro?.valor_inicial ?? 0))
+  const [descuento, setDescuento] = useState(Number(registro?.descuento ?? 0))
+  const [recaudo, setRecaudo] = useState(Number(registro?.recaudo ?? 0))
+  const [cantidad, setCantidad] = useState(Number(registro?.cantidad_final ?? 1))
+  const [observacion, setObservacion] = useState(registro?.observacion ?? "")
   const [pendiente, startTransition] = useTransition()
 
   const valorFinal = Math.max(0, valor - descuento)
@@ -85,15 +111,22 @@ export function NuevaVenta({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="size-4" />
-          Nueva venta
-        </Button>
+        {editando ? (
+          <Button variant="ghost" size="icon" className="size-8">
+            <Pencil className="size-4" />
+            <span className="sr-only">Editar la venta de {registro.licencia_nombre}</span>
+          </Button>
+        ) : (
+          <Button>
+            <Plus className="size-4" />
+            Nueva venta
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Nueva venta</DialogTitle>
+          <DialogTitle>{editando ? "Editar venta" : "Nueva venta"}</DialogTitle>
           <DialogDescription>
             El crédito de un cliente: qué compró, cómo lo financió y cuánto abonó.
           </DialogDescription>
@@ -207,12 +240,15 @@ export function NuevaVenta({
             onClick={() =>
               startTransition(async () => {
                 const r = await saveSale({
+                  id: registro?.id,
                   company_id: companyId,
                   branch_id: branchId,
                   report_date: fecha,
                   staff_id: valorOpcional(staffId),
                   responsable_nombre: persona?.full_name ?? null,
-                  ref_credito: documento.trim() ? `${documento.trim()} - ${fecha}` : null,
+                  ref_credito:
+                    registro?.ref_credito ??
+                    (documento.trim() ? `${documento.trim()} - ${fecha}` : null),
                   financing_code: valorOpcional(financiacion),
                   product_code: valorOpcional(producto),
                   school_code: valorOpcional(escuela),
@@ -235,7 +271,7 @@ export function NuevaVenta({
                   toast.error(r.error ?? "No se pudo guardar la venta.")
                   return
                 }
-                toast.success("Venta registrada", {
+                toast.success(editando ? "Venta actualizada" : "Venta registrada", {
                   description: `${nombre} · ${formatCOP(valorFinal)}`,
                 })
                 setOpen(false)
@@ -243,7 +279,7 @@ export function NuevaVenta({
             }
           >
             <Save className="size-4" />
-            {pendiente ? "Guardando…" : "Guardar venta"}
+            {pendiente ? "Guardando…" : editando ? "Guardar cambios" : "Guardar venta"}
           </Button>
         </DialogFooter>
       </DialogContent>
