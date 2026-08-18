@@ -97,6 +97,23 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
   }
 }
 
+/**
+ * El nombre de un código de catálogo.
+ *
+ * Los registros guardan el código normalizado (`en_proceso`, `50_50`) porque es
+ * estable y no cambia si alguien corrige una tilde. En pantalla eso no se
+ * enseña: va el nombre del catálogo, que es como lo llama el equipo. Si el
+ * código no está en el catálogo se muestra tal cual, que es más útil que dejar
+ * la celda vacía.
+ */
+export function nombreDe(
+  catalogo: { code: string; name: string }[],
+  code: string | null | undefined,
+): string {
+  if (!code) return "—"
+  return catalogo.find((c) => c.code === code)?.name ?? code
+}
+
 /** Conserva los filtros al cambiar de página. */
 export function construirHref(
   base: string,

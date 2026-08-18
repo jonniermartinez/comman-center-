@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { construirHref, getCompanyContext } from "@/lib/data/company"
+import { construirHref, getCompanyContext, nombreDe } from "@/lib/data/company"
 import { leerFiltros, listSales, totalesVentas } from "@/lib/data/records"
 import { formatCOP, formatDate } from "@/lib/format"
 
@@ -109,17 +109,21 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
                   {v.licencia_id ?? ""} · {sede(v.branch_id)}
                 </p>
               </TableCell>
-              <TableCell className="text-xs uppercase">{v.product_code ?? "—"}</TableCell>
-              <TableCell className="text-xs">{v.financing_code ?? "—"}</TableCell>
+              <TableCell className="text-sm">
+                {nombreDe(company.productos, v.product_code)}
+              </TableCell>
+              <TableCell className="text-sm">
+                {nombreDe(company.financiaciones, v.financing_code)}
+              </TableCell>
               <TableCell className="max-w-40 truncate text-sm">
                 {v.responsable_nombre ?? "—"}
               </TableCell>
               <TableCell>
                 <Badge
                   variant={v.state_code === "certificado" ? "default" : "outline"}
-                  className="text-[10px]"
+                  className="text-[10px] whitespace-nowrap"
                 >
-                  {v.state_code ?? "—"}
+                  {nombreDe(company.estados, v.state_code)}
                 </Badge>
               </TableCell>
               <TableCell className="text-right font-medium tabular-nums">

@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { construirHref, getCompanyContext } from "@/lib/data/company"
+import { construirHref, getCompanyContext, nombreDe } from "@/lib/data/company"
 import { leerFiltros, listCashMovements } from "@/lib/data/records"
 import { formatCOP, formatDate } from "@/lib/format"
 
@@ -100,14 +100,18 @@ export default async function CajaPage({ params, searchParams }: PageProps<"/e/[
                   {m.kind === "entrada" ? "Entrada" : "Salida"}
                 </Badge>
               </TableCell>
-              <TableCell className="text-xs">{m.concept_code ?? "—"}</TableCell>
+              <TableCell className="text-sm">
+                {nombreDe(company.conceptosCaja, m.concept_code)}
+              </TableCell>
               <TableCell>
                 <p className="max-w-56 truncate text-sm">{m.nombre ?? "—"}</p>
                 <p className="truncate text-xs text-muted-foreground">
                   {m.responsable_nombre ?? ""}
                 </p>
               </TableCell>
-              <TableCell className="text-xs">{m.method_code ?? "—"}</TableCell>
+              <TableCell className="text-sm">
+                {nombreDe(company.mediosPago, m.method_code)}
+              </TableCell>
               <TableCell className="text-xs text-muted-foreground">{m.factura ?? "—"}</TableCell>
               <TableCell
                 className={

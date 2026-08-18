@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { construirHref, getCompanyContext } from "@/lib/data/company"
+import { construirHref, getCompanyContext, nombreDe } from "@/lib/data/company"
 import { leerFiltros, listPayments } from "@/lib/data/records"
 import { formatCOP, formatDate } from "@/lib/format"
 
@@ -114,7 +114,9 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
                   </Badge>
                 )}
               </TableCell>
-              <TableCell className="text-xs">{p.method_code ?? "—"}</TableCell>
+              <TableCell className="text-sm">
+                {nombreDe(company.mediosPago, p.method_code)}
+              </TableCell>
               <TableCell className="text-xs text-muted-foreground">{p.recibo ?? "—"}</TableCell>
               <TableCell className="text-right font-medium tabular-nums">
                 {formatCOP(Number(p.amount))}
