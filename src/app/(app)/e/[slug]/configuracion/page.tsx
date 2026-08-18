@@ -1,11 +1,13 @@
 "use client"
 
-import { Archive, Save } from "lucide-react"
+import { Archive, Save, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
 
 import { useActiveCompany } from "@/components/company-guard"
+import { DeleteCompanyDialog } from "@/components/delete-company-dialog"
+import { LogoUploader } from "@/components/logo-uploader"
 import { CityCombobox } from "@/components/city-combobox"
 import { PageHeader } from "@/components/page-header"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -30,7 +32,7 @@ import {
   setCompanyCatalog,
   setCompanyModules,
   updateCompany,
-} from "@/lib/store/actions"
+} from "@/lib/data/companies-actions"
 import { useCanManage, useDb, useIsSuperAdmin } from "@/lib/store/hooks"
 import { MODULES, type ModuleCode } from "@/lib/store/types"
 import { cn } from "@/lib/utils"
@@ -50,6 +52,7 @@ export default function ConfiguracionPage() {
   const [department, setDepartment] = useState(company.department ?? "")
   const [crmLabel, setCrmLabel] = useState(company.crm_label ?? "")
   const [accent, setAccent] = useState(company.accent_color)
+  const [borrando, setBorrando] = useState(false)
 
   const modulosActivos = db.company_modules
     .filter((m) => m.company_id === company.id)
@@ -82,11 +85,15 @@ export default function ConfiguracionPage() {
     return db.sales_entries.filter((s) => s.company_id === company.id).length
   }
 
-  function toggleModule(code: ModuleCode) {
+  async function toggleModule(code: ModuleCode) {
     const next = modulosActivos.includes(code)
       ? modulosActivos.filter((m) => m !== code)
       : [...modulosActivos, code]
-    setCompanyModules(company.id, next)
+    const r = await setCompanyModules(company.id, next)
+    if (!r.ok) {
+      toast.error(r.error)
+      return
+    }
     toast.success(
       modulosActivos.includes(code) ? "Módulo deshabilitado" : "Módulo habilitado",
       {
@@ -97,12 +104,13 @@ export default function ConfiguracionPage() {
     )
   }
 
-  function toggleCatalog(kind: "financing" | "payment", code: string) {
+  async function toggleCatalog(kind: "financing" | "payment", code: string) {
     const current = kind === "financing" ? financiacionesActivas : mediosActivos
     const next = current.includes(code)
       ? current.filter((c) => c !== code)
       : [...current, code]
-    setCompanyCatalog(company.id, kind, next)
+    const r = await setCompanyCatalog(company.id, kind, next)
+    if (!r.ok) toast.error(r.error)
   }
 
   return (
@@ -117,6 +125,11 @@ export default function ConfiguracionPage() {
           <CardTitle className="text-base">Datos de la empresa</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-2 border-b pb-4">
+            <Label>Logo</Label>
+            <LogoUploader company={company} />
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="name">Nombre</Label>
@@ -168,16 +181,17 @@ export default function ConfiguracionPage() {
 
           <div className="flex justify-end border-t pt-4">
             <Button
-              onClick={() => {
-                updateCompany(company.id, {
+              onClick={async () => {
+                const r = await updateCompany(company.id, {
                   name: name.trim() || company.name,
-                  nit: nit.trim() || undefined,
-                  city: city.trim() || undefined,
-                  department: department.trim() || undefined,
-                  crm_label: crmLabel.trim() || undefined,
+                  nit: nit.trim() || null,
+                  city: city.trim() || null,
+                  department: department.trim() || null,
+                  crm_label: crmLabel.trim() || null,
                   accent_color: accent,
                 })
-                toast.success("Datos actualizados")
+                if (r.ok) toast.success("Datos actualizados")
+                else toast.error(r.error)
               }}
             >
               <Save className="size-4" />
@@ -279,7 +293,7 @@ export default function ConfiguracionPage() {
       {isSuperAdmin && company.status === "activa" && (
         <Card className="border-destructive/40">
           <CardHeader>
-            <CardTitle className="text-base">Archivar empresa</CardTitle>
+            <CardTitle className="text-base">Zona de riesgo</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
             <p className="max-w-md text-sm text-muted-foreground">
@@ -305,8 +319,12 @@ export default function ConfiguracionPage() {
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={() => {
-                      archiveCompany(company.id)
+                    onClick={async () => {
+                      const r = await archiveCompany(company.id, true)
+                      if (!r.ok) {
+                        toast.error(r.error)
+                        return
+                      }
                       toast.success(`${company.name} archivada`)
                       router.push("/empresas")
                     }}
@@ -317,8 +335,27 @@ export default function ConfiguracionPage() {
               </AlertDialogContent>
             </AlertDialog>
           </CardContent>
+
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+            <p className="max-w-md text-sm text-muted-foreground">
+              Eliminar borra la empresa <strong>y todos sus datos</strong>: sedes, registros
+              diarios, ventas, facturación, recaudo y objetivos. No se puede deshacer, y solo lo
+              puede hacer un super admin.
+            </p>
+            <Button variant="destructive" onClick={() => setBorrando(true)}>
+              <Trash2 className="size-4" />
+              Eliminar empresa
+            </Button>
+          </CardContent>
         </Card>
       )}
+
+      <DeleteCompanyDialog
+        companyId={company.id}
+        companyName={company.name}
+        open={borrando}
+        onOpenChange={setBorrando}
+      />
     </div>
   )
 }

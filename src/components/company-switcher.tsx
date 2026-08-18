@@ -4,6 +4,7 @@ import { Building2, Check, ChevronsUpDown, LayoutGrid, Plus, Users } from "lucid
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
+import { CompanyAvatar } from "@/components/company-avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,17 +37,17 @@ export function CompanySwitcher({ current }: { current?: Company }) {
           type="button"
           className="flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:bg-accent/40 data-[state=open]:bg-accent/40"
         >
-          <span
-            aria-hidden
-            className="flex size-[34px] shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-            style={{
-              background: current
-                ? `linear-gradient(to bottom, ${current.accent_color}, ${current.accent_color}cc)`
-                : "linear-gradient(to bottom, #0f172a, #334155)",
-            }}
-          >
-            {current ? current.name.slice(0, 2).toUpperCase() : "CC"}
-          </span>
+          {current ? (
+            <CompanyAvatar company={current} size={34} className="rounded-lg" />
+          ) : (
+            <span
+              aria-hidden
+              className="flex size-[34px] shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
+              style={{ background: "linear-gradient(to bottom, #0f172a, #334155)" }}
+            >
+              CC
+            </span>
+          )}
 
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold">
