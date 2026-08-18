@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, Save, Search } from "lucide-react"
+import { Pencil, Plus, Save, Search } from "lucide-react"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
@@ -29,24 +29,57 @@ import { formatCOP, formatDate, todayISO } from "@/lib/format"
  * el crédito al que pertenece, no sirve para saber cuánto debe el cliente, que
  * es justamente para lo que se lleva esta hoja.
  */
+/** Un pago ya registrado, como lo devuelve el listado. */
+export interface PagoExistente {
+  id: string
+  branch_id: string
+  sale_id: string | null
+  ref_credito: string | null
+  report_date: string
+  titular_id: string | null
+  titular_nombre: string | null
+  amount: number
+  method_code: string | null
+  recibo: string | null
+}
+
 export function NuevoPago({
   companyId,
   branches,
   mediosPago,
+  registro,
 }: {
   companyId: string
   branches: { id: string; name: string; is_primary: boolean }[]
   mediosPago: { code: string; name: string }[]
+  /** Si viene, el formulario corrige ese abono en vez de crear uno. */
+  registro?: PagoExistente
 }) {
   const hoy = todayISO()
+  const editando = !!registro
   const [open, setOpen] = useState(false)
   const [busqueda, setBusqueda] = useState("")
   const [resultados, setResultados] = useState<VentaBuscada[]>([])
-  const [venta, setVenta] = useState<VentaBuscada | null>(null)
-  const [fecha, setFecha] = useState(hoy)
-  const [monto, setMonto] = useState(0)
-  const [medio, setMedio] = useState("")
-  const [recibo, setRecibo] = useState("")
+  // Al corregir no se vuelve a buscar la venta: el abono ya está colgado de la
+  // suya y cambiarla sería otro pago, no una corrección.
+  const [venta, setVenta] = useState<VentaBuscada | null>(
+    registro
+      ? {
+          id: registro.sale_id ?? "",
+          branch_id: registro.branch_id,
+          ref_credito: registro.ref_credito,
+          cliente: registro.titular_nombre ?? "—",
+          documento: registro.titular_id ?? "",
+          report_date: registro.report_date,
+          valor_final: 0,
+          saldo: 0,
+        }
+      : null,
+  )
+  const [fecha, setFecha] = useState(registro?.report_date ?? hoy)
+  const [monto, setMonto] = useState(Number(registro?.amount ?? 0))
+  const [medio, setMedio] = useState(registro?.method_code ?? "")
+  const [recibo, setRecibo] = useState(registro?.recibo ?? "")
   const [buscando, startBusqueda] = useTransition()
   const [pendiente, startTransition] = useTransition()
 
@@ -69,15 +102,22 @@ export function NuevoPago({
       }}
     >
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="size-4" />
-          Registrar pago
-        </Button>
+        {editando ? (
+          <Button variant="ghost" size="icon" className="size-8">
+            <Pencil className="size-4" />
+            <span className="sr-only">Editar el pago de {registro.titular_nombre}</span>
+          </Button>
+        ) : (
+          <Button>
+            <Plus className="size-4" />
+            Registrar pago
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Registrar pago</DialogTitle>
+          <DialogTitle>{editando ? "Editar pago" : "Registrar pago"}</DialogTitle>
           <DialogDescription>Un abono contra el crédito de un cliente.</DialogDescription>
         </DialogHeader>
 
@@ -91,11 +131,13 @@ export function NuevoPago({
                     {venta.documento} · {formatDate(venta.report_date)}
                   </p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setVenta(null)}>
-                  Cambiar
-                </Button>
+                {!editando && (
+                  <Button variant="ghost" size="sm" onClick={() => setVenta(null)}>
+                    Cambiar
+                  </Button>
+                )}
               </div>
-              <div className="mt-2 flex gap-6 border-t pt-2 text-sm">
+              <div className={editando ? "hidden" : "mt-2 flex gap-6 border-t pt-2 text-sm"}>
                 <span>
                   Valor: <strong className="tabular-nums">{formatCOP(venta.valor_final)}</strong>
                 </span>
@@ -227,9 +269,10 @@ export function NuevoPago({
                 if (!venta) return
                 const { savePayment } = await import("@/lib/data/records-actions")
                 const r = await savePayment({
+                  id: registro?.id,
                   company_id: companyId,
                   branch_id: venta.branch_id,
-                  sale_id: venta.id,
+                  sale_id: venta.id || null,
                   ref_credito: venta.ref_credito,
                   report_date: fecha,
                   titular_id: venta.documento,
@@ -242,16 +285,16 @@ export function NuevoPago({
                   toast.error(r.error ?? "No se pudo guardar el pago.")
                   return
                 }
-                toast.success("Pago registrado", {
+                toast.success(editando ? "Pago actualizado" : "Pago registrado", {
                   description: `${venta.cliente} · ${formatCOP(monto)}`,
                 })
-                limpiar()
+                if (!editando) limpiar()
                 setOpen(false)
               })
             }
           >
             <Save className="size-4" />
-            {pendiente ? "Guardando…" : "Guardar pago"}
+            {pendiente ? "Guardando…" : editando ? "Guardar cambios" : "Guardar pago"}
           </Button>
         </DialogFooter>
       </DialogContent>
