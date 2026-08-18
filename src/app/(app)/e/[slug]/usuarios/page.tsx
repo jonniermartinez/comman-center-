@@ -1,13 +1,13 @@
 "use client"
 
-import { UserMinus, UserPlus, Users } from "lucide-react"
-import Link from "next/link"
-import { useState } from "react"
+import { Info, Link2, MapPin, Trash2, UserPlus } from "lucide-react"
+import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
 import { useActiveCompany } from "@/components/company-guard"
+import { CrearCuentasDialog } from "@/components/crear-cuentas-dialog"
 import { PageHeader } from "@/components/page-header"
-import { SectionCard, SectionCardHeader } from "@/components/section-card"
+import { SectionCard } from "@/components/section-card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -18,7 +18,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -32,6 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -48,43 +48,54 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  addStaffToCompany,
+  linkStaffToProfile,
+  removeStaffFromCompany,
+  setStaffBranch,
+} from "@/lib/data/staff-actions"
 import { initials } from "@/lib/format"
-import { assignUserToCompany, unassignUserFromCompany } from "@/lib/data/branches-actions"
 import {
   useCanManage,
   useCompanyBranches,
   useCompanyMembers,
   useDb,
+  useIsSuperAdmin,
 } from "@/lib/store/hooks"
-import { ROLE_LABELS, STATUS_LABELS, type UserRole } from "@/lib/store/types"
 
-export default function UsuariosEmpresaPage() {
+/**
+ * Equipo de la empresa.
+ *
+ * Son personas, no cuentas de usuario. La mayoría del equipo nunca va a entrar
+ * a la aplicación —en el histórico son 128 comerciales— pero todos tienen que
+ * poder figurar como responsables de una venta o una jornada. Quien sí necesite
+ * entrar se enlaza con su cuenta desde acá.
+ */
+export default function EquipoPage() {
   const company = useActiveCompany()
   const db = useDb()
-  const members = useCompanyMembers(company.id)
   const branches = useCompanyBranches(company.id)
+  const members = useCompanyMembers(company.id)
   const canManage = useCanManage(company.id)
+  const isSuperAdmin = useIsSuperAdmin()
 
-  const [open, setOpen] = useState(false)
-  const [pick, setPick] = useState("")
-  const [role, setRole] = useState<Exclude<UserRole, "super_admin">>("asesor")
-  const [branch, setBranch] = useState(
-    () => branches.find((b) => b.is_primary)?.id ?? branches[0]?.id ?? "",
-  )
+  const [aQuitar, setAQuitar] = useState<{ id: string; full_name: string } | null>(null)
+  const [, startTransition] = useTransition()
 
-  // Solo se pueden asignar usuarios activos o invitados que no estén ya en la empresa.
-  const disponibles = db.profiles.filter(
-    (p) =>
-      !p.deleted_at &&
-      p.role !== "super_admin" &&
-      !members.some((m) => m.id === p.id),
-  )
+  function correr(accion: () => Promise<{ ok: boolean; error?: string }>, exito: string) {
+    startTransition(async () => {
+      const r = await accion()
+      if (r.ok) toast.success(exito)
+      else toast.error(r.error ?? "No se pudo completar la acción.")
+    })
+  }
 
   if (!canManage) {
     return (
       <Alert>
+        <Info />
         <AlertDescription>
-          Gestionar usuarios de {company.name} requiere rol de coordinador o super admin.
+          El equipo lo administra un coordinador o el super admin.
         </AlertDescription>
       </Alert>
     )
@@ -94,173 +105,67 @@ export default function UsuariosEmpresaPage() {
     <>
       <PageHeader
         title="Equipo"
-        description={`Comerciales de ${company.name}, su sede y su rol. Los usuarios se crean en el módulo de plataforma y acá se asignan a una sede.`}
+        description={`Comerciales de ${company.name}. Cada uno pertenece a una sede: es donde quedan sus registros.`}
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" disabled={disponibles.length === 0}>
-                <UserPlus className="size-4" />
-                Asignar usuario
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Asignar usuario a {company.name}</DialogTitle>
-                <DialogDescription>
-                  El usuario podrá ver esta empresa y registrar sus formularios.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="usuario">Usuario</Label>
-                  <Select value={pick} onValueChange={setPick}>
-                    <SelectTrigger id="usuario">
-                      <SelectValue placeholder="Elige un usuario" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {disponibles.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.full_name} · {p.email}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sede">Sede</Label>
-                  <Select
-                    value={role === "coordinador" ? branch || "empresa" : branch}
-                    onValueChange={setBranch}
-                  >
-                    <SelectTrigger id="sede">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.name}
-                          {b.is_primary ? " · principal" : ""}
-                        </SelectItem>
-                      ))}
-                      {role === "coordinador" && (
-                        <SelectItem value="empresa">Toda la empresa</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    El asesor registra en su sede. Un coordinador puede supervisar toda la empresa.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="rol">Rol en esta empresa</Label>
-                  <Select
-                    value={role}
-                    onValueChange={(v) => setRole(v as Exclude<UserRole, "super_admin">)}
-                  >
-                    <SelectTrigger id="rol">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="asesor">
-                        Asesor — llena sus formularios y ve sus KPIs
-                      </SelectItem>
-                      <SelectItem value="coordinador">
-                        Coordinador — ve todo y define objetivos
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button
-                  disabled={!pick}
-                  onClick={async () => {
-                    const sedeId = branch === "empresa" ? null : branch
-                    const r = await assignUserToCompany(company.id, pick, role, sedeId)
-                    if (!r.ok) {
-                      toast.error(r.error)
-                      return
-                    }
-                    const nombre = db.profiles.find((p) => p.id === pick)?.full_name
-                    const sedeNombre = branches.find((b) => b.id === sedeId)?.name
-                    toast.success(`${nombre} asignado a ${company.name}`, {
-                      description: sedeNombre ?? "Supervisa toda la empresa",
-                    })
-                    setPick("")
-                    setOpen(false)
-                  }}
-                >
-                  Asignar
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <>
+            {isSuperAdmin && (
+              <CrearCuentasDialog
+                companyId={company.id}
+                pendientes={members.filter((m) => !m.profile_id).length}
+              />
+            )}
+            <NuevoComercialDialog companyId={company.id} branches={branches} />
+          </>
         }
       />
 
+      <Alert className="mb-4">
+        <Info />
+        <AlertDescription>
+          Un comercial existe tenga o no cuenta de acceso. Quitarlo del equipo no borra nada: sus
+          ventas y sus jornadas siguen en el sistema a su nombre.
+        </AlertDescription>
+      </Alert>
+
       <SectionCard>
-        <SectionCardHeader
-          icon={Users}
-          title={`${members.length} comercial${members.length === 1 ? "" : "es"}`}
-          description={`${branches.length} sede${branches.length === 1 ? "" : "s"}`}
-        />
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Usuario</TableHead>
-                <TableHead>Sede</TableHead>
-                <TableHead>Rol en la empresa</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Registros</TableHead>
+                <TableHead>Comercial</TableHead>
+                <TableHead className="w-52">Sede</TableHead>
+                <TableHead className="w-64">Cuenta de acceso</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {members.map((member) => {
-                const registros =
-                  db.daily_kpi.filter(
-                    (k) => k.company_id === company.id && k.user_id === member.id,
-                  ).length +
-                  db.daily_management.filter(
-                    (d) => d.company_id === company.id && d.user_id === member.id,
-                  ).length
-
+              {members.map((m) => {
+                const cuenta = db.profiles.find((p) => p.id === m.profile_id)
                 return (
-                  <TableRow key={member.id}>
+                  <TableRow key={m.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="size-7 rounded-sm">
                           <AvatarFallback className="rounded-sm text-[10px]">
-                            {initials(member.full_name)}
+                            {initials(m.full_name)}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{member.full_name}</p>
-                          <p className="truncate text-xs text-muted-foreground">{member.email}</p>
-                        </div>
+                        <span className="truncate text-sm font-medium">{m.full_name}</span>
                       </div>
                     </TableCell>
+
                     <TableCell>
                       <Select
-                        value={member.branchId ?? "empresa"}
-                        onValueChange={async (v) => {
-                          const r = await assignUserToCompany(
-                            company.id,
-                            member.id,
-                            member.companyRole,
-                            v === "empresa" ? null : v,
+                        value={m.branchId ?? "empresa"}
+                        onValueChange={(v) =>
+                          correr(
+                            () =>
+                              setStaffBranch(company.id, m.id, v === "empresa" ? null : v),
+                            `${m.full_name} movido de sede`,
                           )
-                          if (!r.ok) toast.error(r.error)
-                        }}
+                        }
                       >
-                        <SelectTrigger size="sm" className="w-40">
+                        <SelectTrigger size="sm" className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -269,92 +174,67 @@ export default function UsuariosEmpresaPage() {
                               {b.name}
                             </SelectItem>
                           ))}
-                          {member.companyRole === "coordinador" && (
-                            <SelectItem value="empresa">Toda la empresa</SelectItem>
-                          )}
+                          <SelectItem value="empresa">Toda la empresa</SelectItem>
                         </SelectContent>
                       </Select>
                     </TableCell>
 
                     <TableCell>
-                      <Select
-                        value={member.companyRole}
-                        onValueChange={async (v) => {
-                          const r = await assignUserToCompany(
-                            company.id,
-                            member.id,
-                            v as Exclude<UserRole, "super_admin">,
-                            member.branchId,
-                          )
-                          if (!r.ok) toast.error(r.error)
-                        }}
+                      {isSuperAdmin ? (
+                        <Select
+                          value={m.profile_id ?? "ninguna"}
+                          onValueChange={(v) =>
+                            correr(
+                              () => linkStaffToProfile(m.id, v === "ninguna" ? null : v),
+                              v === "ninguna"
+                                ? `${m.full_name} quedó sin cuenta enlazada`
+                                : `${m.full_name} enlazado con su cuenta`,
+                            )
+                          }
+                        >
+                          <SelectTrigger size="sm" className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ninguna">Sin cuenta</SelectItem>
+                            {db.profiles
+                              .filter((p) => !p.deleted_at)
+                              .map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.full_name} · {p.email}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      ) : cuenta ? (
+                        <Badge variant="secondary" className="gap-1 text-[10px]">
+                          <Link2 className="size-3" />
+                          {cuenta.email}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Sin cuenta</span>
+                      )}
+                    </TableCell>
+
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        onClick={() => setAQuitar({ id: m.id, full_name: m.full_name })}
                       >
-                        <SelectTrigger size="sm" className="w-36">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="asesor">Asesor</SelectItem>
-                          <SelectItem value="coordinador">Coordinador</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={member.status === "activo" ? "default" : "outline"}>
-                        {STATUS_LABELS[member.status]}
-                      </Badge>
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {ROLE_LABELS[member.role]} global
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{registros}</TableCell>
-                    <TableCell>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-8">
-                            <UserMinus className="size-4" />
-                            <span className="sr-only">Quitar de la empresa</span>
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              ¿Quitar a {member.full_name} de {company.name}?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Deja de ver esta empresa y de poder registrar en ella. Sus{" "}
-                              {registros} registro(s) históricos se conservan a su nombre y siguen
-                              apareciendo en los reportes. Puedes volver a asignarlo cuando quieras.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={async () => {
-                                const r = await unassignUserFromCompany(company.id, member.id)
-                                if (r.ok) {
-                                  toast.success(`${member.full_name} quitado de ${company.name}`)
-                                } else {
-                                  toast.error(r.error)
-                                }
-                              }}
-                            >
-                              Quitar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                        <Trash2 className="size-4" />
+                        <span className="sr-only">Quitar a {m.full_name} del equipo</span>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 )
               })}
+
               {members.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                    Sin usuarios asignados. Usa &ldquo;Asignar usuario&rdquo; o{" "}
-                    <Link href="/admin/usuarios" className="underline">
-                      crea uno nuevo
-                    </Link>
-                    .
+                  <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+                    {company.name} todavía no tiene comerciales. Agrega el primero.
                   </TableCell>
                 </TableRow>
               )}
@@ -362,6 +242,159 @@ export default function UsuariosEmpresaPage() {
           </Table>
         </div>
       </SectionCard>
+
+      <AlertDialog open={!!aQuitar} onOpenChange={(o) => !o && setAQuitar(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Quitar a {aQuitar?.full_name} del equipo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deja de aparecer como responsable para registros nuevos de {company.name}. Sus
+              ventas y jornadas anteriores se conservan a su nombre y siguen contando en los
+              reportes. Puedes volver a agregarlo cuando quieras.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!aQuitar) return
+                correr(
+                  () => removeStaffFromCompany(company.id, aQuitar.id),
+                  `${aQuitar.full_name} salió del equipo`,
+                )
+                setAQuitar(null)
+              }}
+            >
+              Quitar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
+  )
+}
+
+function NuevoComercialDialog({
+  companyId,
+  branches,
+}: {
+  companyId: string
+  branches: { id: string; name: string }[]
+}) {
+  const db = useDb()
+  const [open, setOpen] = useState(false)
+  const [nombre, setNombre] = useState("")
+  const [existente, setExistente] = useState("nuevo")
+  const [sede, setSede] = useState(branches[0]?.id ?? "")
+  const [pendiente, startTransition] = useTransition()
+
+  // Personas que ya están en el sistema por otra empresa: reutilizarlas evita
+  // tener a la misma persona dos veces con métricas partidas.
+  const yaEnEmpresa = new Set(
+    db.company_staff.filter((cs) => cs.company_id === companyId).map((cs) => cs.staff_id),
+  )
+  const disponibles = db.staff.filter((s) => s.active && !yaEnEmpresa.has(s.id))
+
+  const valido = existente !== "nuevo" || nombre.trim().length > 2
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm">
+          <UserPlus className="size-4" />
+          Agregar comercial
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Agregar comercial</DialogTitle>
+          <DialogDescription>
+            Puede ser alguien nuevo o alguien que ya trabaja en otra empresa.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Persona</Label>
+            <Select value={existente} onValueChange={setExistente}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nuevo">Alguien nuevo</SelectItem>
+                {disponibles.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {existente === "nuevo" && (
+            <div className="space-y-2">
+              <Label htmlFor="nombre">Nombre completo</Label>
+              <Input
+                id="nombre"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Apellido Nombre"
+              />
+              <p className="text-xs text-muted-foreground">
+                Como se escribe en los reportes: apellido primero, igual que en el Excel.
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="sede">
+              <MapPin className="size-3.5" />
+              Sede
+            </Label>
+            <Select value={sede} onValueChange={setSede}>
+              <SelectTrigger id="sede" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancelar
+          </Button>
+          <Button
+            disabled={!valido || pendiente}
+            onClick={() =>
+              startTransition(async () => {
+                const r = await addStaffToCompany({
+                  company_id: companyId,
+                  branch_id: sede || null,
+                  staff_id: existente === "nuevo" ? undefined : existente,
+                  full_name: existente === "nuevo" ? nombre : undefined,
+                })
+                if (!r.ok) {
+                  toast.error(r.error)
+                  return
+                }
+                toast.success("Comercial agregado")
+                setNombre("")
+                setExistente("nuevo")
+                setOpen(false)
+              })
+            }
+          >
+            {pendiente ? "Agregando…" : "Agregar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
