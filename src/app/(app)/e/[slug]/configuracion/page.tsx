@@ -76,15 +76,6 @@ export default function ConfiguracionPage() {
     )
   }
 
-  /** Cuenta los registros que dependen de un módulo, para avisar antes de apagarlo. */
-  function registrosDe(module: ModuleCode): number {
-    if (module === "kpi_diario")
-      return db.daily_kpi.filter((k) => k.company_id === company.id).length
-    if (module === "gestion_diaria")
-      return db.daily_management.filter((d) => d.company_id === company.id).length
-    return db.sales_entries.filter((s) => s.company_id === company.id).length
-  }
-
   async function toggleModule(code: ModuleCode) {
     const next = modulosActivos.includes(code)
       ? modulosActivos.filter((m) => m !== code)
@@ -212,7 +203,6 @@ export default function ConfiguracionPage() {
         <CardContent className="space-y-2">
           {MODULES.map((m) => {
             const activo = modulosActivos.includes(m.code)
-            const registros = registrosDe(m.code)
             return (
               <label
                 key={m.code}
@@ -229,10 +219,9 @@ export default function ConfiguracionPage() {
                 <span className="space-y-0.5">
                   <span className="block text-sm font-medium">{m.name}</span>
                   <span className="block text-xs text-muted-foreground">{m.description}</span>
-                  {activo && registros > 0 && (
+                  {activo && (
                     <span className="block text-xs text-muted-foreground">
-                      {registros} registro(s) guardados. Deshabilitarlo solo lo oculta del menú: los
-                      datos no se borran.
+                      Deshabilitarlo solo lo oculta del menú: los datos no se borran.
                     </span>
                   )}
                 </span>
