@@ -15,6 +15,29 @@
 -- dentro de una política no dispare las políticas de esas mismas
 -- tablas (recursión infinita).
 -- ------------------------------------------------------------
+-- Rol y estado propios. Se leen por función y no por subconsulta dentro de la
+-- política: una subconsulta a profiles dentro de una política DE profiles
+-- vuelve a evaluar la política y entra en recursión.
+create or replace function my_role()
+returns user_role
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select role from profiles where id = (select auth.uid());
+$$;
+
+create or replace function my_status()
+returns user_status
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select status from profiles where id = (select auth.uid());
+$$;
+
 create or replace function is_super_admin()
 returns boolean
 language sql
@@ -24,7 +47,7 @@ set search_path = public
 as $$
   select exists (
     select 1 from profiles
-    where id = auth.uid()
+    where id = (select auth.uid())
       and role = 'super_admin'
       and deleted_at is null
       and status = 'activo'
@@ -40,7 +63,7 @@ set search_path = public
 as $$
   select exists (
     select 1 from profiles
-    where id = auth.uid() and deleted_at is null and status = 'activo'
+    where id = (select auth.uid()) and deleted_at is null and status = 'activo'
   );
 $$;
 
@@ -56,7 +79,7 @@ as $$
   from company_users cu
   join profiles p on p.id = cu.user_id
   where cu.company_id = target_company
-    and cu.user_id = auth.uid()
+    and cu.user_id = (select auth.uid())
     and cu.removed_at is null
     and p.deleted_at is null
     and p.status = 'activo'
@@ -89,7 +112,7 @@ as $$
     select 1
     from company_users mine
     join company_users theirs on theirs.company_id = mine.company_id
-    where mine.user_id = auth.uid()
+    where mine.user_id = (select auth.uid())
       and mine.removed_at is null
       and theirs.user_id = target_user
       and theirs.removed_at is null
@@ -161,18 +184,18 @@ $$;
 -- ============================================================
 create policy profiles_select on profiles
   for select using (
-    id = auth.uid()
+    id = (select auth.uid())
     or is_super_admin()
     or (is_active_user() and shares_company(id))
   );
 
 create policy profiles_update_propio on profiles
-  for update using (id = auth.uid() and is_active_user())
+  for update using (id = (select auth.uid()) and is_active_user())
   with check (
-    id = auth.uid()
+    id = (select auth.uid())
     -- nadie se cambia su propio rol ni se resucita a sí mismo
-    and role   = (select role   from profiles where id = auth.uid())
-    and status = (select status from profiles where id = auth.uid())
+    and role   = my_role()
+    and status = my_status()
   );
 
 create policy profiles_super_admin_insert on profiles
@@ -260,7 +283,7 @@ $$;
 -- fallaría en producción con un error de permisos.
 -- ============================================================
 create policy company_users_select on company_users
-  for select using (is_super_admin() or has_company_access(company_id) or user_id = auth.uid());
+  for select using (is_super_admin() or has_company_access(company_id) or user_id = (select auth.uid()));
 
 create policy company_users_insert on company_users
   for insert with check (can_manage_company(company_id));
@@ -289,13 +312,13 @@ begin
     execute format(
       'create policy %I_insert on %I for insert with check (
          has_company_access(company_id)
-         and (can_manage_company(company_id) or user_id = auth.uid())
+         and (can_manage_company(company_id) or user_id = (select auth.uid()))
        )', t, t);
 
     execute format(
       'create policy %I_update on %I for update using (
          can_manage_company(company_id)
-         or (user_id = auth.uid() and has_company_access(company_id))
+         or (user_id = (select auth.uid()) and has_company_access(company_id))
        )', t, t);
   end loop;
 end;
@@ -314,13 +337,13 @@ begin
     execute format(
       'create policy %I_insert on %I for insert with check (
          has_company_access(company_id)
-         and (can_manage_company(company_id) or user_id = auth.uid())
+         and (can_manage_company(company_id) or user_id = (select auth.uid()))
        )', t, t);
 
     execute format(
       'create policy %I_update on %I for update using (
          can_manage_company(company_id)
-         or (user_id = auth.uid() and has_company_access(company_id))
+         or (user_id = (select auth.uid()) and has_company_access(company_id))
        )', t, t);
   end loop;
 end;
@@ -367,7 +390,7 @@ security definer
 set search_path = public
 as $$
 declare
-  actor uuid := auth.uid();
+  actor uuid := (select auth.uid());
 begin
   if not is_super_admin() then
     raise exception 'Solo el super admin puede eliminar usuarios';
@@ -399,7 +422,7 @@ security definer
 set search_path = public
 as $$
 declare
-  actor uuid := auth.uid();
+  actor uuid := (select auth.uid());
 begin
   if not is_super_admin() then
     raise exception 'Solo el super admin puede restaurar usuarios';

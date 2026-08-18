@@ -204,7 +204,6 @@ create table daily_kpi (
   updated_at            timestamptz not null default now(),
 
   unique (company_id, branch_id, report_date, user_id, jornada),
-  constraint dk_no_futuro       check (report_date <= current_date),
   constraint dk_contestadas     check (llamadas_contestadas <= llamadas_realizadas),
   constraint dk_agendas         check (atencion_agendas     <= agendas_dia),
   constraint dk_presencial      check (ventas_exitosas      <= clientes_atendidos)
@@ -236,8 +235,7 @@ create table daily_management (
   updated_by          uuid        references profiles (id),
   updated_at          timestamptz not null default now(),
 
-  unique (company_id, branch_id, report_date, user_id, jornada),
-  constraint dm_no_futuro check (report_date <= current_date)
+  unique (company_id, branch_id, report_date, user_id, jornada)
 );
 
 create index daily_management_empresa_fecha_idx on daily_management (company_id, report_date desc);
@@ -265,9 +263,7 @@ create table sales_entries (
   created_by          uuid        references profiles (id),
   created_at          timestamptz not null default now(),
   updated_by          uuid        references profiles (id),
-  updated_at          timestamptz not null default now(),
-
-  constraint se_no_futuro check (report_date <= current_date)
+  updated_at          timestamptz not null default now()
 );
 
 -- Una línea por combinación. COALESCE porque user_id puede ser null.
@@ -289,9 +285,7 @@ create table billing_entries (
   created_by         uuid        references profiles (id),
   created_at         timestamptz not null default now(),
   updated_by         uuid        references profiles (id),
-  updated_at         timestamptz not null default now(),
-
-  constraint be_no_futuro check (report_date <= current_date)
+  updated_at         timestamptz not null default now()
 );
 
 create unique index billing_entries_unica_idx
@@ -312,9 +306,7 @@ create table collection_entries (
   created_by         uuid        references profiles (id),
   created_at         timestamptz not null default now(),
   updated_by         uuid        references profiles (id),
-  updated_at         timestamptz not null default now(),
-
-  constraint ce_no_futuro check (report_date <= current_date)
+  updated_at         timestamptz not null default now()
 );
 
 create unique index collection_entries_unica_idx
@@ -380,6 +372,7 @@ create index audit_log_company_idx on audit_log (company_id, created_at desc);
 create or replace function set_updated_at()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   new.updated_at := now();
@@ -410,6 +403,7 @@ $$;
 create or replace function fill_responsable_nombre()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   if new.user_id is not null and (new.responsable_nombre is null or new.responsable_nombre = '') then
@@ -440,6 +434,7 @@ $$;
 create or replace function reject_deleted_responsable()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   if new.user_id is not null
@@ -461,6 +456,41 @@ begin
     execute format(
       'create trigger %I_reject_deleted before insert on %I
          for each row execute function reject_deleted_responsable()', t, t);
+  end loop;
+end;
+$$;
+
+-- ============================================================
+-- No se registran fechas futuras.
+--
+-- Va en un trigger y no en un CHECK: `current_date` es STABLE, no IMMUTABLE,
+-- y Postgres rechaza funciones no inmutables dentro de una restricción CHECK
+-- (una restricción tiene que dar el mismo resultado siempre, y "hoy" cambia).
+-- ============================================================
+create or replace function reject_future_date()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.report_date > current_date then
+    raise exception 'No se puede registrar la fecha futura %', new.report_date;
+  end if;
+  return new;
+end;
+$$;
+
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'daily_kpi', 'daily_management',
+    'sales_entries', 'billing_entries', 'collection_entries'
+  ]
+  loop
+    execute format(
+      'create trigger %I_reject_future before insert or update on %I
+         for each row execute function reject_future_date()', t, t);
   end loop;
 end;
 $$;

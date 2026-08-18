@@ -1,5 +1,5 @@
 -- ============================================================
--- Command Center · 004 · Catálogos y datos iniciales
+-- Command Center · 004 · Catálogos
 -- Idempotente: se puede volver a correr sin duplicar.
 -- ============================================================
 
@@ -54,57 +54,9 @@ insert into metrics (code, name, unit, sort_order) values
 on conflict (code) do update set name = excluded.name, unit = excluded.unit, sort_order = excluded.sort_order;
 
 -- ============================================================
--- Empresas cliente iniciales
--- ============================================================
-insert into companies (name, slug, city, department, crm_label) values
-  ('Ruta Segura', 'ruta-segura', 'Buga', 'Valle del Cauca', 'Ruta Segura'),
-  ('LV Unión',    'lv-union',    'Buga', 'Valle del Cauca', 'LV Unión')
-on conflict (slug) do nothing;
-
--- Sedes. Ruta Segura opera en dos municipios; LV Unión en uno.
-insert into branches (company_id, name, city, department, is_primary)
-select c.id, v.name, v.city, 'Valle del Cauca', v.is_primary
-from companies c
-join (values
-  ('ruta-segura', 'Sede Buga',      'Buga',  true),
-  ('ruta-segura', 'Sede Tuluá',     'Tuluá', false),
-  ('lv-union',    'Sede principal', 'Buga',  true)
-) as v(slug, name, city, is_primary) on v.slug = c.slug
-on conflict (company_id, name) do nothing;
-
--- Todos los módulos habilitados para ambas
-insert into company_modules (company_id, module_code)
-select c.id, m.code
-from companies c cross join modules m
-where c.slug in ('ruta-segura', 'lv-union')
-on conflict do nothing;
-
--- Financiaciones y medios de recaudo activos para ambas
-insert into company_financing_types (company_id, financing_code, sort_order)
-select c.id, f.code, f.sort_order
-from companies c cross join financing_types f
-where c.slug in ('ruta-segura', 'lv-union')
-on conflict do nothing;
-
-insert into company_payment_methods (company_id, method_code, sort_order)
-select c.id, pm.code, pm.sort_order
-from companies c cross join payment_methods pm
-where c.slug in ('ruta-segura', 'lv-union')
-on conflict do nothing;
-
--- ============================================================
--- Primer super admin
+-- Sin datos de ejemplo.
 --
--- No se puede crear acá porque profiles.id referencia auth.users.
--- Pasos:
---   1. Authentication → Users → "Add user" en el panel de Supabase.
---   2. Copiar el UUID que queda y correr esto reemplazando los valores:
---
---   insert into profiles (id, full_name, email, role, status)
---   values ('<UUID-DE-AUTH>', 'Jonnier A. Martínez', 'jonnieralejandrom@gmail.com',
---           'super_admin', 'activo')
---   on conflict (id) do update
---     set role = 'super_admin', status = 'activo';
---
--- A partir de ahí los demás usuarios se crean desde /admin/usuarios.
+-- Las empresas, sedes y usuarios se crean desde la aplicación. El primer super
+-- admin lo resuelve el trigger `handle_new_auth_user` de 005: el primer usuario
+-- que aparezca en auth.users nace super_admin y activo. Ver docs/SUPABASE.md.
 -- ============================================================
