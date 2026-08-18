@@ -1,4 +1,4 @@
-import { formatByUnit, formatPercent } from "@/lib/format"
+import { formatByUnit, formatCOPShort, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 export interface StatItem {
@@ -44,18 +44,15 @@ export function StatStrip({ items, className }: { items: StatItem[]; className?:
       {items.map((item, i) => {
         const tieneMeta = typeof item.target === "number" && item.target > 0
         const ratio = tieneMeta ? item.value / item.target! : null
-        const texto = formatByUnit(item.value, item.unit ?? "cantidad")
+        const unidad = item.unit ?? "cantidad"
+        const exacto = formatByUnit(item.value, unidad)
 
-        // El tamaño lo decide lo que mide la cifra, no la unidad. Un importe en
-        // pesos puede tener quince dígitos y a 28px se sale de su columna y se
-        // pega con la de al lado; un contador de dos dígitos se ve pequeño si
-        // se encoge todo por igual.
-        const tamano =
-          texto.length <= 8
-            ? "text-xl lg:text-[28px]"
-            : texto.length <= 12
-              ? "text-lg lg:text-2xl"
-              : "text-base lg:text-xl"
+        // Un importe en pesos puede tener diez dígitos y no cabe en su columna.
+        // Arriba va abreviado, que es lo que se lee de un vistazo, y el valor
+        // exacto queda escrito debajo: recortarlo con puntos suspensivos o
+        // esconderlo tras el cursor obliga a cazar el número que uno vino a ver.
+        const abreviar = unidad === "moneda" && Math.abs(item.value) >= 1_000_000
+        const principal = abreviar ? formatCOPShort(item.value) : exacto
 
         return (
           <div key={item.label} className="flex items-start">
@@ -65,17 +62,8 @@ export function StatStrip({ items, className }: { items: StatItem[]; className?:
                 <span className="truncate text-xs font-medium sm:text-sm">{item.label}</span>
               </div>
 
-              <p
-                // El valor exacto queda al pasar el cursor: si aun así no cabe,
-                // se corta con puntos suspensivos y no se monta sobre la
-                // columna vecina.
-                title={texto}
-                className={cn(
-                  "truncate font-semibold leading-tight tracking-tight tabular-nums",
-                  tamano,
-                )}
-              >
-                {texto}
+              <p className="text-xl font-semibold leading-tight tracking-tight tabular-nums lg:text-[28px]">
+                {principal}
               </p>
 
               {tieneMeta ? (
@@ -91,12 +79,15 @@ export function StatStrip({ items, className }: { items: StatItem[]; className?:
                   >
                     {formatPercent(ratio)}
                   </span>
-                  <span className="text-muted-foreground">
-                    de {formatByUnit(item.target!, item.unit ?? "cantidad")}
-                  </span>
+                  <span className="text-muted-foreground">de {formatByUnit(item.target!, unidad)}</span>
                 </div>
-              ) : item.hint ? (
-                <p className="text-xs text-muted-foreground sm:text-sm">{item.hint}</p>
+              ) : abreviar || item.hint ? (
+                // Si la cifra se abrevió, el exacto va primero: es lo que la
+                // persona vino a leer. El texto de apoyo lo acompaña, no lo
+                // reemplaza.
+                <p className="text-xs tabular-nums text-muted-foreground sm:text-sm">
+                  {[abreviar ? exacto : null, item.hint].filter(Boolean).join(" · ")}
+                </p>
               ) : null}
             </div>
 
