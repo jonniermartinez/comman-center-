@@ -37,7 +37,8 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { formatCOPShort, formatNumber, formatPercent, todayISO } from "@/lib/format"
-import { captureStatus, companyMonthTotals, monthLabel, monthOf } from "@/lib/kpi"
+import { monthLabel, monthOf } from "@/lib/kpi"
+import { useCompanyMonthly } from "@/lib/data/client-queries"
 import { archiveCompany } from "@/lib/data/companies-actions"
 import { useDb, useIsSuperAdmin, useVisibleCompanies } from "@/lib/store/hooks"
 import type { Company } from "@/lib/store/types"
@@ -55,19 +56,19 @@ export default function EmpresasPage() {
 
   const today = todayISO()
   const month = monthOf(today)
+  // Los totales del mes los calcula Postgres: son 16.000 ventas y 19.000 pagos.
+  const { datos: mensual } = useCompanyMonthly(month)
 
-  const consolidado = companies
-    .filter((c) => c.status === "activa")
+  const activas = new Set(companies.filter((c) => c.status === "activa").map((c) => c.id))
+  const consolidado = mensual
+    .filter((m) => activas.has(m.company_id))
     .reduce(
-      (acc, c) => {
-        const t = companyMonthTotals(db, c.id, month)
-        return {
-          ventas: acc.ventas + t.ventas,
-          licencias: acc.licencias + t.licencias,
-          facturacion: acc.facturacion + t.facturacion,
-          recaudo: acc.recaudo + t.recaudo,
-        }
-      },
+      (acc, m) => ({
+        ventas: acc.ventas + Number(m.ventas_mes),
+        licencias: acc.licencias + Number(m.licencias_mes),
+        facturacion: acc.facturacion + Number(m.facturacion_mes),
+        recaudo: acc.recaudo + Number(m.recaudo_mes),
+      }),
       { ventas: 0, licencias: 0, facturacion: 0, recaudo: 0 },
     )
 
@@ -181,26 +182,23 @@ function CompanyCard({
   isSuperAdmin: boolean
 }) {
   const db = useDb()
-  const totals = companyMonthTotals(db, company.id, month)
-  const members = db.company_users.filter(
-    (cu) => cu.company_id === company.id && !cu.removed_at,
-  ).length
+  const { datos: mensual } = useCompanyMonthly(month)
+  const fila = mensual.find((m) => m.company_id === company.id)
+  const totals = {
+    ventas: Number(fila?.ventas_mes ?? 0),
+    licencias: Number(fila?.licencias_mes ?? 0),
+    facturacion: Number(fila?.facturacion_mes ?? 0),
+    recaudo: Number(fila?.recaudo_mes ?? 0),
+  }
+  const members = db.company_staff.filter((cs) => cs.company_id === company.id).length
   const sedes = db.branches.filter(
     (b) => b.company_id === company.id && b.status === "activa",
   ).length
   const modules = db.company_modules.filter((m) => m.company_id === company.id).length
 
-  const metaVentas = db.objectives.find(
-    (o) =>
-      o.company_id === company.id &&
-      o.period_month === month &&
-      o.metric_code === "ventas_mensuales" &&
-      !o.user_id,
-  )?.target_value
-  const ratioVentas = metaVentas ? totals.ventas / metaVentas : null
-
-  const status = captureStatus(db, company.id, today)
-  const registrados = status.filter((s) => s.kpi).length
+  // El cumplimiento contra la meta vive en la pantalla de objetivos, donde la
+  // vista `v_objective_progress` ya cruza meta y real. Acá se muestra la cifra.
+  const ratioVentas: number | null = null
   const archivada = company.status === "archivada"
   const [borrando, setBorrando] = useState(false)
 
@@ -291,12 +289,7 @@ function CompanyCard({
         <div className="space-y-1.5">
           <div className="flex items-baseline justify-between text-sm">
             <span className="text-muted-foreground">Ventas del mes</span>
-            <span className="font-semibold tabular-nums">
-              {formatNumber(totals.ventas)}
-              {metaVentas ? (
-                <span className="text-muted-foreground"> / {formatNumber(metaVentas)}</span>
-              ) : null}
-            </span>
+            <span className="font-semibold tabular-nums">{formatNumber(totals.ventas)}</span>
           </div>
           {ratioVentas !== null ? (
             <>
@@ -333,23 +326,10 @@ function CompanyCard({
         </div>
 
         <div className="flex items-center gap-1.5 border-t pt-3 text-xs">
-          {status.length === 0 ? (
-            <span className="text-muted-foreground">Sin usuarios asignados</span>
-          ) : registrados === status.length ? (
-            <>
-              <CheckCircle2 className="size-3.5 text-emerald-600" />
-              <span className="text-muted-foreground">
-                {registrados} de {status.length} registraron hoy
-              </span>
-            </>
-          ) : (
-            <>
-              <AlertCircle className="size-3.5 text-amber-600" />
-              <span className="text-muted-foreground">
-                {registrados} de {status.length} registraron hoy
-              </span>
-            </>
-          )}
+          <CheckCircle2 className="size-3.5 text-muted-foreground" />
+          <span className="text-muted-foreground">
+            {members} comercial{members === 1 ? "" : "es"} · {sedes} sede{sedes === 1 ? "" : "s"}
+          </span>
         </div>
       </CardContent>
 
