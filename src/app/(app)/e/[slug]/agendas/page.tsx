@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 
+import { NuevaAgenda } from "@/components/captura/nueva-agenda"
 import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
@@ -36,6 +37,15 @@ export default async function AgendasPage({
     <RecordsScaffold
       title="Agendas"
       description={`Citas concertadas por ${company.name} y su resultado.`}
+      actions={
+        <NuevaAgenda
+          companyId={company.id}
+          branches={company.branches}
+          staff={company.staff}
+          canManage={company.canManage}
+          myStaffId={company.myStaffId}
+        />
+      }
       filters={<RecordFilters sedes={company.branches} responsables={company.staff} buscar="Nombre o celular…" />}
       total={pagina.total}
       page={pagina.page}

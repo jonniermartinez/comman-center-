@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 
+import { NuevaVenta } from "@/components/captura/nueva-venta"
 import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
@@ -46,6 +47,19 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
     <RecordsScaffold
       title="Ventas"
       description={`Créditos vendidos por ${company.name}. Cada fila es una licencia financiada, con su cliente, su valor y su saldo.`}
+      actions={
+        <NuevaVenta
+          companyId={company.id}
+          branches={company.branches}
+          staff={company.staff}
+          financiaciones={company.financiaciones}
+          productos={company.productos}
+          escuelas={company.escuelas}
+          estados={company.estados}
+          canManage={company.canManage}
+          myStaffId={company.myStaffId}
+        />
+      }
       filters={
         <RecordFilters
           sedes={company.branches}

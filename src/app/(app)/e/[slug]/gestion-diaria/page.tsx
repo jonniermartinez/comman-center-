@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react"
 import { notFound } from "next/navigation"
 
+import { NuevaJornada } from "@/components/captura/nueva-jornada"
 import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
@@ -47,6 +48,16 @@ export default async function GestionDiariaPage({
     <RecordsScaffold
       title="Gestión Diaria"
       description={`Jornada, cola del CRM, agendas, llamadas y atenciones de ${company.name}. Se espera al equipo a las ${company.hora_entrada.slice(0, 5)}.`}
+      actions={
+        <NuevaJornada
+          companyId={company.id}
+          branches={company.branches}
+          staff={company.staff}
+          horaEntrada={company.hora_entrada}
+          canManage={company.canManage}
+          myStaffId={company.myStaffId}
+        />
+      }
       filters={<RecordFilters sedes={company.branches} responsables={company.staff} buscar="Responsable…" />}
       summary={
         <StatStrip

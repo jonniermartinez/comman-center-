@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 
+import { NuevoPago } from "@/components/captura/nuevo-pago"
 import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
@@ -38,6 +39,13 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
     <RecordsScaffold
       title="Pagos"
       description={`Abonos recibidos por ${company.name}, con su medio de pago y el crédito al que pertenecen.`}
+      actions={
+        <NuevoPago
+          companyId={company.id}
+          branches={company.branches}
+          mediosPago={company.mediosPago}
+        />
+      }
       filters={
         <RecordFilters sedes={company.branches} buscar="Nombre, documento o referencia…" />
       }

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 
+import { NuevoMovimiento } from "@/components/captura/nuevo-movimiento"
 import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
@@ -46,6 +47,17 @@ export default async function CajaPage({ params, searchParams }: PageProps<"/e/[
     <RecordsScaffold
       title="Ingreso y Gasto"
       description={`Entradas y salidas de caja de ${company.name}, por concepto y medio de pago.`}
+      actions={
+        company.canManage ? (
+          <NuevoMovimiento
+            companyId={company.id}
+            branches={company.branches}
+            staff={company.staff}
+            conceptos={company.conceptosCaja}
+            mediosPago={company.mediosPago}
+          />
+        ) : null
+      }
       filters={<RecordFilters sedes={company.branches} responsables={company.staff} buscar="Nombre, factura u observación…" />}
       summary={
         <StatStrip
