@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache"
 
 import { requireSession } from "@/lib/auth/session"
 import { createClient } from "@/lib/supabase/server"
-import type { KpiTotals } from "@/lib/kpi"
 
 export interface Result {
   ok: boolean
@@ -19,58 +18,89 @@ function refrescar() {
  * Traduce el error de Postgres a algo que se pueda leer en pantalla.
  *
  * Las reglas de negocio viven en la base —restricciones CHECK, índices únicos y
- * triggers—, así que acá no se repiten: se explican. Repetirlas en el cliente
- * es lo que hace que la app y la base terminen discrepando.
+ * triggers—, así que acá no se repiten: se explican. Repetirlas en el cliente es
+ * lo que hace que la app y la base terminen discrepando.
  */
 function explicar(mensaje: string): string {
   if (mensaje.includes("fecha futura")) return "No se puede registrar una fecha futura."
-  if (mensaje.includes("dk_contestadas"))
-    return "Las llamadas contestadas no pueden superar las realizadas."
-  if (mensaje.includes("dk_agendas"))
-    return "La atención de agendas no puede superar las agendas del día."
-  if (mensaje.includes("dk_presencial"))
-    return "Las ventas exitosas no pueden superar los clientes atendidos."
-  if (mensaje.includes("está eliminado"))
-    return "El responsable está eliminado y no puede recibir registros nuevos."
+  if (mensaje.includes("daily_activity_company_id_branch_id_report_date_staff_id_key"))
+    return "Esa persona ya tiene registrada esa fecha."
   if (mensaje.includes("row-level security") || mensaje.includes("permission denied"))
     return "No tienes permiso para registrar en esta empresa."
   return mensaje
 }
 
-/**
- * Un registro por empresa + sede + fecha + responsable + jornada.
- *
- * Se usa `upsert` sobre esa combinación: reenviar el mismo día corrige el
- * registro en vez de duplicarlo, y la unicidad la garantiza el índice de la
- * base, no una consulta previa que podría quedar desactualizada.
- */
-export async function saveDailyKpi(input: {
+/** El primer día del mes al que pertenece una fecha. */
+function periodo(fecha: string) {
+  return `${fecha.slice(0, 7)}-01`
+}
+
+export interface ActividadInput {
+  id?: string
   company_id: string
   branch_id: string
   report_date: string
-  user_id: string
+  staff_id: string
   responsable_nombre: string
-  jornada: "inicial" | "medio_dia" | "final"
-  values: KpiTotals
-  notas?: string
-}): Promise<Result> {
+  hora_llegada?: string | null
+  hora_salida?: string | null
+  chats_inicial: number
+  chats_medio: number
+  chats_final: number
+  tareas_inicial: number
+  tareas_medio: number
+  tareas_final: number
+  caducadas_inicial: number
+  caducadas_medio: number
+  caducadas_final: number
+  agenda_confirmada: number
+  agenda_posible: number
+  agenda_reprograma: number
+  agenda_no_contesta: number
+  agenda_cancela: number
+  llamada_no_contestada: number
+  llamada_efectiva: number
+  llamada_seguimiento: number
+  llamada_agenda: number
+  llamada_no_interesado: number
+  llamada_contestada: number
+  llamada_postventa: number
+  atencion_venta: number
+  atencion_seguimiento: number
+  atencion_declinado: number
+  atencion_asociado: number
+  atencion_enrolamiento: number
+  atencion_certificados: number
+  atencion_agenda: number
+  atencion_renovacion: number
+  notas?: string | null
+}
+
+/**
+ * Guarda la jornada de una persona.
+ *
+ * Una fila por empresa + sede + fecha + persona: el `upsert` sobre esa
+ * combinación hace que volver a guardar el mismo día corrija en vez de
+ * duplicar, y la unicidad la garantiza el índice de la base, no una consulta
+ * previa que podría quedar desactualizada.
+ */
+export async function saveActivity(input: ActividadInput): Promise<Result> {
   const session = await requireSession()
   const supabase = await createClient()
 
-  const { error } = await supabase.from("daily_kpi").upsert(
+  const { id, ...campos } = input
+  const { error } = await supabase.from("daily_activity").upsert(
     {
-      company_id: input.company_id,
-      branch_id: input.branch_id,
-      report_date: input.report_date,
-      user_id: input.user_id,
-      responsable_nombre: input.responsable_nombre,
-      jornada: input.jornada,
-      ...input.values,
-      notas: input.notas ?? null,
-      created_by: session.profile.id,
+      ...campos,
+      id,
+      period_month: periodo(input.report_date),
+      hora_llegada: input.hora_llegada || null,
+      hora_salida: input.hora_salida || null,
+      notas: input.notas || null,
       updated_by: session.profile.id,
+      created_by: session.profile.id,
     },
-    { onConflict: "company_id,branch_id,report_date,user_id,jornada" },
+    { onConflict: "company_id,branch_id,report_date,staff_id" },
   )
 
   if (error) return { ok: false, error: explicar(error.message) }
@@ -79,129 +109,148 @@ export async function saveDailyKpi(input: {
   return { ok: true }
 }
 
-export async function saveDailyManagement(input: {
+export interface VentaInput {
+  id?: string
   company_id: string
   branch_id: string
   report_date: string
-  user_id: string
-  responsable_nombre: string
-  jornada: "inicial" | "medio_dia" | "final"
-  chats_por_responder: number
-  tareas_del_dia: number
-  tareas_caducadas: number
-  certificados: number
-  notas?: string
-}): Promise<Result> {
+  staff_id?: string | null
+  responsable_nombre?: string | null
+  ref_credito?: string | null
+  financing_code?: string | null
+  product_code?: string | null
+  school_code?: string | null
+  state_code?: string | null
+  channel_code?: string | null
+  licencia_tipo_id?: string | null
+  licencia_id?: string | null
+  licencia_nombre?: string | null
+  licencia_celular?: string | null
+  credito_id?: string | null
+  credito_nombre?: string | null
+  credito_celular?: string | null
+  valor_inicial: number
+  adicion: number
+  descuento: number
+  valor_final: number
+  recaudo: number
+  saldo: number
+  cantidad_final: number
+  observacion?: string | null
+}
+
+export async function saveSale(input: VentaInput): Promise<Result> {
   const session = await requireSession()
   const supabase = await createClient()
 
-  const { error } = await supabase.from("daily_management").upsert(
-    {
-      company_id: input.company_id,
-      branch_id: input.branch_id,
-      report_date: input.report_date,
-      user_id: input.user_id,
-      responsable_nombre: input.responsable_nombre,
-      jornada: input.jornada,
-      chats_por_responder: input.chats_por_responder,
-      tareas_del_dia: input.tareas_del_dia,
-      tareas_caducadas: input.tareas_caducadas,
-      certificados: input.certificados,
-      notas: input.notas ?? null,
-      created_by: session.profile.id,
-      updated_by: session.profile.id,
-    },
-    { onConflict: "company_id,branch_id,report_date,user_id,jornada" },
-  )
-
-  if (error) return { ok: false, error: explicar(error.message) }
-
-  refrescar()
-  return { ok: true }
-}
-
-export interface SalesReportInput {
-  company_id: string
-  branch_id: string
-  report_date: string
-  /** financing_code → { ventas, licencias } */
-  ventas: Record<string, { ventas: number; licencias: number }>
-  renovaciones: Record<string, number>
-  facturacion: Record<string, number>
-  recaudo: Record<string, number>
-}
-
-/**
- * Reemplaza el reporte de un día en una sede.
- *
- * Se borran las líneas de ese día y se vuelven a escribir: el formulario es la
- * única fuente de verdad de ese día, así que una financiación que quedó en cero
- * tiene que desaparecer, no quedarse como línea vieja. Solo se toca esa sede;
- * lo que reportaron las demás no se roza.
- *
- * Es lo único de la app que borra filas de un registro histórico, y por eso la
- * base sí tiene política de DELETE en estas tres tablas.
- */
-export async function saveSalesReport(input: SalesReportInput): Promise<Result> {
-  const session = await requireSession()
-  const supabase = await createClient()
-
-  const { company_id, branch_id, report_date } = input
-  const delDia = <T extends { eq: (col: string, val: string) => T }>(q: T) =>
-    q.eq("company_id", company_id).eq("branch_id", branch_id).eq("report_date", report_date)
-
-  const borrados = await Promise.all([
-    delDia(supabase.from("sales_entries").delete()),
-    delDia(supabase.from("billing_entries").delete()),
-    delDia(supabase.from("collection_entries").delete()),
-  ])
-  const falloBorrado = borrados.find((r) => r.error)
-  if (falloBorrado?.error) return { ok: false, error: explicar(falloBorrado.error.message) }
-
-  const comun = {
-    company_id,
-    branch_id,
-    report_date,
+  const { error } = await supabase.from("sales").upsert({
+    ...input,
+    period_month: periodo(input.report_date),
     created_by: session.profile.id,
     updated_by: session.profile.id,
-  }
+  })
 
-  const ventas = [
-    ...Object.entries(input.ventas)
-      .filter(([, v]) => v.ventas || v.licencias)
-      .map(([financing_code, v]) => ({
-        ...comun,
-        financing_code,
-        kind: "venta" as const,
-        ventas: v.ventas,
-        licencias: v.licencias,
-      })),
-    ...Object.entries(input.renovaciones)
-      .filter(([, cantidad]) => cantidad > 0)
-      .map(([financing_code, cantidad]) => ({
-        ...comun,
-        financing_code,
-        kind: "renovacion" as const,
-        ventas: cantidad,
-        licencias: 0,
-      })),
-  ]
+  if (error) return { ok: false, error: explicar(error.message) }
 
-  const facturacion = Object.entries(input.facturacion)
-    .filter(([, amount]) => amount > 0)
-    .map(([financing_code, amount]) => ({ ...comun, financing_code, amount }))
+  refrescar()
+  return { ok: true }
+}
 
-  const recaudo = Object.entries(input.recaudo)
-    .filter(([, amount]) => amount > 0)
-    .map(([method_code, amount]) => ({ ...comun, method_code, amount }))
+export interface PagoInput {
+  id?: string
+  company_id: string
+  branch_id: string
+  report_date: string
+  ref_credito?: string | null
+  sale_id?: string | null
+  titular_id?: string | null
+  titular_nombre?: string | null
+  amount: number
+  method_code?: string | null
+  recibo?: string | null
+  observacion?: string | null
+}
 
-  const escrituras = await Promise.all([
-    ventas.length ? supabase.from("sales_entries").insert(ventas) : { error: null },
-    facturacion.length ? supabase.from("billing_entries").insert(facturacion) : { error: null },
-    recaudo.length ? supabase.from("collection_entries").insert(recaudo) : { error: null },
-  ])
-  const fallo = escrituras.find((r) => r.error)
-  if (fallo?.error) return { ok: false, error: explicar(fallo.error.message) }
+export async function savePayment(input: PagoInput): Promise<Result> {
+  const session = await requireSession()
+  const supabase = await createClient()
+
+  const { error } = await supabase.from("payments").upsert({
+    ...input,
+    period_month: periodo(input.report_date),
+    created_by: session.profile.id,
+    updated_by: session.profile.id,
+  })
+
+  if (error) return { ok: false, error: explicar(error.message) }
+
+  refrescar()
+  return { ok: true }
+}
+
+export interface MovimientoCajaInput {
+  id?: string
+  company_id: string
+  branch_id: string
+  report_date: string
+  kind: "entrada" | "salida"
+  concept_code?: string | null
+  method_code?: string | null
+  staff_id?: string | null
+  responsable_nombre?: string | null
+  identificacion?: string | null
+  nombre?: string | null
+  factura?: string | null
+  amount: number
+  observacion?: string | null
+}
+
+export async function saveCashMovement(input: MovimientoCajaInput): Promise<Result> {
+  const session = await requireSession()
+  const supabase = await createClient()
+
+  const { error } = await supabase.from("cash_movements").upsert({
+    ...input,
+    period_month: periodo(input.report_date),
+    // Las salidas se guardan en negativo, como vienen del Excel, para que el
+    // neto sea una suma y no un condicional repartido por las consultas.
+    amount: input.kind === "salida" ? -Math.abs(input.amount) : Math.abs(input.amount),
+    created_by: session.profile.id,
+    updated_by: session.profile.id,
+  })
+
+  if (error) return { ok: false, error: explicar(error.message) }
+
+  refrescar()
+  return { ok: true }
+}
+
+export interface AgendaInput {
+  id?: string
+  company_id: string
+  branch_id: string
+  scheduled_at: string
+  scheduled_time?: string | null
+  nombre?: string | null
+  celular?: string | null
+  staff_id?: string | null
+  responsable_nombre?: string | null
+  resultado?: string | null
+  observacion?: string | null
+}
+
+export async function saveAppointment(input: AgendaInput): Promise<Result> {
+  const session = await requireSession()
+  const supabase = await createClient()
+
+  const { error } = await supabase.from("appointments").upsert({
+    ...input,
+    scheduled_time: input.scheduled_time || null,
+    created_by: session.profile.id,
+    updated_by: session.profile.id,
+  })
+
+  if (error) return { ok: false, error: explicar(error.message) }
 
   refrescar()
   return { ok: true }
