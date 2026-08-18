@@ -1,11 +1,9 @@
-"use client"
-
 import { Info } from "lucide-react"
 
 import { PageHeader } from "@/components/page-header"
+import { SectionCard } from "@/components/section-card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { SectionCard } from "@/components/section-card"
 import {
   Table,
   TableBody,
@@ -14,7 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useDb, useIsSuperAdmin } from "@/lib/store/hooks"
+import { requireSession } from "@/lib/auth/session"
+import { createClient } from "@/lib/supabase/server"
 
 const ACCION_LABELS: Record<string, string> = {
   create: "Creación",
@@ -23,6 +22,7 @@ const ACCION_LABELS: Record<string, string> = {
   restore: "Restauración",
   archive: "Archivado",
   assign: "Asignación",
+  purge: "Borrado definitivo",
   unassign: "Desasignación",
 }
 
@@ -37,11 +37,23 @@ const ENTIDAD_LABELS: Record<string, string> = {
   objectives: "Objetivos",
 }
 
-export default function AuditoriaPage() {
-  const db = useDb()
-  const isSuperAdmin = useIsSuperAdmin()
+/** Resumen legible de lo que cambió, a partir del jsonb que guardó la acción. */
+function detalle(after: unknown, before: unknown): string {
+  const valores = (after ?? before) as Record<string, unknown> | null
+  if (!valores || typeof valores !== "object") return "—"
+  return Object.entries(valores)
+    .map(([clave, valor]) => `${clave}: ${Array.isArray(valor) ? valor.join(", ") : String(valor)}`)
+    .join(" · ")
+}
 
-  if (!isSuperAdmin) {
+/**
+ * El log vive en Postgres y solo tiene política de lectura, y solo para el
+ * super admin: se escribe desde el servidor, nadie lo edita desde la app.
+ */
+export default async function AuditoriaPage() {
+  const session = await requireSession()
+
+  if (!session.isSuperAdmin) {
     return (
       <Alert>
         <Info />
@@ -49,6 +61,13 @@ export default function AuditoriaPage() {
       </Alert>
     )
   }
+
+  const supabase = await createClient()
+  const { data: entradas } = await supabase
+    .from("audit_log")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(300)
 
   return (
     <>
@@ -70,9 +89,9 @@ export default function AuditoriaPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {db.audit_log.map((entry) => (
+              {(entradas ?? []).map((entry) => (
                 <TableRow key={entry.id}>
-                  <TableCell className="text-xs text-muted-foreground tabular-nums">
+                  <TableCell className="text-xs tabular-nums text-muted-foreground">
                     {new Date(entry.created_at).toLocaleString("es-CO", {
                       day: "2-digit",
                       month: "2-digit",
@@ -81,11 +100,11 @@ export default function AuditoriaPage() {
                       minute: "2-digit",
                     })}
                   </TableCell>
-                  <TableCell className="text-sm">{entry.actor_name}</TableCell>
+                  <TableCell className="text-sm">{entry.actor_name ?? "Sistema"}</TableCell>
                   <TableCell>
                     <Badge
                       variant={
-                        entry.action === "delete"
+                        entry.action === "delete" || entry.action === "purge"
                           ? "destructive"
                           : entry.action === "create"
                             ? "default"
@@ -99,15 +118,15 @@ export default function AuditoriaPage() {
                   <TableCell className="text-xs text-muted-foreground">
                     {ENTIDAD_LABELS[entry.entity] ?? entry.entity}
                   </TableCell>
-                  <TableCell className="text-sm">{entry.detail}</TableCell>
+                  <TableCell className="text-sm">{detalle(entry.after, entry.before)}</TableCell>
                 </TableRow>
               ))}
 
-              {db.audit_log.length === 0 && (
+              {(entradas ?? []).length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                    Todavía no hay movimientos registrados. Crea una empresa, un usuario o cambia un
-                    objetivo y aparecerán acá.
+                    Todavía no hay movimientos registrados. Crea una empresa o un usuario y
+                    aparecerán acá.
                   </TableCell>
                 </TableRow>
               )}
