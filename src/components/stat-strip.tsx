@@ -8,7 +8,10 @@ export interface StatItem {
   icon?: React.ComponentType<{ className?: string }>
   /** Meta del período. Sin meta se omite la línea de cumplimiento. */
   target?: number | null
-  /** Texto de apoyo cuando no hay meta. */
+  /**
+   * Texto de apoyo cuando no hay meta. Sin él no se escribe nada: repetir
+   * "sin meta definida" bajo cada cifra era ruido en todas las pantallas.
+   */
   hint?: string
 }
 
@@ -18,10 +21,23 @@ export interface StatItem {
  * grupo se lea como una unidad.
  */
 export function StatStrip({ items, className }: { items: StatItem[]; className?: string }) {
+  // Las columnas siguen al número de métricas: con cinco en una rejilla de
+  // cuatro, la quinta caía sola en una segunda fila y la tira dejaba de leerse
+  // como un grupo.
+  const columnas: Record<number, string> = {
+    1: "lg:grid-cols-1",
+    2: "lg:grid-cols-2",
+    3: "lg:grid-cols-3",
+    4: "lg:grid-cols-4",
+    5: "lg:grid-cols-5",
+    6: "lg:grid-cols-6",
+  }
+
   return (
     <div
       className={cn(
-        "grid grid-cols-2 gap-4 rounded-xl border bg-card p-4 sm:p-6 lg:grid-cols-4 lg:gap-6",
+        "grid grid-cols-2 gap-4 rounded-xl border bg-card p-4 sm:p-6 lg:gap-6",
+        columnas[items.length] ?? "lg:grid-cols-4",
         className,
       )}
     >
@@ -58,11 +74,9 @@ export function StatStrip({ items, className }: { items: StatItem[]; className?:
                     de {formatByUnit(item.target!, item.unit ?? "cantidad")}
                   </span>
                 </div>
-              ) : (
-                <p className="text-xs text-muted-foreground sm:text-sm">
-                  {item.hint ?? "Sin meta definida"}
-                </p>
-              )}
+              ) : item.hint ? (
+                <p className="text-xs text-muted-foreground sm:text-sm">{item.hint}</p>
+              ) : null}
             </div>
 
             {i < items.length - 1 && (
