@@ -1,7 +1,10 @@
 /**
- * Modelo de dominio. Espejo de supabase/migrations/001_schema.sql:
- * cuando se conecte Supabase, estos tipos se reemplazan por los generados
- * y el resto de la app no cambia.
+ * Modelo de dominio de la interfaz. Espejo de `supabase/migrations/001_schema.sql`,
+ * pero con las comodidades que la app necesita: opcionales en vez de null y un
+ * solo tipo para facturación y recaudo, que en Postgres son dos tablas.
+ *
+ * Los tipos generados de la base viven en `src/lib/supabase/database.types.ts`
+ * y se usan en la capa de datos; estos son los que consumen las pantallas.
  */
 
 export type UserRole = "super_admin" | "coordinador" | "asesor"
@@ -33,6 +36,8 @@ export interface Company {
   city?: string
   /** Departamento del municipio. Necesario porque hay nombres repetidos. */
   department?: string
+  /** Logo subido a Storage. Si no hay, la empresa se muestra con sus iniciales. */
+  logo_url?: string | null
   accent_color: string
   /** Nombre del CRM que usa la empresa (aparece como "CRM - LV Unión" en el Excel). */
   crm_label?: string
@@ -164,20 +169,13 @@ export interface Objective {
   locked: boolean
 }
 
-export interface AuditEntry {
-  id: string
-  actor_name: string
-  action: string
-  entity: string
-  entity_id?: string
-  company_id?: string | null
-  detail: string
-  created_at: string
-}
-
-/** Todo el estado de la app. En esta etapa vive en localStorage. */
+/**
+ * Todo el estado de la app, tal como se lee de Supabase.
+ *
+ * Es un espejo de las tablas de Postgres, no un almacén aparte: se carga en el
+ * layout con sesión y se baja por contexto. No hay copia local de nada.
+ */
 export interface Database {
-  version: number
   profiles: Profile[]
   companies: Company[]
   branches: Branch[]
@@ -194,9 +192,6 @@ export interface Database {
   collection_entries: AmountEntry[]
   metrics: Metric[]
   objectives: Objective[]
-  audit_log: AuditEntry[]
-  /** Usuario con el que se está navegando. Reemplaza al login mientras no hay Supabase. */
-  current_user_id: string
 }
 
 export const MODULES: { code: ModuleCode; name: string; description: string }[] = [

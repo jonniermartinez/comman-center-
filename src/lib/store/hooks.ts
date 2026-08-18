@@ -1,33 +1,28 @@
 "use client"
 
-import { useSyncExternalStore } from "react"
-
+import { useSession } from "@/lib/auth/session-context"
 import { todayISO } from "@/lib/format"
-import { getServerSnapshot, getSnapshot, subscribe } from "./db"
-import { REFERENCE_DATE } from "./seed"
+import { useRemote } from "./remote"
 import type { Branch, Company, Database, ModuleCode, Profile, UserRole } from "./types"
 
-/** Suscripción a toda la base. Cualquier acción re-renderiza lo suscrito. */
+/**
+ * La base como la ven las pantallas: lo que Supabase devolvió para esta sesión.
+ *
+ * Las escrituras son Server Actions; cada una llama a `revalidatePath`, así que
+ * la respuesta de la acción ya trae el estado nuevo y no hay que refrescar a
+ * mano ni mantener una copia en el cliente.
+ */
 export function useDb(): Database {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+  return useRemote()
 }
 
+/** El usuario de la sesión de Supabase. */
 export function useCurrentUser(): Profile {
-  const db = useDb()
-  return (
-    db.profiles.find((p) => p.id === db.current_user_id) ?? {
-      id: "desconocido",
-      full_name: "Sin sesión",
-      email: "",
-      role: "asesor",
-      status: "inactivo",
-      created_at: new Date(0).toISOString(),
-    }
-  )
+  return useSession().profile
 }
 
 export function useIsSuperAdmin(): boolean {
-  return useCurrentUser().role === "super_admin"
+  return useSession().isSuperAdmin
 }
 
 /** Rol efectivo del usuario actual dentro de una empresa. */
@@ -146,15 +141,9 @@ export function useCompanyCatalog(companyId: string | undefined, kind: "financin
     .sort((a, b) => a.sort_order - b.sort_order)
 }
 
-/**
- * Fecha de trabajo. Mientras los datos son de demo, cae a la fecha del Excel
- * (15/08/2026) para que los dashboards no salgan vacíos. Con datos reales
- * devuelve siempre la fecha del sistema.
- */
+/** Fecha de trabajo: siempre la del sistema. */
 export function useEffectiveToday(): string {
-  const db = useDb()
-  const today = todayISO()
-  return db.daily_kpi.some((k) => k.report_date === today) ? today : REFERENCE_DATE
+  return todayISO()
 }
 
 /**
