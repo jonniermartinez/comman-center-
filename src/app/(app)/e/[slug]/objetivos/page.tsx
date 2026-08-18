@@ -27,9 +27,8 @@ import {
   businessDaysInMonth,
   monthLabel,
   monthOf,
-  objectiveProgress,
-  realValueFor,
 } from "@/lib/kpi"
+import { useObjectiveProgress } from "@/lib/data/client-queries"
 import {
   copyObjectivesFromPreviousMonth,
   setObjective,
@@ -50,8 +49,22 @@ export default function ObjetivosPage() {
 
   const [month, setMonth] = useState(monthOf(today))
 
-  const progreso = objectiveProgress(db, company.id, month, today)
+  // Meta y real vienen juntos de `v_objective_progress`: calcular el real acá
+  // sería repetir en TypeScript las sumas que ya hace Postgres, y es cuestión
+  // de tiempo que las dos versiones dejen de coincidir.
+  const { datos: progreso } = useObjectiveProgress(company.id, month)
   const puedeEditar = canManage
+
+  // Las metas por persona se guardan contra su cuenta, así que solo aplican a
+  // quien tiene una: alguien sin cuenta no puede tener meta individual todavía.
+  const conCuenta = members.filter((m) => m.profile_id)
+
+  /** La fila de la vista para una métrica y, si aplica, una persona. */
+  function filaDe(metricCode: string, userId?: string | null) {
+    return progreso.find(
+      (p) => p.metric_code === metricCode && (p.user_id ?? null) === (userId ?? null),
+    )
+  }
 
   const elapsed = businessDaysElapsed(month, today)
   const totalDias = businessDaysInMonth(month)
@@ -65,13 +78,8 @@ export default function ObjetivosPage() {
   )
 
   function metaDe(metricCode: string, userId?: string | null) {
-    return db.objectives.find(
-      (o) =>
-        o.company_id === company.id &&
-        o.period_month === month &&
-        o.metric_code === metricCode &&
-        (o.user_id ?? null) === (userId ?? null),
-    )
+    const fila = filaDe(metricCode, userId)
+    return fila ? { target_value: Number(fila.target_value) } : undefined
   }
 
   async function guardar(metricCode: string, userId: string | null, raw: number | string) {
@@ -165,7 +173,7 @@ export default function ObjetivosPage() {
             <TableBody>
               {metricasEmpresa.map((metric) => {
                 const objetivo = metaDe(metric.code, null)
-                const real = realValueFor(db, company.id, month, metric.code, null)
+                const real = Number(filaDe(metric.code, null)?.real_value ?? 0)
                 const cumpl = objetivo?.target_value ? real / objetivo.target_value : null
                 const proy = elapsed ? (real / elapsed) * totalDias : real
                 const mismatch = descuadre(metric.code)
@@ -239,17 +247,14 @@ export default function ObjetivosPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {members.map((member) => (
+                  {conCuenta.map((member) => (
                     <TableRow key={member.id}>
-                      <TableCell className="font-medium">
-                        {member.full_name}
-                        <span className="ml-2 text-xs font-normal text-muted-foreground">
-                          {member.companyRole}
-                        </span>
-                      </TableCell>
+                      <TableCell className="font-medium">{member.full_name}</TableCell>
                       {metricasPersona.map((metric) => {
-                        const objetivo = metaDe(metric.code, member.id)
-                        const real = realValueFor(db, company.id, month, metric.code, member.id)
+                        const objetivo = metaDe(metric.code, member.profile_id)
+                        const real = Number(
+                          filaDe(metric.code, member.profile_id)?.real_value ?? 0,
+                        )
                         const cumpl = objetivo?.target_value
                           ? real / objetivo.target_value
                           : null
@@ -260,7 +265,7 @@ export default function ObjetivosPage() {
                               unit={metric.unit}
                               disabled={!puedeEditar}
                               valorInicial={objetivo?.target_value ?? 0}
-                              onGuardar={(valor) => guardar(metric.code, member.id, valor)}
+                              onGuardar={(valor) => guardar(metric.code, member.profile_id!, valor)}
                               className="ml-auto w-28"
                             />
                             <p className="mt-1 text-xs text-muted-foreground tabular-nums">
