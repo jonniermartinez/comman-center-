@@ -354,3 +354,59 @@ export async function copyObjectivesFromPreviousMonth(
   refrescar()
   return { ok: true, copiadas: nuevas.length }
 }
+
+export interface VentaBuscada {
+  id: string
+  branch_id: string
+  ref_credito: string | null
+  cliente: string
+  documento: string
+  report_date: string
+  valor_final: number
+  saldo: number
+}
+
+/**
+ * Busca la venta a la que pertenece un pago.
+ *
+ * Devuelve el saldo junto con el valor: al registrar un abono, lo primero que
+ * se necesita saber es cuánto falta, y tenerlo delante evita el error clásico
+ * de abonar sobre el crédito equivocado.
+ */
+export async function buscarVentas(
+  companyId: string,
+  texto: string,
+): Promise<VentaBuscada[]> {
+  await requireSession()
+  const termino = texto.trim()
+  if (termino.length < 3) return []
+
+  const supabase = await createClient()
+  const patron = `%${termino}%`
+
+  const { data } = await supabase
+    .from("sales")
+    .select("id, branch_id, ref_credito, licencia_nombre, credito_nombre, licencia_id, credito_id, report_date, valor_final, saldo")
+    .eq("company_id", companyId)
+    .or(
+      [
+        `licencia_nombre.ilike.${patron}`,
+        `credito_nombre.ilike.${patron}`,
+        `licencia_id.ilike.${patron}`,
+        `credito_id.ilike.${patron}`,
+      ].join(","),
+    )
+    .order("report_date", { ascending: false })
+    .limit(15)
+
+  return (data ?? []).map((v) => ({
+    id: v.id,
+    branch_id: v.branch_id,
+    ref_credito: v.ref_credito,
+    cliente: v.licencia_nombre ?? v.credito_nombre ?? "—",
+    documento: v.licencia_id ?? v.credito_id ?? "",
+    report_date: v.report_date,
+    valor_final: Number(v.valor_final),
+    saldo: Number(v.saldo),
+  }))
+}
