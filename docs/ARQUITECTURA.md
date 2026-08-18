@@ -78,8 +78,9 @@ Reglas que se cumplen en este estado:
 - **No puede enumerar usuarios.** `profiles_select` solo devuelve su propio perfil
   y los de gente con la que comparte empresa.
 
-Usuarios de prueba en el seed: **Pedro Salazar** (activo, cero empresas) y
-**Marcela Ruiz** (invitada). Se cambia de usuario desde el pie del sidebar.
+Ya no hay usuarios de prueba ni datos sembrados: la instalación arranca vacía y
+todo se crea desde la app. Para verificar estos estados se crea un usuario sin
+empresas y se entra con él.
 
 ---
 
@@ -184,6 +185,24 @@ Requisito: **al eliminar un usuario, sus datos permanecen en el sistema con su n
   usuarios eliminados.
 
 Lo mismo aplica a **empresas**: se archivan, no se borran.
+
+### Excepción: borrado definitivo de una empresa
+
+Hay una sola salida real, para deshacer una empresa creada por error o sacar a
+un cliente que ya no lo es: **Eliminar definitivamente**, en la configuración de
+la empresa y en el menú de su tarjeta. Solo el super admin.
+
+Borra la empresa y todo lo suyo —sedes, asignaciones, KPI, gestión diaria,
+ventas, facturación, recaudo y objetivos— sin papelera. Por eso:
+
+- La confirmación muestra **cuántos registros se van a perder**, contados en la
+  base, y exige **escribir el nombre de la empresa**.
+- La regla vive en `delete_company_cascade` (Postgres), no en la interfaz:
+  verifica que quien llama sea super admin y que el nombre coincida. Llamar la
+  Server Action por fuera de la app no evita ninguna de las dos cosas.
+- **La entrada de auditoría sobrevive**: antes de borrar se suelta el
+  `company_id` de `audit_log` y se escribe una entrada `purge` con el nombre y
+  los conteos. La evidencia de que esto pasó es justo lo que no debe perderse.
 
 ### 3.6 Objetivos comerciales — `/e/[slug]/objetivos`
 
@@ -338,7 +357,7 @@ registros de días cerrados o de registros ajenos.
 
 | # | Entregable | Estado |
 |---|---|---|
-| 1 | Schema Postgres + vistas + RLS + seeds (`supabase/migrations`) | escrito, sin ejecutar |
+| 1 | Schema Postgres + vistas + RLS + catálogos | ✅ aplicado (ver `docs/SUPABASE.md`) |
 | 2 | Shell de la app (sidebar, contexto de empresa, guardas) | ✅ |
 | 3 | Módulo de empresas: grid, wizard de 5 pasos, configuración, archivado | ✅ |
 | 4 | Módulo de sedes: alta, principal, archivado, equipo por sede | ✅ |
@@ -347,12 +366,32 @@ registros de días cerrados o de registros ajenos.
 | 7 | Formularios de captura (3 módulos) | ✅ |
 | 8 | Dashboards y KPIs, con desglose por sede | ✅ |
 | 9 | Auditoría | ✅ |
-| 10 | Login y cuentas reales (Supabase Auth) | pendiente |
+| 10 | Login y cuentas reales (Supabase Auth) | ✅ |
 | 11 | Importación masiva del histórico de Excel | pendiente |
 
-Los puntos 2 a 8 corren hoy contra `localStorage`.
+### Dónde vive cada cosa hoy
 
-Conectar Supabase **no** es reemplazar un archivo: `useDb()` entrega toda la base
-de forma síncrona y se consume en 29 lugares de 16 archivos, con 17 puntos de
-escritura. Al pasar a Supabase (asíncrono) hay que introducir queries por página,
-estados de carga y error, y revalidación tras cada escritura. Estimado: ~10 horas.
+La migración a Supabase va por mitades, y la costura está en `useDb()`:
+
+| Ya en Postgres | Todavía en `localStorage` |
+|---|---|
+| `profiles`, `companies`, `branches`, `company_users`, `company_modules`, catálogos, `metrics`, `audit_log` | `daily_kpi`, `daily_management`, `sales_entries`, `billing_entries`, `collection_entries`, `objectives` |
+
+La mitad remota la carga el layout con sesión (`loadSnapshot()`), ya filtrada por
+RLS, y la baja por contexto de React —no por una variable de módulo, que en el
+render del servidor se comparte entre peticiones y filtraría datos de un usuario
+a otro—. `useDb()` fusiona las dos mitades, así que las pantallas no se enteran
+de por dónde viene cada tabla. Cuando se migre lo que falta, `useDb()` se queda
+solo con la mitad remota y las pantallas no cambian.
+
+Las escrituras de la mitad remota son Server Actions (`src/lib/data/*-actions.ts`)
+que llaman a `revalidatePath`: la respuesta de la acción ya trae el snapshot
+nuevo, así que no hace falta refrescar a mano.
+
+### Sesión
+
+No hay selector de usuario: quién eres lo decide el token de Supabase.
+`src/proxy.ts` (en Next 16 el antiguo `middleware.ts`) refresca la sesión en cada
+petición y manda al login a quien no la tiene; el layout resuelve el perfil y el
+rol en el servidor con `me()`, y las pantallas consumen ese resultado. Ninguna
+pantalla vuelve a preguntar quién eres.

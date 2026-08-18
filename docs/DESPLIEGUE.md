@@ -96,3 +96,23 @@ la build remota fallará aunque la local funcione.
   Logs** sin configurar nada más.
 - Con `main` conectada a despliegue automático, **todo push a `main` sale a
   producción**. En cuanto haya un dominio en línea conviene volver a ramas y PR.
+
+## Variables de entorno
+
+En local van en `.env.local` (ver `.env.example`). En Cloudflare, las públicas
+como `vars` en `wrangler.jsonc` y la clave de servicio **como secret**:
+
+```bash
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+```
+
+| Variable | Dónde | Para qué |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | cliente y servidor | Proyecto de Supabase |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | cliente y servidor | Clave publicable; todo lo que alcanza está acotado por RLS |
+| `SUPABASE_SERVICE_ROLE_KEY` | **solo servidor** | Admin API de Auth (invitar, bloquear) y escritura del log de auditoría. Salta RLS: nunca debe llegar al navegador |
+| `NEXT_PUBLIC_SITE_URL` | servidor | A dónde vuelven los enlaces de los correos de invitación |
+
+Al cambiar de dominio hay que actualizar `NEXT_PUBLIC_SITE_URL` y las *Redirect
+URLs* en Supabase → Authentication → URL Configuration, o los enlaces de
+invitación no regresan a la app.
