@@ -17,7 +17,7 @@ export interface DashboardData {
     licencias: number
     facturacion: number
   }[]
-  porMedioPago: { method_code: string | null; pagos: number; amount: number }[]
+  porMedioPago: { method_code: string | null; nombre: string; pagos: number; amount: number }[]
   porSede: {
     branch_id: string
     branch_name: string
@@ -40,6 +40,10 @@ export interface DashboardData {
     ratio_conversion_llamada: number | null
   }[]
   capturaHoy: { staff_id: string; responsable_nombre: string; registrado: boolean }[]
+  /** Serie diaria del mes, para la gráfica de evolución. */
+  serieDiaria: { dia: number; ventas: number; facturacion: number; recaudo: number }[]
+  /** De las llamadas a la venta: dónde se cae la gestión. */
+  embudo: { nombre: string; valor: number }[]
 }
 
 /**
@@ -52,7 +56,12 @@ export interface DashboardData {
 export async function loadDashboard(companyId: string, mes: string): Promise<DashboardData> {
   const supabase = await createClient()
 
-  const [totales, financiacion, medios, sedes, ranking, captura] = await Promise.all([
+  const finDeMes = new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0))
+    .toISOString()
+    .slice(0, 10)
+
+  const [totales, financiacion, medios, sedes, ranking, captura, ventasDia, pagosDia, nombresMedio] =
+    await Promise.all([
     supabase
       .from("v_monthly_totals")
       .select("ventas_mes, licencias_mes, renovaciones_mes, facturacion_mes, recaudo_mes")
@@ -76,13 +85,27 @@ export async function loadDashboard(companyId: string, mes: string): Promise<Das
       .eq("period_month", mes),
     supabase
       .from("v_monthly_activity")
-      .select("staff_id, responsable_nombre, dias_reportados, dias_tarde, total_llamadas, llamadas_contestadas, llamada_efectiva, total_atencion, ratio_contactabilidad, ratio_conversion_llamada")
+      .select("staff_id, responsable_nombre, dias_reportados, dias_tarde, total_llamadas, llamadas_contestadas, llamada_efectiva, llamada_agenda, total_agendas, total_atencion, atencion_venta, ratio_contactabilidad, ratio_conversion_llamada")
       .eq("company_id", companyId)
       .eq("period_month", mes),
     supabase
       .from("v_capture_status")
       .select("staff_id, responsable_nombre, registrado")
       .eq("company_id", companyId),
+    supabase
+      .from("v_daily_sales")
+      .select("report_date, ventas, facturacion")
+      .eq("company_id", companyId)
+      .gte("report_date", mes)
+      .lte("report_date", finDeMes),
+    supabase
+      .from("payments")
+      .select("report_date, amount")
+      .eq("company_id", companyId)
+      .gte("report_date", mes)
+      .lte("report_date", finDeMes)
+      .limit(20000),
+    supabase.from("payment_methods").select("code, name"),
   ])
 
   const numero = (v: unknown) => Number(v ?? 0)
@@ -116,6 +139,36 @@ export async function loadDashboard(companyId: string, mes: string): Promise<Das
     porPersona.set(id, fila)
   }
 
+  // Serie diaria: las ventas y el recaudo del mes, día por día. Se arma acá
+  // porque son dos fuentes —ventas y pagos— y ninguna vista las cruza.
+  const porDia = new Map<number, { dia: number; ventas: number; facturacion: number; recaudo: number }>()
+  const dia = (fecha: string) => Number(fecha.slice(8, 10))
+  const tomar = (fecha: string) => {
+    const d = dia(fecha)
+    if (!porDia.has(d)) porDia.set(d, { dia: d, ventas: 0, facturacion: 0, recaudo: 0 })
+    return porDia.get(d)!
+  }
+  for (const v of ventasDia.data ?? []) {
+    const p = tomar(v.report_date as string)
+    p.ventas += numero(v.ventas)
+    p.facturacion += numero(v.facturacion)
+  }
+  for (const p of pagosDia.data ?? []) {
+    tomar(p.report_date as string).recaudo += numero(p.amount)
+  }
+  const serie = [...porDia.values()].sort((a, b) => a.dia - b.dia)
+
+  const totalesActividad = (ranking.data ?? []).reduce(
+    (acc, r) => ({
+      llamadas: acc.llamadas + numero(r.total_llamadas),
+      contestadas: acc.contestadas + numero(r.llamadas_contestadas),
+      agendas: acc.agendas + numero(r.total_agendas),
+      atenciones: acc.atenciones + numero(r.total_atencion),
+      ventas: acc.ventas + numero(r.llamada_efectiva) + numero(r.atencion_venta),
+    }),
+    { llamadas: 0, contestadas: 0, agendas: 0, atenciones: 0, ventas: 0 },
+  )
+
   return {
     totales: {
       ventas: numero(totales.data?.ventas_mes),
@@ -136,6 +189,12 @@ export async function loadDashboard(companyId: string, mes: string): Promise<Das
     porMedioPago: (medios.data ?? [])
       .map((m) => ({
         method_code: m.method_code as string | null,
+        // El código es para la base; en pantalla va el nombre del catálogo, que
+        // es como lo llama el equipo ("Brilla TTC", no "brilla_ttc").
+        nombre:
+          nombresMedio.data?.find((n) => n.code === m.method_code)?.name ??
+          (m.method_code as string | null) ??
+          "Sin medio",
         pagos: numero(m.pagos),
         amount: numero(m.amount),
       }))
@@ -158,5 +217,13 @@ export async function loadDashboard(companyId: string, mes: string): Promise<Das
       responsable_nombre: (c.responsable_nombre as string) ?? "—",
       registrado: Boolean(c.registrado),
     })),
+    serieDiaria: serie,
+    embudo: [
+      { nombre: "Llamadas", valor: totalesActividad.llamadas },
+      { nombre: "Contestadas", valor: totalesActividad.contestadas },
+      { nombre: "Agendas", valor: totalesActividad.agendas },
+      { nombre: "Atenciones", valor: totalesActividad.atenciones },
+      { nombre: "Ventas", valor: totalesActividad.ventas },
+    ],
   }
 }

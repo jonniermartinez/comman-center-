@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 import { AlertCircle, CheckCircle2, Clock } from "lucide-react"
 
+import { Embudo, GraficaBarras, GraficaDiaria } from "@/components/graficas"
 import { PageHeader } from "@/components/page-header"
 import { SectionCard, SectionCardHeader } from "@/components/section-card"
 import { StatStrip } from "@/components/stat-strip"
@@ -56,11 +57,37 @@ export default async function DashboardPage({
         ]}
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <SectionCard className="lg:col-span-2">
+          <SectionCardHeader
+            title={`Evolución de ${monthLabel(mes)}`}
+            description="Lo facturado y lo efectivamente recaudado, día por día."
+          />
+          <GraficaDiaria datos={datos.serieDiaria} />
+        </SectionCard>
+
+        <SectionCard>
+          <SectionCardHeader
+            title="Embudo de la gestión"
+            description="Dónde se cae, de la llamada a la venta."
+          />
+          <Embudo pasos={datos.embudo} />
+        </SectionCard>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <SectionCard>
           <SectionCardHeader
             title="Ventas por financiación"
             description={`Cómo se financió lo vendido en ${monthLabel(mes)}.`}
+          />
+          <GraficaBarras
+            datos={datos.porFinanciacion.slice(0, 6).map((f) => ({
+              nombre: f.financing_name ?? "Sin definir",
+              valor: f.facturacion,
+              detalle: `${f.ventas} venta(s)`,
+            }))}
+            moneda
           />
           <Table>
             <TableHeader>
@@ -98,6 +125,14 @@ export default async function DashboardPage({
             title="Recaudo por medio de pago"
             description="Lo que efectivamente entró, no lo facturado."
           />
+          <GraficaBarras
+            datos={datos.porMedioPago.slice(0, 6).map((m) => ({
+              nombre: m.nombre,
+              valor: m.amount,
+              detalle: `${m.pagos} pago(s)`,
+            }))}
+            moneda
+          />
           <Table>
             <TableHeader>
               <TableRow>
@@ -109,7 +144,7 @@ export default async function DashboardPage({
             <TableBody>
               {datos.porMedioPago.map((m) => (
                 <TableRow key={m.method_code ?? "sin"}>
-                  <TableCell className="text-sm">{m.method_code ?? "Sin medio"}</TableCell>
+                  <TableCell className="text-sm">{m.nombre}</TableCell>
                   <TableCell className="text-right tabular-nums">{m.pagos}</TableCell>
                   <TableCell className="text-right font-medium tabular-nums">
                     {formatCOP(m.amount)}
@@ -133,6 +168,14 @@ export default async function DashboardPage({
           <SectionCardHeader
             title="Por sede"
             description="El total de la empresa es la suma de sus sedes."
+          />
+          <GraficaBarras
+            datos={datos.porSede.map((s) => ({
+              nombre: s.branch_name,
+              valor: s.facturacion_mes,
+              detalle: `${s.ventas_mes} venta(s)`,
+            }))}
+            moneda
           />
           <Table>
             <TableHeader>
