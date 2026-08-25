@@ -18,6 +18,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { CompanySwitcher } from "@/components/company-switcher"
+import { MobileNotice } from "@/components/mobile-notice"
 import { UserMenu } from "@/components/user-menu"
 import {
   Sidebar,
@@ -117,144 +118,152 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     href === base ? pathname === base : pathname.startsWith(href)
 
   return (
-    <SidebarProvider>
-      <Sidebar collapsible="offcanvas" className="border-r">
-        {/* La tarjeta de empresa hace también de logo: no hay fila de marca aparte. */}
-        {!sinAcceso && (
-          <SidebarHeader className="px-3 pt-4 pb-2">
-            <CompanySwitcher current={company} />
-          </SidebarHeader>
-        )}
+    <>
+      {/* En celular la app no se muestra: en su lugar va el aviso. El corte es
+          CSS puro, así que el navegador lo resuelve antes de pintar. */}
+      <MobileNotice />
 
-        <SidebarContent className="gap-1 px-3">
-          {!sinAcceso && (
-            <SidebarGroup className="p-0">
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <NavLink
-                    href="/empresas"
-                    label="Empresas"
-                    icon={LayoutGrid}
-                    active={pathname.startsWith("/empresas")}
-                  />
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
+      <div className="hidden sm:contents">
+        <SidebarProvider>
+          <Sidebar collapsible="offcanvas" className="border-r">
+            {/* La tarjeta de empresa hace también de logo: no hay fila de marca aparte. */}
+            {!sinAcceso && (
+              <SidebarHeader className="px-3 pt-4 pb-2">
+                <CompanySwitcher current={company} />
+              </SidebarHeader>
+            )}
 
-          {company && (
-            <>
-              <SidebarGroup className="p-0">
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    <NavLink
-                      href={base}
-                      label="Dashboard"
-                      icon={BarChart3}
-                      active={pathname === base}
-                    />
-                    <NavLink
-                      href={`${base}/objetivos`}
-                      label="Objetivos"
-                      icon={Target}
-                      active={isActive(`${base}/objetivos`)}
-                    />
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-
-              {capturaItems.length > 0 && (
+            <SidebarContent className="gap-1 px-3">
+              {!sinAcceso && (
                 <SidebarGroup className="p-0">
-                  <GroupLabel>Operación</GroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {capturaItems.map((item) => (
+                      <NavLink
+                        href="/empresas"
+                        label="Empresas"
+                        icon={LayoutGrid}
+                        active={pathname.startsWith("/empresas")}
+                      />
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
+
+              {company && (
+                <>
+                  <SidebarGroup className="p-0">
+                    <SidebarGroupContent>
+                      <SidebarMenu>
                         <NavLink
-                          key={item.href}
-                          href={item.href}
-                          label={item.label}
-                          icon={item.icon}
-                          active={isActive(item.href)}
+                          href={base}
+                          label="Dashboard"
+                          icon={BarChart3}
+                          active={pathname === base}
                         />
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
+                        <NavLink
+                          href={`${base}/objetivos`}
+                          label="Objetivos"
+                          icon={Target}
+                          active={isActive(`${base}/objetivos`)}
+                        />
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+
+                  {capturaItems.length > 0 && (
+                    <SidebarGroup className="p-0">
+                      <GroupLabel>Operación</GroupLabel>
+                      <SidebarGroupContent>
+                        <SidebarMenu>
+                          {capturaItems.map((item) => (
+                            <NavLink
+                              key={item.href}
+                              href={item.href}
+                              label={item.label}
+                              icon={item.icon}
+                              active={isActive(item.href)}
+                            />
+                          ))}
+                        </SidebarMenu>
+                      </SidebarGroupContent>
+                    </SidebarGroup>
+                  )}
+
+                  {canManage && (
+                    <SidebarGroup className="p-0">
+                      <GroupLabel>Administrar</GroupLabel>
+                      <SidebarGroupContent>
+                        <SidebarMenu>
+                          <NavLink
+                            href={`${base}/sedes`}
+                            label="Sedes"
+                            icon={MapPin}
+                            active={isActive(`${base}/sedes`)}
+                          />
+                          <NavLink
+                            href={`${base}/usuarios`}
+                            label="Equipo"
+                            icon={Users}
+                            active={isActive(`${base}/usuarios`)}
+                          />
+                          <NavLink
+                            href={`${base}/configuracion`}
+                            label="Configuración"
+                            icon={Settings}
+                            active={isActive(`${base}/configuracion`)}
+                          />
+                        </SidebarMenu>
+                      </SidebarGroupContent>
+                    </SidebarGroup>
+                  )}
+                </>
               )}
 
-              {canManage && (
-                <SidebarGroup className="p-0">
-                  <GroupLabel>Administrar</GroupLabel>
+              {isSuperAdmin && (
+                <SidebarGroup className="mt-auto p-0">
+                  <GroupLabel>Plataforma</GroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
                       <NavLink
-                        href={`${base}/sedes`}
-                        label="Sedes"
-                        icon={MapPin}
-                        active={isActive(`${base}/sedes`)}
-                      />
-                      <NavLink
-                        href={`${base}/usuarios`}
-                        label="Equipo"
+                        href="/admin/usuarios"
+                        label="Usuarios"
                         icon={Users}
-                        active={isActive(`${base}/usuarios`)}
+                        active={isActive("/admin/usuarios")}
                       />
                       <NavLink
-                        href={`${base}/configuracion`}
-                        label="Configuración"
-                        icon={Settings}
-                        active={isActive(`${base}/configuracion`)}
+                        href="/admin/auditoria"
+                        label="Auditoría"
+                        icon={History}
+                        active={isActive("/admin/auditoria")}
                       />
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
               )}
-            </>
-          )}
+            </SidebarContent>
 
-          {isSuperAdmin && (
-            <SidebarGroup className="mt-auto p-0">
-              <GroupLabel>Plataforma</GroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <NavLink
-                    href="/admin/usuarios"
-                    label="Usuarios"
-                    icon={Users}
-                    active={isActive("/admin/usuarios")}
-                  />
-                  <NavLink
-                    href="/admin/auditoria"
-                    label="Auditoría"
-                    icon={History}
-                    active={isActive("/admin/auditoria")}
-                  />
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
-        </SidebarContent>
+            <SidebarFooter className="px-3 pb-3">
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <UserMenu />
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarFooter>
+          </Sidebar>
 
-        <SidebarFooter className="px-3 pb-3">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <UserMenu />
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
+          <SidebarInset>
+            <header className="sticky top-0 z-10 flex w-full items-center gap-3 border-b bg-card px-4 py-3.5 sm:px-6">
+              <SidebarTrigger className="-ml-1" />
+              <h1 className="flex-1 truncate text-base font-medium sm:text-lg">
+                {tituloDe(pathname, !!company)}
+              </h1>
+            </header>
 
-      <SidebarInset>
-        <header className="sticky top-0 z-10 flex w-full items-center gap-3 border-b bg-card px-4 py-3.5 sm:px-6">
-          <SidebarTrigger className="-ml-1" />
-          <h1 className="flex-1 truncate text-base font-medium sm:text-lg">
-            {tituloDe(pathname, !!company)}
-          </h1>
-        </header>
-
-        <div className="flex-1 p-4 sm:p-6">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+            <div className="flex-1 p-4 sm:p-6">{children}</div>
+          </SidebarInset>
+        </SidebarProvider>
+      </div>
+    </>
   )
 }
 
