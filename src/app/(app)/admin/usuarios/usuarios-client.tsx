@@ -273,11 +273,27 @@ export function UsuariosClient({
                                       toast.error(r.error ?? "No se pudo restablecer.")
                                       return
                                     }
-                                    await navigator.clipboard.writeText(r.clave)
-                                    toast.success("Contraseña nueva copiada", {
-                                      description: `${profile.full_name} → ${r.clave}. No se vuelve a mostrar.`,
-                                      duration: 20000,
-                                    })
+                                    // Copiar es una comodidad; enseñar la clave
+                                    // es imprescindible. Si el portapapeles
+                                    // falla —permiso denegado, contexto no
+                                    // seguro— y se copiara antes de avisar, la
+                                    // contraseña quedaría cambiada y sin que
+                                    // nadie la haya visto: esa persona se queda
+                                    // fuera y solo se arregla con otro
+                                    // restablecimiento.
+                                    const copiada = await navigator.clipboard
+                                      .writeText(r.clave)
+                                      .then(() => true)
+                                      .catch(() => false)
+                                    toast.success(
+                                      copiada
+                                        ? "Contraseña nueva copiada"
+                                        : "Contraseña nueva (cópiala a mano)",
+                                      {
+                                        description: `${profile.full_name} → ${r.clave}. No se vuelve a mostrar.`,
+                                        duration: 20000,
+                                      },
+                                    )
                                   })
                                 }
                               >

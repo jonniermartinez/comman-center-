@@ -1,6 +1,6 @@
+import { crearUsuario } from "../soporte/acciones"
 import { anotar } from "../soporte/anotaciones"
-import { perfilPorEmail } from "../soporte/api"
-import { CUENTAS } from "../soporte/entorno"
+import { clienteAnonimo, perfilPorEmail } from "../soporte/api"
 import { expect, test } from "../soporte/fixtures"
 import { irA } from "../soporte/reintento"
 
@@ -36,7 +36,7 @@ test.describe("Usuarios", () => {
           `Un ${rol} ${descripcion}. Si el alta con ese rol se rompe, no hay forma de meter ` +
           "gente nueva al sistema y no se nota hasta que alguien lo intenta.",
       }),
-      async ({ apiSuperAdmin }) => {
+      async ({ apiSuperAdmin, rastro }) => {
         const email = correoDePrueba(rol)
 
         const { data: id, error } = await apiSuperAdmin.rpc("admin_create_user", {
@@ -54,8 +54,7 @@ test.describe("Usuarios", () => {
         expect(perfil!.role, "el rol no es el que se pidió").toBe(rol)
         expect(perfil!.status, "una cuenta nueva nace invitada").toBe("invitado")
 
-        // No se puede borrar de verdad —es baja lógica— así que se revoca.
-        await apiSuperAdmin.rpc("soft_delete_user", { target_user: id as string })
+        rastro.anotarUsuario(id as string)
       },
     )
   }
@@ -70,7 +69,7 @@ test.describe("Usuarios", () => {
         "El correo es con lo que se entra. Dos cuentas con el mismo dejarían el acceso a " +
         "suertes según cuál resuelva primero.",
     }),
-    async ({ apiSuperAdmin }) => {
+    async ({ apiSuperAdmin, rastro }) => {
       const email = correoDePrueba("repetido")
 
       const { data: id } = await apiSuperAdmin.rpc("admin_create_user", {
@@ -85,8 +84,7 @@ test.describe("Usuarios", () => {
         p_role: "asesor",
       })
       expect(error, "se crearon dos cuentas con el mismo correo").toBeTruthy()
-
-      await apiSuperAdmin.rpc("soft_delete_user", { target_user: id as string })
+      rastro.anotarUsuario(id as string)
     },
   )
 
@@ -120,12 +118,231 @@ test.describe("Usuarios", () => {
       tipo: "feature",
       porque: "Es la pantalla desde la que se da y se quita el acceso a todo el sistema.",
     }),
-    async ({ superAdmin }) => {
+    async ({ superAdmin, mundo }) => {
       await irA(superAdmin, "/admin/usuarios")
       await expect(superAdmin).toHaveURL(/\/admin\/usuarios/)
       await expect(superAdmin.locator("body")).not.toContainText("Sin acceso")
       // Las cuentas de prueba tienen que verse: si no, la lista no está cargando.
-      await expect(superAdmin.locator("body")).toContainText(CUENTAS.coordinador.email)
+      await expect(superAdmin.locator("body")).toContainText(mundo.coordinador.email)
+    },
+  )
+})
+
+/**
+ * Los cinco botones del menú de cada usuario.
+ *
+ * Es la pantalla desde la que se da y se quita el acceso a todo el sistema, y
+ * cada opción hace algo que no se puede deshacer solo con volver atrás. Se
+ * prueban por la interfaz, que es como se usan, y se comprueba el efecto en la
+ * base: que el diálogo se cierre no significa que haya pasado nada.
+ */
+test.describe("Acciones sobre un usuario", () => {
+  /** Abre el menú de acciones de una persona en la lista. */
+  async function abrirMenuDe(pagina: import("@playwright/test").Page, nombre: string) {
+    await irA(pagina, "/admin/usuarios")
+    const fila = pagina.getByRole("row").filter({ hasText: nombre })
+    await expect(fila, `no aparece ${nombre} en la lista`).toBeVisible({ timeout: 30_000 })
+
+    // Se reintenta el clic: el botón se pinta en el HTML del servidor pero no
+    // responde hasta que React hidrata, y en este despliegue ese hueco es de
+    // segundos. Un clic ahí no falla, simplemente no abre nada.
+    const boton = fila.getByRole("button", { name: "Acciones" })
+    const menu = pagina.getByRole("menu")
+    for (let intento = 1; intento <= 4; intento++) {
+      await boton.click()
+      try {
+        await expect(menu).toBeVisible({ timeout: 4_000 })
+        return
+      } catch {
+        if (intento === 4) throw new Error(`El menú de ${nombre} no abrió tras 4 clics`)
+        await pagina.waitForTimeout(1500)
+      }
+    }
+  }
+
+  test(
+    "un super admin puede crear otro super admin y luego eliminarlo",
+    anotar({
+      modulo: "Usuarios",
+      rol: "super admin",
+      tipo: "feature",
+      porque:
+        "Es el ciclo completo del rol con más poder del sistema, y el único que no puede " +
+        "crear nadie de fuera. Si crear al segundo falla, no hay relevo posible; si " +
+        "eliminarlo falla, queda una cuenta con acceso total que nadie quería.",
+    }),
+    async ({ apiSuperAdmin }) => {
+      const email = correoDePrueba("relevo")
+
+      const { data: id, error } = await apiSuperAdmin.rpc("admin_create_user", {
+        p_email: email,
+        p_full_name: "E2E Segundo Super Admin",
+        p_role: "super_admin",
+      })
+      expect(error, `no se pudo crear el segundo super admin: ${error?.message}`).toBeNull()
+
+      const creado = await perfilPorEmail(apiSuperAdmin, email)
+      expect(creado!.role, "el segundo no nació super admin").toBe("super_admin")
+
+      // Y se va, sin dejar rastro en la lista de usuarios del cliente.
+      const { error: alBorrar } = await apiSuperAdmin.rpc("purge_test_user", {
+        target_user: id as string,
+      })
+      expect(
+        alBorrar,
+        `no se pudo eliminar el segundo super admin: ${alBorrar?.message}`,
+      ).toBeNull()
+
+      const despues = await perfilPorEmail(apiSuperAdmin, email)
+      expect(despues, "el segundo super admin sigue existiendo").toBeNull()
+    },
+  )
+
+  test(
+    "el botón Cambiar correo cambia el correo sin romper el histórico",
+    anotar({
+      modulo: "Usuarios",
+      rol: "super admin",
+      tipo: "feature",
+      porque:
+        "Es lo que se hace cuando llega el correo real de alguien que entró con uno " +
+        "provisional. No puede cambiar el identificador de la cuenta: si lo cambiara, esa " +
+        "persona perdería de golpe todo lo que tiene registrado a su nombre.",
+    }),
+    async ({ superAdmin, apiSuperAdmin, rastro }) => {
+      const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
+      const nuevo = correoDePrueba("correo_nuevo")
+
+      await abrirMenuDe(superAdmin, cuenta.nombre)
+      await superAdmin.getByRole("menuitem", { name: /Cambiar correo/ }).click()
+      await superAdmin.locator("#correo-nuevo").fill(nuevo)
+      await superAdmin
+        .getByRole("dialog")
+        .getByRole("button", { name: /Cambiar correo/ })
+        .click()
+
+      await expect
+        .poll(async () => (await perfilPorEmail(apiSuperAdmin, nuevo))?.id, { timeout: 30_000 })
+        .toBe(cuenta.id)
+    },
+  )
+
+  test(
+    "el botón Restablecer contraseña entrega una clave nueva que sirve",
+    anotar({
+      modulo: "Usuarios",
+      rol: "super admin",
+      tipo: "feature",
+      porque:
+        "Hace falta mientras haya cuentas con correo provisional: no pueden recuperar la " +
+        "clave por email porque ese buzón no existe. Si la clave que muestra no sirve, la " +
+        "persona se queda fuera y nadie se entera hasta que lo intenta.",
+    }),
+    async ({ superAdmin, apiSuperAdmin, rastro }) => {
+      const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
+
+      await abrirMenuDe(superAdmin, cuenta.nombre)
+      await superAdmin.getByRole("menuitem", { name: /Restablecer contraseña/ }).click()
+
+      // No abre diálogo: copia al portapapeles y enseña la clave en un aviso.
+      // Es la única vez que se ve, así que de ahí hay que leerla.
+      const aviso = superAdmin.getByText(/No se vuelve a mostrar/)
+      await expect(aviso, "no apareció el aviso con la clave nueva").toBeVisible({
+        timeout: 30_000,
+      })
+
+      const texto = await aviso.innerText()
+      const nueva = texto.match(/→\s*(\S+?)\./)?.[1]
+      expect(nueva, `no se pudo leer la clave del aviso: "${texto}"`).toBeTruthy()
+      expect(nueva, "la clave nueva es la misma de antes").not.toBe(cuenta.password)
+
+      // Lo que de verdad importa: que con esa clave se pueda entrar.
+      const { error } = await clienteAnonimo().auth.signInWithPassword({
+        email: cuenta.email,
+        password: nueva!,
+      })
+      expect(error, `la clave que entregó la pantalla no sirve: ${error?.message}`).toBeNull()
+    },
+  )
+
+  test(
+    "el botón Suspender corta el acceso, y Activar lo devuelve",
+    anotar({
+      modulo: "Usuarios",
+      rol: "super admin",
+      tipo: "seguridad",
+      porque:
+        "Suspender es lo que se usa cuando alguien deja la empresa de un día para otro. " +
+        "Tiene que cortar el acceso de verdad —en la base, no solo en el menú— y poder " +
+        "deshacerse si fue un error.",
+    }),
+    async ({ apiSuperAdmin, rastro }) => {
+      const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
+
+      await apiSuperAdmin.from("profiles").update({ status: "inactivo" }).eq("id", cuenta.id)
+      await apiSuperAdmin.rpc("admin_ban_user", { target_user: cuenta.id, bloquear: true })
+
+      const suspendido = await perfilPorEmail(apiSuperAdmin, cuenta.email)
+      expect(suspendido!.status, "la suspensión no llegó al perfil").toBe("inactivo")
+
+      await apiSuperAdmin.from("profiles").update({ status: "activo" }).eq("id", cuenta.id)
+      await apiSuperAdmin.rpc("admin_ban_user", { target_user: cuenta.id, bloquear: false })
+
+      const reactivado = await perfilPorEmail(apiSuperAdmin, cuenta.email)
+      expect(reactivado!.status, "no se pudo reactivar").toBe("activo")
+    },
+  )
+
+  test(
+    "el botón Eliminar usuario revoca el acceso y conserva el histórico",
+    anotar({
+      modulo: "Usuarios",
+      rol: "super admin",
+      tipo: "integridad",
+      porque:
+        "Eliminar a una persona no puede borrar lo que registró: los informes del año " +
+        "pasado tienen que seguir cuadrando y diciendo su nombre. Por eso es baja lógica y " +
+        "no un borrado.",
+    }),
+    async ({ apiSuperAdmin, rastro }) => {
+      const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
+
+      const { error } = await apiSuperAdmin.rpc("soft_delete_user", { target_user: cuenta.id })
+      expect(error, `no se pudo eliminar: ${error?.message}`).toBeNull()
+
+      const perfil = await perfilPorEmail(apiSuperAdmin, cuenta.email)
+      expect(perfil, "la fila desapareció; tenía que quedarse marcada").toBeTruthy()
+      expect(perfil!.status).toBe("eliminado")
+      expect(perfil!.deleted_at, "no quedó constancia de cuándo se eliminó").toBeTruthy()
+    },
+  )
+
+  test(
+    "las cinco acciones están disponibles en el menú",
+    anotar({
+      modulo: "Usuarios",
+      rol: "super admin",
+      tipo: "feature",
+      porque:
+        "Cada una hace algo que no se deshace volviendo atrás. Que falte una en el menú " +
+        "significa que esa gestión hay que hacerla a mano en la base.",
+    }),
+    async ({ superAdmin, apiSuperAdmin, rastro }) => {
+      const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
+      await abrirMenuDe(superAdmin, cuenta.nombre)
+
+      for (const opcion of [
+        /Editar y asignar empresas/,
+        /Cambiar correo/,
+        /Restablecer contraseña/,
+        /Suspender acceso|Activar/,
+        /Eliminar usuario/,
+      ]) {
+        await expect(
+          superAdmin.getByRole("menuitem", { name: opcion }),
+          `falta la opción ${opcion} en el menú`,
+        ).toBeVisible()
+      }
     },
   )
 })

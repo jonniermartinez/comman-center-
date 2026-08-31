@@ -1,89 +1,171 @@
-import { test as base, type Page } from "@playwright/test"
+import { test as base, type Browser, type Page } from "@playwright/test"
 
+import { desmontarMundo, montarMundo, type CuentaCreada, type Mundo } from "./acciones"
 import {
   asignarAEmpresa,
   borrarEmpresa,
+  clienteAnonimo,
   clienteDe,
   crearEmpresa,
   empresaPorSlug,
   vincularStaff,
   type Cliente,
 } from "./api"
-import { CUENTAS } from "./entorno"
+import { BASE_URL } from "./entorno"
 import { nombreDePrueba } from "./guardarrail"
 import { nuevoRastro, type Rastro } from "./rastro"
-import { rutaSesion } from "./montaje"
-import type { Rol } from "./entorno"
+import { SESION_SUPER_ADMIN } from "./montaje"
+import { irA } from "./reintento"
 
 /**
- * Una pestaña ya con la sesión de cada rol, y un cliente de base con esa misma
- * identidad.
+ * Cada rol tiene dos caras en las pruebas, y las dos hacen falta.
  *
- * Las dos caras hacen falta y prueban cosas distintas: la pestaña dice qué ve
- * la persona, el cliente dice qué le daría la base si preguntara por su cuenta.
- * Una prueba de seguridad que solo mire la pestaña no prueba nada: los botones
- * se pueden pintar con las herramientas del navegador.
+ * La pestaña dice **qué ve la persona**; el cliente de base dice **qué le daría
+ * Postgres si preguntara por su cuenta**, sin pasar por la interfaz. La segunda
+ * es la que vale para seguridad: que a un asesor no se le pinte un botón no
+ * demuestra nada, los botones se pintan con las herramientas del navegador.
+ *
+ * Las cuentas de esos roles no están sembradas: las crea el fixture `mundo` al
+ * arrancar cada proceso, con las mismas funciones que usa la aplicación, y las
+ * purga al terminar. Solo el super admin preexiste.
  */
-async function paginaComo(rol: Rol, navegador: import("@playwright/test").Browser) {
-  const contexto = await navegador.newContext({
-    storageState: rutaSesion(rol),
-  })
+
+/** Abre sesión por el formulario, como haría la persona a la que representa. */
+async function iniciarSesion(navegador: Browser, cuenta: CuentaCreada) {
+  if (!cuenta.password) throw new Error(`La cuenta ${cuenta.email} se creó sin clave`)
+
+  const contexto = await navegador.newContext({ baseURL: BASE_URL })
   const pagina = await contexto.newPage()
-  return { contexto, pagina }
+  await irA(pagina, "/login")
+  await pagina.locator("#email").waitFor({ state: "visible", timeout: 45_000 })
+  await pagina.locator("#email").fill(cuenta.email)
+  await pagina.locator("#password").fill(cuenta.password)
+  await pagina.getByRole("button", { name: "Entrar" }).click()
+  await pagina.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 45_000 })
+
+  const estado = await contexto.storageState()
+  await contexto.close()
+  return estado
 }
 
-export const test = base.extend<{
-  superAdmin: Page
-  coordinador: Page
-  asesorA: Page
-  asesorB: Page
-  apiSuperAdmin: Cliente
-  apiCoordinador: Cliente
-  apiAsesorA: Cliente
-  apiAsesorB: Cliente
-  rastro: Rastro
-  empresaPropia: EmpresaPropia
-}>({
+/** Un cliente de base con la sesión de una cuenta recién creada. */
+async function clienteDeCuenta(cuenta: CuentaCreada): Promise<Cliente> {
+  if (!cuenta.password) throw new Error(`La cuenta ${cuenta.email} se creó sin clave`)
+  const cliente = clienteAnonimo()
+  const { error } = await cliente.auth.signInWithPassword({
+    email: cuenta.email,
+    password: cuenta.password,
+  })
+  if (error) throw new Error(`No se pudo entrar como ${cuenta.email}: ${error.message}`)
+  return cliente
+}
+
+type Sesiones = {
+  coordinador: Awaited<ReturnType<typeof iniciarSesion>>
+  asesorA: Awaited<ReturnType<typeof iniciarSesion>>
+  asesorB: Awaited<ReturnType<typeof iniciarSesion>>
+}
+
+type Clientes = {
+  coordinador: Cliente
+  asesorA: Cliente
+  asesorB: Cliente
+}
+
+export const test = base.extend<
+  {
+    superAdmin: Page
+    coordinador: Page
+    asesorA: Page
+    asesorB: Page
+    apiSuperAdmin: Cliente
+    apiCoordinador: Cliente
+    apiAsesorA: Cliente
+    apiAsesorB: Cliente
+    rastro: Rastro
+    empresaPropia: EmpresaPropia
+  },
+  {
+    mundo: Mundo
+    sesiones: Sesiones
+    clientes: Clientes
+  }
+>({
+  /**
+   * El equipo y las empresas con las que trabajan las pruebas.
+   *
+   * Se monta una vez por proceso —no por prueba— porque crear seis cuentas y
+   * dos empresas antes de cada una de las ciento veinte costaría minutos y
+   * dispararía el límite de inicios de sesión de Auth.
+   */
+  mundo: [
+    async ({}, usar) => {
+      const admin = await clienteDe("superAdmin")
+      const mundo = await montarMundo(admin)
+      await usar(mundo)
+      await desmontarMundo(admin, mundo)
+    },
+    { scope: "worker" },
+  ],
+
+  /** Una sesión de navegador por rol, abierta con las cuentas del mundo. */
+  sesiones: [
+    async ({ mundo, browser }, usar) => {
+      await usar({
+        coordinador: await iniciarSesion(browser, mundo.coordinador),
+        asesorA: await iniciarSesion(browser, mundo.asesorA),
+        asesorB: await iniciarSesion(browser, mundo.asesorB),
+      })
+    },
+    { scope: "worker" },
+  ],
+
+  /** Y un cliente de base por rol, con esas mismas cuentas. */
+  clientes: [
+    async ({ mundo }, usar) => {
+      await usar({
+        coordinador: await clienteDeCuenta(mundo.coordinador),
+        asesorA: await clienteDeCuenta(mundo.asesorA),
+        asesorB: await clienteDeCuenta(mundo.asesorB),
+      })
+    },
+    { scope: "worker" },
+  ],
+
   superAdmin: async ({ browser }, usar) => {
-    const { contexto, pagina } = await paginaComo("superAdmin", browser)
-    await usar(pagina)
+    const contexto = await browser.newContext({ storageState: SESION_SUPER_ADMIN })
+    await usar(await contexto.newPage())
     await contexto.close()
   },
-  coordinador: async ({ browser }, usar) => {
-    const { contexto, pagina } = await paginaComo("coordinador", browser)
-    await usar(pagina)
+  coordinador: async ({ browser, sesiones }, usar) => {
+    const contexto = await browser.newContext({ storageState: sesiones.coordinador })
+    await usar(await contexto.newPage())
     await contexto.close()
   },
-  asesorA: async ({ browser }, usar) => {
-    const { contexto, pagina } = await paginaComo("asesorA", browser)
-    await usar(pagina)
+  asesorA: async ({ browser, sesiones }, usar) => {
+    const contexto = await browser.newContext({ storageState: sesiones.asesorA })
+    await usar(await contexto.newPage())
     await contexto.close()
   },
-  asesorB: async ({ browser }, usar) => {
-    const { contexto, pagina } = await paginaComo("asesorB", browser)
-    await usar(pagina)
+  asesorB: async ({ browser, sesiones }, usar) => {
+    const contexto = await browser.newContext({ storageState: sesiones.asesorB })
+    await usar(await contexto.newPage())
     await contexto.close()
   },
 
+  // Los clientes de base no se cierran al terminar cada prueba: son de proceso
+  // a propósito, para no reautenticar ciento veinte veces.
   apiSuperAdmin: async ({}, usar) => {
-    // No se cierra sesión al terminar: el cliente es compartido por todo el
-    // proceso a propósito (ver `clienteDe`).
     await usar(await clienteDe("superAdmin"))
   },
-  apiCoordinador: async ({}, usar) => {
-    // No se cierra sesión al terminar: el cliente es compartido por todo el
-    // proceso a propósito (ver `clienteDe`).
-    await usar(await clienteDe("coordinador"))
+  apiCoordinador: async ({ clientes }, usar) => {
+    await usar(clientes.coordinador)
   },
-  apiAsesorA: async ({}, usar) => {
-    // No se cierra sesión al terminar: el cliente es compartido por todo el
-    // proceso a propósito (ver `clienteDe`).
-    await usar(await clienteDe("asesorA"))
+  apiAsesorA: async ({ clientes }, usar) => {
+    await usar(clientes.asesorA)
   },
-  apiAsesorB: async ({}, usar) => {
-    // No se cierra sesión al terminar: el cliente es compartido por todo el
-    // proceso a propósito (ver `clienteDe`).
-    await usar(await clienteDe("asesorB"))
+  apiAsesorB: async ({ clientes }, usar) => {
+    await usar(clientes.asesorB)
   },
 
   /**
@@ -100,22 +182,16 @@ export const test = base.extend<{
   },
 
   /**
-   * Una empresa ficticia entera, solo para esta prueba.
-   *
-   * Las pruebas no tocan las empresas del cliente ni de lejos: cada una que lo
-   * pida estrena la suya, con su sede y su equipo, y al terminar se borra
-   * completa. Eso se lleva de paso todo lo que se haya creado dentro, incluido
-   * lo que no se puede borrar fila a fila.
-   *
-   * Cuesta un par de segundos montarla, así que solo la piden las pruebas que
-   * escriben de verdad; las de permisos y lectura usan el banco compartido.
+   * Una empresa ficticia entera, solo para esta prueba, con el equipo del
+   * mundo dentro. Al terminar se borra completa, y eso se lleva de paso todo lo
+   * que se haya creado dentro.
    */
-  empresaPropia: async ({ apiSuperAdmin }, usar) => {
+  empresaPropia: async ({ apiSuperAdmin, mundo }, usar) => {
     const nombre = nombreDePrueba("empresa")
     await crearEmpresa(apiSuperAdmin, nombre)
-    await asignarAEmpresa(apiSuperAdmin, CUENTAS.coordinador.email, nombre, "coordinador")
-    await asignarAEmpresa(apiSuperAdmin, CUENTAS.asesorA.email, nombre, "asesor")
-    await vincularStaff(apiSuperAdmin, CUENTAS.asesorA.email, nombre)
+    await asignarAEmpresa(apiSuperAdmin, mundo.coordinador.email, nombre, "coordinador")
+    await asignarAEmpresa(apiSuperAdmin, mundo.asesorA.email, nombre, "asesor")
+    await vincularStaff(apiSuperAdmin, mundo.asesorA.email, nombre)
 
     const empresa = await empresaPorSlug(apiSuperAdmin, nombre)
     const { data: sede } = await apiSuperAdmin

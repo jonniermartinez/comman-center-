@@ -2,6 +2,7 @@ import { anotar } from "../soporte/anotaciones"
 import { borrarEmpresa, empresaPorSlug } from "../soporte/api"
 import { nombreDePrueba } from "../soporte/guardarrail"
 import { expect, test } from "../soporte/fixtures"
+import { altaDeEmpresaPorLaInterfaz, crearEmpresaPorLaInterfaz } from "../soporte/acciones"
 import { irA } from "../soporte/reintento"
 
 /**
@@ -31,16 +32,7 @@ test.describe("Alta de empresa", () => {
       const nombre = nombreDePrueba("doble-clic")
       const slug = nombre
 
-      await irA(superAdmin, "/empresas/nueva")
-      await superAdmin.locator("#name").fill(nombre)
-
-      // Los cinco pasos del asistente hasta el botón final.
-      for (let paso = 1; paso < 5; paso++) {
-        await superAdmin.getByRole("button", { name: "Siguiente" }).click()
-      }
-
-      const crear = superAdmin.getByRole("button", { name: /Crear empresa/ })
-      await expect(crear).toBeEnabled()
+      const crear = await altaDeEmpresaPorLaInterfaz(superAdmin, nombre)
 
       // Dos clics seguidos, como los daría alguien que no ve respuesta.
       await crear.click()
@@ -78,13 +70,8 @@ test.describe("Alta de empresa", () => {
     async ({ superAdmin, apiSuperAdmin }) => {
       const nombre = nombreDePrueba("pendiente")
 
-      await irA(superAdmin, "/empresas/nueva")
-      await superAdmin.locator("#name").fill(nombre)
-      for (let paso = 1; paso < 5; paso++) {
-        await superAdmin.getByRole("button", { name: "Siguiente" }).click()
-      }
-
-      await superAdmin.getByRole("button", { name: /Crear empresa/ }).click()
+      const crear = await altaDeEmpresaPorLaInterfaz(superAdmin, nombre)
+      await crear.click()
       // El estado de espera tiene que existir: es lo que le dice a la persona que
       // no vuelva a pulsar.
       await expect(superAdmin.getByRole("button", { name: /Creando/ })).toBeVisible({
@@ -107,13 +94,7 @@ test.describe("Alta de empresa", () => {
     }),
     async ({ superAdmin, apiSuperAdmin }) => {
       const nombre = nombreDePrueba("duplicada")
-      await irA(superAdmin, "/empresas/nueva")
-      await superAdmin.locator("#name").fill(nombre)
-      for (let paso = 1; paso < 5; paso++) {
-        await superAdmin.getByRole("button", { name: "Siguiente" }).click()
-      }
-      await superAdmin.getByRole("button", { name: /Crear empresa/ }).click()
-      await superAdmin.waitForURL(/\/e\//, { timeout: 30_000 })
+      await crearEmpresaPorLaInterfaz(superAdmin, nombre)
 
       // La segunda vez, el mismo nombre: el paso 1 tiene que protestar y no
       // dejar avanzar.
@@ -141,13 +122,7 @@ test.describe("Borrado definitivo", () => {
     }),
     async ({ superAdmin, apiSuperAdmin }) => {
       const nombre = nombreDePrueba("borrar")
-      await irA(superAdmin, "/empresas/nueva")
-      await superAdmin.locator("#name").fill(nombre)
-      for (let paso = 1; paso < 5; paso++) {
-        await superAdmin.getByRole("button", { name: "Siguiente" }).click()
-      }
-      await superAdmin.getByRole("button", { name: /Crear empresa/ }).click()
-      await superAdmin.waitForURL(/\/e\//, { timeout: 30_000 })
+      await crearEmpresaPorLaInterfaz(superAdmin, nombre)
 
       await irA(superAdmin, "/empresas")
       const tarjeta = superAdmin.locator("div").filter({ hasText: nombre }).last()

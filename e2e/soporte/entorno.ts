@@ -24,7 +24,7 @@ export const SUPABASE_KEY = requerido("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY")
  */
 export const PREFIJO = "e2e-"
 
-export type Rol = "superAdmin" | "coordinador" | "asesorA" | "asesorB" | "suspendido"
+export type Rol = "superAdmin"
 
 export interface Cuenta {
   rol: Rol
@@ -33,36 +33,23 @@ export interface Cuenta {
   nombre: string
 }
 
+/**
+ * La única cuenta que preexiste.
+ *
+ * Todo lo demás —coordinadores, asesores, la cuenta suspendida— lo crean las
+ * pruebas llamando a las mismas funciones que la aplicación, y lo purgan al
+ * terminar. Sembrar cuentas a mano dejaba usuarios de prueba acumulándose para
+ * siempre en la pantalla de usuarios del cliente.
+ *
+ * Esta no se puede crear desde dentro: es el equivalente al primer usuario de
+ * la instalación, el que no puede dar de alta nadie porque no habría quién.
+ */
 export const CUENTAS: Record<Rol, Cuenta> = {
   superAdmin: {
     rol: "superAdmin",
     email: requerido("E2E_SUPER_ADMIN_EMAIL"),
     password: requerido("E2E_SUPER_ADMIN_PASSWORD"),
     nombre: "E2E Super Admin",
-  },
-  coordinador: {
-    rol: "coordinador",
-    email: requerido("E2E_COORDINADOR_EMAIL"),
-    password: requerido("E2E_COORDINADOR_PASSWORD"),
-    nombre: "E2E Coordinador",
-  },
-  asesorA: {
-    rol: "asesorA",
-    email: requerido("E2E_ASESOR_A_EMAIL"),
-    password: requerido("E2E_ASESOR_A_PASSWORD"),
-    nombre: "E2E Asesor A",
-  },
-  asesorB: {
-    rol: "asesorB",
-    email: requerido("E2E_ASESOR_B_EMAIL"),
-    password: requerido("E2E_ASESOR_B_PASSWORD"),
-    nombre: "E2E Asesor B",
-  },
-  suspendido: {
-    rol: "suspendido",
-    email: requerido("E2E_SUSPENDIDO_EMAIL"),
-    password: requerido("E2E_SUSPENDIDO_PASSWORD"),
-    nombre: "E2E Suspendido",
   },
 }
 
@@ -72,6 +59,11 @@ export const CUENTAS: Record<Rol, Cuenta> = {
  * Son dos y no una a propósito: casi toda la seguridad que hay que demostrar es
  * "lo de la empresa A no se ve desde la B", y eso no se puede probar con una
  * sola. El asesor A vive en la primera, el B en la segunda.
+ */
+/**
+ * Ya no hay empresas fijas: cada proceso crea las suyas (ver el fixture
+ * `mundo`). Se dejan los nombres antiguos por si quedara alguna suelta de una
+ * corrida vieja, para que la limpieza sepa reconocerla.
  */
 export const EMPRESA_A = `${PREFIJO}sandbox-a`
 export const EMPRESA_B = `${PREFIJO}sandbox-b`

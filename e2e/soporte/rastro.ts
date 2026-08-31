@@ -48,6 +48,16 @@ export interface Rastro {
   /** Apunta una fila ya creada para que se borre al final. */
   anotar(tabla: Tabla, id: string | null | undefined): void
   /**
+   * Apunta una cuenta para borrarla al final.
+   *
+   * Se purga de verdad, no se marca. La baja lógica es lo correcto para una
+   * persona real —el histórico tiene que seguir diciendo quién hizo cada
+   * cosa— pero para las cuentas que inventan las pruebas es lo contrario: si
+   * solo se marcan, se acumulan para siempre en la pantalla de usuarios del
+   * cliente. `purge_test_user` solo acepta correos del patrón de pruebas.
+   */
+  anotarUsuario(id: string | null | undefined): void
+  /**
    * Crea una fila y la apunta de una vez.
    *
    * Devuelve lo mismo que Supabase —`{ data, error }`— para que la prueba pueda
@@ -62,10 +72,14 @@ export interface Rastro {
 
 export function nuevoRastro(): { rastro: Rastro; limpiar: (admin: Cliente) => Promise<void> } {
   const filas: { tabla: Tabla; id: string }[] = []
+  const usuarios: string[] = []
 
   const rastro: Rastro = {
     anotar(tabla, id) {
       if (id) filas.push({ tabla, id })
+    },
+    anotarUsuario(id) {
+      if (id) usuarios.push(id)
     },
     async crear(cliente, tabla, fila) {
       const { data, error } = await cliente
@@ -98,6 +112,12 @@ export function nuevoRastro(): { rastro: Rastro; limpiar: (admin: Cliente) => Pr
       if (error) console.error(`rastro: quedó sin borrar ${tabla}/${id}: ${error.message}`)
     }
     filas.length = 0
+
+    for (const id of usuarios) {
+      const { error } = await admin.rpc("purge_test_user", { target_user: id })
+      if (error) console.error(`rastro: quedó sin borrar el usuario ${id}: ${error.message}`)
+    }
+    usuarios.length = 0
   }
 
   return { rastro, limpiar }

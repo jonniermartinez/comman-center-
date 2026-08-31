@@ -2250,6 +2250,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_status"]
       }
+      purge_test_user: { Args: { target_user: string }; Returns: undefined }
       restore_user: { Args: { target_user: string }; Returns: undefined }
       safe_ratio: {
         Args: { denominador: number; numerador: number }

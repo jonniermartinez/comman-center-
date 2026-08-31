@@ -43,10 +43,12 @@ test.describe("Sin sesión", () => {
       tipo: "seguridad",
       porque: "Suspender tiene que cortar el login, no solo esconder los datos.",
     }),
-    async ({ page }) => {
+    async ({ page, mundo }) => {
+      // La cuenta suspendida la crea el mundo y la suspende de verdad: perfil
+      // inactivo y login bloqueado en Auth.
       await irA(page, "/login")
-      await page.locator("#email").fill(CUENTAS.suspendido.email)
-      await page.locator("#password").fill(CUENTAS.suspendido.password)
+      await page.locator("#email").fill(mundo.suspendido.email)
+      await page.locator("#password").fill(mundo.suspendido.password!)
       await page.getByRole("button", { name: "Entrar" }).click()
 
       // Se queda en el login y lo dice; no cae dentro con una pantalla vacía.
