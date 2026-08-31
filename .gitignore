@@ -53,3 +53,9 @@ cloudflare-env.d.ts
 /.agents/
 /.claude/
 skills-lock.json
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/.auth/
