@@ -55,11 +55,31 @@ export async function vaciarBuzon(email: string): Promise<void> {
 }
 
 /**
+ * ¿Puede Supabase mandar correos ahora mismo?
+ *
+ * El remitente por defecto va limitado a unos pocos por hora y responde 429
+ * `over_email_send_rate_limit`. Cuando eso pasa, esperar dos minutos a un
+ * correo que nunca se envió no aporta nada: es mejor decirlo de inmediato y
+ * con el motivo, que además es el mismo que impide invitar a una persona real.
+ */
+export async function limiteDeCorreoAlcanzado(email: string): Promise<boolean> {
+  const respuesta = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/recover`, {
+    method: "POST",
+    headers: {
+      apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  })
+  return respuesta.status === 429
+}
+
+/**
  * Espera a que llegue un correo.
  *
- * El plazo por defecto es generoso —dos minutos— porque el envío no es
- * instantáneo: pasa por el SMTP de Supabase y por Email Routing. Medido en
- * producción, el primero puede tardar más de un minuto.
+ * El plazo es generoso porque el envío no es instantáneo: pasa por el SMTP de
+ * Supabase y por Email Routing, y medido en producción el primero puede tardar
+ * más de un minuto.
  */
 export async function esperarCorreo(
   email: string,
@@ -81,8 +101,10 @@ export async function esperarCorreo(
   throw new Error(
     `No llegó correo a ${email} en ${(opciones.timeoutMs ?? 120_000) / 1000}s ` +
       `(${vistos} correos en el buzón${opciones.asunto ? `, ninguno con asunto ${opciones.asunto}` : ""}). ` +
-      `Si el buzón está vacío, mira si Supabase tiene SMTP propio: el de por ` +
-      `defecto va limitado a unos pocos correos por hora.`,
+      `Si el buzón está vacío, casi seguro es el límite de envío: el remitente por ` +
+      `defecto de Supabase responde 429 over_email_send_rate_limit tras unos pocos ` +
+      `correos por hora. Hace falta SMTP propio (Resend, SES) — y no solo para las ` +
+      `pruebas: con ese límite tampoco se puede invitar a varias personas seguidas.`,
   )
 }
 

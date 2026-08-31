@@ -4,10 +4,12 @@ import {
   BUZON_INVITADO,
   BUZON_RECUPERA,
   esperarCorreo,
+  limiteDeCorreoAlcanzado,
   hayBuzon,
   rutaDeConfirmacion,
   vaciarBuzon,
 } from "../soporte/correo"
+import { crearUsuario } from "../soporte/acciones"
 import { expect, test } from "../soporte/fixtures"
 import { irA } from "../soporte/reintento"
 
@@ -24,6 +26,18 @@ import { irA } from "../soporte/reintento"
 
 test.describe("Flujos por correo", () => {
   test.skip(!hayBuzon(), "Sin E2E_MAIL_URL / E2E_MAIL_SECRET en .env.e2e")
+
+  // Si Supabase ya no admite más envíos, estas pruebas no pueden decir nada
+  // sobre la aplicación. Se marcan como saltadas con el motivo, en vez de
+  // fallar dos minutos después por algo que no es del código.
+  test.beforeEach(async () => {
+    const agotado = await limiteDeCorreoAlcanzado("sonda-limite@ejemplo.invalid")
+    test.skip(
+      agotado,
+      "Supabase no admite más correos ahora mismo (429 over_email_send_rate_limit). " +
+        "El remitente por defecto va limitado a unos pocos por hora: hace falta SMTP propio.",
+    )
+  })
   // El envío pasa por el SMTP de Supabase y por Email Routing; medido en
   // producción, el primer correo puede tardar más de un minuto.
   test.setTimeout(240_000)
@@ -37,7 +51,15 @@ test.describe("Flujos por correo", () => {
       porque:
         "Quien olvida su clave se queda fuera del sistema. Es el único camino de vuelta y no lo prueba nadie hasta que falla.",
     }),
-    async ({ page }) => {
+    async ({ page, apiSuperAdmin, rastro }) => {
+      // La cuenta la crea la prueba: no hay cuentas sembradas, y sin cuenta
+      // Supabase responde 200 pero no manda nada —a propósito, para no delatar
+      // qué correos existen—, así que la espera del correo se agotaría sin
+      // decir por qué.
+      await crearUsuario(apiSuperAdmin, rastro, "asesor", {
+        email: BUZON_RECUPERA,
+        conAcceso: true,
+      })
       await vaciarBuzon(BUZON_RECUPERA)
 
       await irA(page, "/recuperar")
@@ -70,7 +92,15 @@ test.describe("Flujos por correo", () => {
       porque:
         "Un enlace de un solo uso que sirve siempre es una llave permanente en el buzón de alguien.",
     }),
-    async ({ page }) => {
+    async ({ page, apiSuperAdmin, rastro }) => {
+      // La cuenta la crea la prueba: no hay cuentas sembradas, y sin cuenta
+      // Supabase responde 200 pero no manda nada —a propósito, para no delatar
+      // qué correos existen—, así que la espera del correo se agotaría sin
+      // decir por qué.
+      await crearUsuario(apiSuperAdmin, rastro, "asesor", {
+        email: BUZON_RECUPERA,
+        conAcceso: true,
+      })
       await vaciarBuzon(BUZON_RECUPERA)
 
       await irA(page, "/recuperar")
@@ -110,7 +140,7 @@ test.describe("Flujos por correo", () => {
       // cuenta no exista.
       const previo = await perfilPorEmail(apiSuperAdmin, BUZON_INVITADO)
       if (previo) {
-        await apiSuperAdmin.rpc("soft_delete_user", { target_user: previo.id })
+        await apiSuperAdmin.rpc("purge_test_user", { target_user: previo.id })
       }
       await vaciarBuzon(BUZON_INVITADO)
 

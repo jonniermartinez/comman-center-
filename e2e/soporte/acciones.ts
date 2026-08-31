@@ -84,16 +84,30 @@ export async function crearUsuario(
   admin: Cliente,
   rastro: Rastro | null,
   rol: RolCuenta,
-  opciones: { conAcceso?: boolean } = {},
+  opciones: { conAcceso?: boolean; email?: string } = {},
 ): Promise<CuentaCreada> {
   const sufijo = `${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`
-  const email = `e2e_${rol}_${sufijo}@jonnier.com`
+  // Se puede pedir una dirección concreta: las pruebas de correo necesitan una
+  // de las que tienen regla de enrutamiento hacia el buzón, y esas son fijas.
+  const email = opciones.email ?? `e2e_${rol}_${sufijo}@jonnier.com`
   const nombre = `E2E ${rol} ${sufijo}`
   // Con acceso, la cuenta nace confirmada y con clave: es lo que hace la
   // aplicación al dar de alta al equipo de una empresa sin esperar correos.
   const password = opciones.conAcceso
     ? `E2e-${sufijo}-${Math.random().toString(36).slice(2, 10)}`
     : undefined
+
+  // Si la dirección se pidió a mano puede quedar ocupada de una corrida
+  // anterior que no llegó a limpiar. Se libera antes: son direcciones de
+  // prueba y `purge_test_user` solo acepta esas.
+  if (opciones.email) {
+    const { data: previo } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle()
+    if (previo) await admin.rpc("purge_test_user", { target_user: previo.id })
+  }
 
   const { data: id, error } = await admin.rpc("admin_create_user", {
     p_email: email,
