@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { requireSession } from "@/lib/auth/session"
+import { logAudit } from "@/lib/data/audit"
 import { createClient } from "@/lib/supabase/server"
 
 export interface Result {
@@ -377,10 +378,7 @@ export interface VentaBuscada {
  * se necesita saber es cuánto falta, y tenerlo delante evita el error clásico
  * de abonar sobre el crédito equivocado.
  */
-export async function buscarVentas(
-  companyId: string,
-  texto: string,
-): Promise<VentaBuscada[]> {
+export async function buscarVentas(companyId: string, texto: string): Promise<VentaBuscada[]> {
   await requireSession()
   const termino = texto.trim()
   if (termino.length < 3) return []
@@ -390,7 +388,9 @@ export async function buscarVentas(
 
   const { data } = await supabase
     .from("sales")
-    .select("id, branch_id, ref_credito, licencia_nombre, credito_nombre, licencia_id, credito_id, report_date, valor_final, saldo")
+    .select(
+      "id, branch_id, ref_credito, licencia_nombre, credito_nombre, licencia_id, credito_id, report_date, valor_final, saldo",
+    )
     .eq("company_id", companyId)
     .or(
       [
@@ -413,4 +413,63 @@ export async function buscarVentas(
     valor_final: Number(v.valor_final),
     saldo: Number(v.saldo),
   }))
+}
+
+/** Los cinco tipos de registro que el equipo captura a diario. */
+export type TipoRegistro = "venta" | "pago" | "jornada" | "agenda" | "movimiento"
+
+const TABLA: Record<
+  TipoRegistro,
+  "sales" | "payments" | "daily_activity" | "appointments" | "cash_movements"
+> = {
+  venta: "sales",
+  pago: "payments",
+  jornada: "daily_activity",
+  agenda: "appointments",
+  movimiento: "cash_movements",
+}
+
+/**
+ * Borra un registro de captura.
+ *
+ * Todo lo que se puede crear se tiene que poder corregir y quitar: hasta ahora
+ * la aplicación solo dejaba crear y editar, así que una venta metida por error
+ * —o duplicada— se quedaba ahí para siempre falseando el mes.
+ *
+ * Quién puede hacerlo lo decide la base, no esta función: las políticas de
+ * borrado exigen `can_manage_company`, o sea super admin o coordinador. Un
+ * asesor puede corregir lo suyo, pero hacer desaparecer un registro es cosa de
+ * quien administra.
+ *
+ * Es borrado de verdad, no marca: son datos operativos del día a día, no el
+ * histórico de una empresa. Lo que sí queda es el rastro en la auditoría.
+ */
+export async function deleteRecord(tipo: TipoRegistro, id: string): Promise<Result> {
+  const session = await requireSession()
+  const supabase = await createClient()
+  const tabla = TABLA[tipo]
+
+  // Se lee antes de borrar para poder dejar en la auditoría qué se llevó por
+  // delante: después ya no hay a quién preguntarle.
+  const { data: antes } = await supabase.from(tabla).select("*").eq("id", id).maybeSingle()
+  if (!antes) return { ok: false, error: "El registro ya no existe." }
+
+  const { error } = await supabase.from(tabla).delete().eq("id", id)
+  if (error) return { ok: false, error: explicar(error.message) }
+
+  // Si RLS no dejó borrar, PostgREST no da error: simplemente no toca ninguna
+  // fila. Hay que comprobarlo, o la pantalla diría que borró algo que sigue ahí.
+  const { data: sigue } = await supabase.from(tabla).select("id").eq("id", id).maybeSingle()
+  if (sigue) return { ok: false, error: "No tienes permiso para eliminar este registro." }
+
+  await logAudit({
+    action: "delete",
+    entity: tabla,
+    entity_id: id,
+    company_id: (antes as { company_id?: string }).company_id ?? null,
+    before: antes,
+  })
+
+  refrescar()
+  return { ok: true }
 }

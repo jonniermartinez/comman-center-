@@ -74,6 +74,17 @@ política. Por eso los payloads se construyen en `soporte/datos.ts` con las
 columnas reales, y la misma fila se inserta primero donde **sí** está
 permitida. Si el control positivo falla, la prueba falla: no hay verde barato.
 
+## La tabla de permisos que prueban
+
+| | crear | corregir | eliminar |
+|---|---|---|---|
+| Ventas, Pagos, Agendas, Jornada | a nombre propio, o quien administra | **cualquiera de la empresa** | lo suyo, o quien administra |
+| Caja | solo quien administra | solo quien administra | solo quien administra |
+
+Corregir lo de un compañero se permite y borrarlo no, y no es un descuido: una
+corrección deja rastro y se puede deshacer; un borrado no deja nada que
+revisar. La caja va aparte porque es el dinero físico del punto.
+
 ## Qué está cubierto
 
 **Seguridad** (`e2e/seguridad/`) — 29 pruebas

@@ -35,6 +35,14 @@ interface Registro {
    */
   unico?: (ranura: number) => Record<string, unknown>
   /**
+   * Solo lo toca quien administra, en crear, corregir y borrar.
+   *
+   * Es el caso de la caja, y viene de la 019: el dinero físico del punto lo
+   * responde quien administra, no quien vende. Sin esta marca, las pruebas
+   * darían por hecho que un asesor puede lo mismo que en los demás módulos.
+   */
+  soloAdmin?: boolean
+  /**
    * Campo que la prueba de edición modifica.
    *
    * Cada tabla tiene el suyo: la jornada guarda las correcciones en `notas`, no
@@ -42,13 +50,7 @@ interface Registro {
    * por esquema y parecería un permiso denegado.
    */
   campoEditable: string
-  /**
-   * ¿La base deja borrarlo?
-   *
-   * `daily_activity` no tiene política de DELETE: no se puede borrar una
-   * jornada, ni siquiera siendo super admin. Las demás sí, pero solo para quien
-   * administra la empresa.
-   */
+  /** ¿La base deja borrarlo? Desde la 024, las cinco tablas sí. */
   borrable: boolean
 }
 
@@ -94,6 +96,7 @@ const REGISTROS: Registro[] = [
     fila: movimiento,
     conResponsable: false,
     borrable: true,
+    soloAdmin: true,
   },
   {
     singular: "jornada",
@@ -102,10 +105,32 @@ const REGISTROS: Registro[] = [
     campoEditable: "notas",
     fila: jornada,
     conResponsable: true,
-    borrable: false,
+    borrable: true,
     unico: diaDistinto,
   },
 ]
+
+/**
+ * Ata la fila a una venta cuando hace falta para saber de quién es.
+ *
+ * Un pago no lleva responsable propio: cuelga de una venta, y la política mira
+ * el responsable de esa venta. Sin `sale_id`, un pago no es de nadie y ni su
+ * autor puede borrarlo, que es justo lo que confundía a la prueba.
+ */
+async function conVenta(
+  admin: Cliente,
+  r: Registro,
+  ctx: Contexto,
+): Promise<Record<string, unknown>> {
+  if (r.tabla !== "payments") return {}
+
+  const { data } = await admin
+    .from("sales")
+    .insert(venta(ctx) as never)
+    .select("id")
+    .single()
+  return { sale_id: data!.id }
+}
 
 async function contexto(admin: Cliente, slug: string, staff?: string): Promise<Contexto> {
   const empresa = await empresaPorSlug(admin, slug)
@@ -271,9 +296,55 @@ for (const r of REGISTROS) {
     )
 
     // ------------------------------------------------------------
-    // Asesor: registra lo suyo.
+    // Asesor: crea lo suyo, corrige lo de cualquiera, borra solo lo suyo.
+    //
+    // La caja queda fuera entera: ahí no puede ni crear ni corregir ni borrar.
     // ------------------------------------------------------------
-    if (r.conResponsable) {
+    if (r.soloAdmin) {
+      test(
+        `el asesor no puede tocar ${r.singular}`,
+        anotar({
+          modulo: r.modulo,
+          rol: "asesor",
+          tipo: "seguridad",
+          porque:
+            "La caja es el dinero físico del punto y responde quien administra, no quien " +
+            "vende. Es la única excepción a que el comercial maneje lo suyo.",
+        }),
+        async ({ apiAsesorA, apiSuperAdmin }) => {
+          const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
+
+          const { error: alCrear } = await apiAsesorA.from(r.tabla).insert(r.fila(ctx) as never)
+          expect(alCrear, `un asesor creó ${r.singular}`).toBeTruthy()
+
+          const { data: creado } = await apiSuperAdmin
+            .from(r.tabla)
+            .insert(r.fila(ctx) as never)
+            .select("id")
+            .single()
+          expect(creado?.id, "el montaje no pudo crear la fila").toBeTruthy()
+
+          await apiAsesorA
+            .from(r.tabla)
+            .update({ [r.campoEditable]: "no debería poder" } as never)
+            .eq("id", creado!.id)
+          await apiAsesorA.from(r.tabla).delete().eq("id", creado!.id)
+
+          const { data: despues } = await apiSuperAdmin
+            .from(r.tabla)
+            .select("*")
+            .eq("id", creado!.id)
+            .maybeSingle()
+          expect(despues, `un asesor eliminó ${r.singular}`).toBeTruthy()
+          expect(
+            (despues as unknown as Record<string, unknown>)[r.campoEditable],
+            `un asesor corrigió ${r.singular}`,
+          ).not.toBe("no debería poder")
+
+          await apiSuperAdmin.from(r.tabla).delete().eq("id", creado!.id)
+        },
+      )
+    } else if (r.conResponsable) {
       test(
         `el asesor puede crear ${r.singular} a su nombre`,
         anotar({
@@ -340,39 +411,120 @@ for (const r of REGISTROS) {
       )
     }
 
-    if (r.borrable) {
+    // Estas tres no aplican a la caja: ahí el asesor no llega a nada.
+    if (!r.soloAdmin) {
       test(
-        `el asesor no puede eliminar ${r.singular}`,
+        `el asesor puede corregir ${r.singular} de un compañero`,
         anotar({
           modulo: r.modulo,
           rol: "asesor",
-          tipo: "seguridad",
+          tipo: "feature",
           porque:
-            "Borrar es la operación que no deja rastro. Un comercial puede corregir lo suyo, " +
-            "pero hacer desaparecer un registro es cosa de quien administra.",
+            "Quien está en el punto ve el error de un compañero que ya se fue. Si no puede " +
+            "arreglarlo, el dato se queda mal hasta que aparezca un coordinador. Corregir deja " +
+            "rastro y se puede volver a corregir; por eso se permite y borrar no.",
         }),
         async ({ apiAsesorA, apiSuperAdmin }) => {
-          const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
+          const ajeno = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor B")
           const { data: creado } = await apiSuperAdmin
             .from(r.tabla)
-            .insert(r.fila(ctx, r.unico?.(9)) as never)
+            .insert(r.fila(ajeno, r.unico?.(9)) as never)
             .select("id")
             .single()
+          expect(creado?.id, "el montaje de la prueba no pudo crear la fila").toBeTruthy()
 
-          await apiAsesorA.from(r.tabla).delete().eq("id", creado!.id)
-
-          // Lo que importa no es si el DELETE devolvió error: RLS puede
-          // limitarse a no borrar ninguna fila y responder que todo fue bien.
-          const { data: sigue } = await apiSuperAdmin
+          const { error } = await apiAsesorA
             .from(r.tabla)
-            .select("id")
+            .update({ [r.campoEditable]: "corregido por un compañero" } as never)
             .eq("id", creado!.id)
-            .maybeSingle()
-          expect(sigue, `un asesor eliminó ${r.singular}`).toBeTruthy()
+          expect(
+            error,
+            `el asesor no pudo corregir ${r.singular} ajena: ${error?.message}`,
+          ).toBeNull()
+
+          const { data: despues } = await apiSuperAdmin
+            .from(r.tabla)
+            .select("*")
+            .eq("id", creado!.id)
+            .single()
+          expect(
+            (despues as unknown as Record<string, unknown>)[r.campoEditable],
+            "la corrección no se guardó",
+          ).toBe("corregido por un compañero")
 
           await apiSuperAdmin.from(r.tabla).delete().eq("id", creado!.id)
         },
       )
+
+      if (r.borrable) {
+        test(
+          `el asesor puede eliminar ${r.singular} suya`,
+          anotar({
+            modulo: r.modulo,
+            rol: "asesor",
+            tipo: "feature",
+            porque:
+              "Si puede crearla y corregirla, tiene que poder quitarla cuando la metió por " +
+              "error. Antes no podía, y la salida era dejarla en cero, que ensucia los informes.",
+          }),
+          async ({ apiAsesorA, apiSuperAdmin }) => {
+            const mia = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
+            const atado = await conVenta(apiSuperAdmin, r, mia)
+            const { data: creado } = await apiSuperAdmin
+              .from(r.tabla)
+              .insert(r.fila(mia, { ...r.unico?.(10), ...atado }) as never)
+              .select("id")
+              .single()
+            expect(creado?.id, "el montaje no pudo crear la fila").toBeTruthy()
+
+            await apiAsesorA.from(r.tabla).delete().eq("id", creado!.id)
+
+            const { data: sigue } = await apiSuperAdmin
+              .from(r.tabla)
+              .select("id")
+              .eq("id", creado!.id)
+              .maybeSingle()
+            expect(sigue, `el asesor no pudo eliminar su propia ${r.singular}`).toBeNull()
+          },
+        )
+
+        test(
+          `el asesor no puede eliminar ${r.singular} de un compañero`,
+          anotar({
+            modulo: r.modulo,
+            rol: "asesor",
+            tipo: "seguridad",
+            porque:
+              "Corregir lo de otro deja rastro y se puede deshacer; borrarlo no deja nada que " +
+              "revisar. Por eso el comercial corrige lo ajeno pero solo borra lo suyo.",
+          }),
+          async ({ apiAsesorA, apiSuperAdmin }) => {
+            // A nombre del asesor B: si se crea a nombre de A, la prueba dice
+            // "de un compañero" pero comprueba lo contrario y siempre falla.
+            const ajeno = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor B")
+            const atado = await conVenta(apiSuperAdmin, r, ajeno)
+            const { data: creado } = await apiSuperAdmin
+              .from(r.tabla)
+              .insert(r.fila(ajeno, { ...r.unico?.(11), ...atado }) as never)
+              .select("id")
+              .single()
+            expect(creado?.id, "el montaje no pudo crear la fila").toBeTruthy()
+
+            await apiAsesorA.from(r.tabla).delete().eq("id", creado!.id)
+
+            // Lo que importa no es si el DELETE devolvió error: RLS puede
+            // limitarse a no borrar ninguna fila y responder que todo fue bien.
+            const { data: sigue } = await apiSuperAdmin
+              .from(r.tabla)
+              .select("id")
+              .eq("id", creado!.id)
+              .maybeSingle()
+            expect(sigue, `un asesor eliminó ${r.singular} de otra persona`).toBeTruthy()
+
+            await apiSuperAdmin.from(r.tabla).delete().eq("id", creado!.id)
+          },
+        )
+      }
     }
 
     test(
