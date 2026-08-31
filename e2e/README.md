@@ -103,27 +103,47 @@ casos, no montar nada.
 
 ### Los flujos que dependen del correo
 
-Sin cubrir: **invitación de usuario** y **recuperación de contraseña**. Son los
-dos únicos que necesitan leer un correo de verdad; todo lo demás usa cuentas ya
-confirmadas con contraseña conocida.
+**Ya funcionan.** `e2e/features/correo.spec.ts` cubre recuperación de
+contraseña, invitación de usuario, que un enlace de un solo uso no sirva dos
+veces, y que pedir recuperación de un correo inexistente no delate si existe.
 
-`jonnier.com` está en Cloudflare con Email Routing activo (MX
-`route1/2/3.mx.cloudflare.net`), pero **Email Routing solo reenvía: no guarda
-nada y no tiene API de lectura**. Para que una prueba pueda leer el enlace de
-invitación hace falta:
+Detrás hay un Email Worker propio, `e2e/correo-worker/`, desplegado en la
+cuenta **Jonnier** (donde vive la zona `jonnier.com`; Email Routing solo entrega
+a workers de su misma cuenta). Hace falta porque Email Routing **solo reenvía**:
+no guarda nada ni tiene API de lectura.
 
-1. Un **Email Worker** enganchado a `e2e_*@jonnier.com` que guarde el mensaje
-   (KV o D1) y lo exponga por HTTP con un token.
-2. Un helper `soporte/correo.ts` que consulte ese endpoint hasta que llegue el
-   mensaje y saque el `token_hash` del enlace.
-3. Las dos pruebas.
+No se reutilizó `gurwi-e2e-mail`, que ya existía en esa zona: solo rescata
+códigos de seis dígitos y tira el resto, y los correos de Supabase traen un
+enlace. Además es de otro proyecto.
 
-Requiere acceso a Cloudflare: `npx wrangler login` o un `CLOUDFLARE_API_TOKEN`
-con permiso sobre Workers y Email Routing de esa zona.
+```
+GET    /correos?email=…   →  { correos: [...] }   lista, más reciente primero
+DELETE /correos?email=…   →  vacía el buzón
+```
+Ambos con `Authorization: Bearer $E2E_MAIL_SECRET`.
 
-**Además, la plantilla de Magic Link tiene que apuntar a `/auth/confirm`**
-(ver `docs/SUPABASE.md`), o la invitación muere en "enlace inválido" tanto en
-las pruebas como en la vida real.
+#### Ninguna prueba manda correo a un buzón personal
+
+La zona tiene un catch-all que reenvía todo lo no enrutado a
+`jonnieralejandrom@gmail.com`. Por eso **las siete direcciones de prueba tienen
+regla explícita** apuntando al worker: las dos de correo (`e2e-cc-invitado`,
+`e2e-cc-recupera`) y las cinco cuentas de rol (`e2e_*`), que no se leen nunca
+pero se enrutan igual para que no acaben en el buzón personal.
+
+> **Al añadir una dirección de prueba nueva, crea primero su regla de
+> enrutamiento.** Sin regla cae en el catch-all y llega al correo personal. Por
+> eso la prueba que necesita una dirección inexistente usa `.invalid`, no
+> `jonnier.com`.
+
+## Dos cosas rotas que encontraron estas pruebas
+
+1. **La Site URL de Supabase es `http://localhost:3000`.** El enlace de
+   "olvidé mi contraseña" que llega en producción manda a localhost. Se cambia
+   en Authentication → URL Configuration.
+2. **La plantilla de correo usa `{{ .ConfirmationURL }}`**, que apunta al
+   `/auth/v1/verify` de Supabase en vez de al `/auth/confirm` de la aplicación.
+   Las pruebas construyen la ruta a mano para poder seguir; una persona real no
+   puede. Ver `docs/SUPABASE.md`.
 
 ## Volver a crear las cuentas
 

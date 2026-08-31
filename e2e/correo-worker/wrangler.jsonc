@@ -1,0 +1,13 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "command-center-e2e-mail",
+  // Cuenta "Jonnier": es donde está la zona jonnier.com, y Email Routing solo
+  // puede entregar a un worker de su misma cuenta. La app vive en otra.
+  "account_id": "9bc53bed8d99e575aa402d7d0ce7af43",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-17",
+  "kv_namespaces": [
+    { "binding": "CORREOS", "id": "4f8b726222634024a3344a44bb361b6f" }
+  ],
+  "observability": { "enabled": true }
+}
