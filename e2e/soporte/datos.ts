@@ -54,15 +54,18 @@ export function pago(ctx: Contexto, extra: Record<string, unknown> = {}) {
   }
 }
 
-/** Una agenda mínima. */
+/**
+ * Una agenda mínima.
+ *
+ * No lleva `report_date` ni `period_month`: `appointments` guarda la cita en
+ * `scheduled_at`, que es un instante, no el día en que se reportó.
+ */
 export function agenda(ctx: Contexto, extra: Record<string, unknown> = {}) {
-  const fecha = hoyISO()
   return {
     company_id: ctx.companyId,
     branch_id: ctx.branchId,
     staff_id: ctx.staffId ?? null,
-    report_date: fecha,
-    period_month: mesDe(fecha),
+    scheduled_at: new Date().toISOString(),
     ...extra,
   }
 }
