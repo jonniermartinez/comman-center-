@@ -58,24 +58,34 @@ Tres cosas que no se pueden hacer por SQL y hay que dejar listas:
 3. **URLs de redirección.** Authentication → URL Configuration: agregar
    `http://localhost:3000/**` y el dominio de producción, o los enlaces del
    correo no vuelven a la app.
+4. **Plantilla del enlace mágico.** La invitación llega por el correo de
+   *Magic Link* (Authentication → Emails → Templates): su enlace debe apuntar a
+   `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink&next=/definir-clave`,
+   igual que el resto de plantillas. Con el enlace por defecto de Supabase el
+   token no llega a la ruta `/auth/confirm` y la invitación muere en
+   "enlace inválido".
+
+Desde la migración 022, crear usuarios desde el panel de Supabase (Add user)
+solo funciona para el primero: el trigger `handle_new_auth_user` rechaza
+cualquier alta que no venga de `admin_create_user`, que es la función que usa
+la app. Es la misma regla de "solo por invitación", pero verificada por la
+base y no por un ajuste del panel.
 
 ## 4. Variables de entorno
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://yooqgcqdssvtkkschkku.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_…
-SUPABASE_SERVICE_ROLE_KEY=…        # solo servidor, nunca en el cliente
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-La `service_role` salta RLS por completo. Se usa únicamente para lo que la Admin
-API de Auth exige y ninguna política puede hacer: invitar, bloquear y desbloquear
-cuentas, y escribir en `audit_log`. Cada uso va detrás de `requireSuperAdmin()`.
-En Cloudflare va como *secret*, no como variable de texto plano:
-
-```
-npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-```
+No hay ninguna clave secreta: la aplicación entera habla con Supabase con la
+clave publicable, acotada por RLS. La administración de cuentas —crear, cambiar
+correo, poner clave temporal, bloquear el login— y la escritura de `audit_log`
+las hacen funciones `security definer` de Postgres (`admin_create_user`,
+`admin_change_email`, `admin_set_password`, `admin_ban_user`, `log_audit`)
+que verifican `is_super_admin()` del lado de la base. La `service_role` no se
+usa en ningún punto y no debe configurarse.
 
 ## 5. Avisos del linter que se dejan a propósito
 

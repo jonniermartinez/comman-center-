@@ -81,15 +81,9 @@ domain**. Si el dominio ya está en Cloudflare, el certificado es automático.
 
 ## Cuando entre Supabase
 
-Las claves **no van en el repo**. Las públicas van en `wrangler.jsonc` bajo
-`vars`, y las secretas se cargan aparte:
-
-```bash
-npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-```
-
-En Workers Builds hay que repetirlas en **Settings → Variables and Secrets**, o
-la build remota fallará aunque la local funcione.
+Las claves públicas van en `wrangler.jsonc` bajo `vars` o en
+`.env.production`. No hay claves secretas: la aplicación funciona entera con la
+clave publicable y RLS.
 
 ## Notas
 
@@ -105,31 +99,12 @@ la build remota fallará aunque la local funcione.
 | Archivo | Qué lleva | ¿Se versiona? |
 |---|---|---|
 | `.env.production` | Las públicas: URL del proyecto, clave publicable y URL del sitio | **Sí**. `NEXT_PUBLIC_*` termina dentro del bundle del navegador, así que no son secretas, y tenerlas versionadas hace que la build remota no dependa de configurar nada a mano |
-| `.env.local` | Lo de la máquina de desarrollo, incluida `SUPABASE_SERVICE_ROLE_KEY` | No |
-| Secret del worker | `SUPABASE_SERVICE_ROLE_KEY` en producción | — |
-
-```bash
-npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-```
-
-### Cuidado al desplegar desde la máquina local
-
-OpenNext **copia los archivos `.env` al bundle**, `.env.local` incluido. Si
-corres `npm run deploy` desde tu portátil, la clave de servicio queda escrita
-dentro del código desplegado en vez de vivir como secret.
-
-No es catastrófico —la clave tiene que estar disponible en tiempo de ejecución
-de todos modos— pero un secret no se puede leer desde el bundle y una variable
-incrustada sí. Lo correcto es **desplegar desde la build remota**, que clona el
-repo y por tanto no tiene `.env.local`, y registrar la clave como secret. Si
-tienes que desplegar a mano, borra o vacía `SUPABASE_SERVICE_ROLE_KEY` de
-`.env.local` antes de construir.
+| `.env.local` | Lo particular de la máquina de desarrollo, si hace falta | No |
 
 | Variable | Dónde | Para qué |
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | cliente y servidor | Proyecto de Supabase |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | cliente y servidor | Clave publicable; todo lo que alcanza está acotado por RLS |
-| `SUPABASE_SERVICE_ROLE_KEY` | **solo servidor** | Admin API de Auth (invitar, bloquear) y escritura del log de auditoría. Salta RLS: nunca debe llegar al navegador |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | cliente y servidor | Clave publicable; todo lo que alcanza está acotado por RLS. Es la única clave: la administración de cuentas la hacen funciones de Postgres guardadas por `is_super_admin()` |
 | `NEXT_PUBLIC_SITE_URL` | servidor | A dónde vuelven los enlaces de los correos de invitación |
 
 Al cambiar de dominio hay que actualizar `NEXT_PUBLIC_SITE_URL` en
