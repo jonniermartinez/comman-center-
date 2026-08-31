@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache"
 
 import { logAudit } from "@/lib/data/audit"
 import { requireSuperAdmin } from "@/lib/auth/session"
-import { createAdminClient, hasAdminKey } from "@/lib/supabase/admin"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/lib/supabase/database.types"
 
@@ -15,29 +16,41 @@ export interface Result {
   error?: string
 }
 
-/** Baneo efectivamente permanente en Auth: 100 años. */
-const BLOQUEO_TOTAL = "876000h"
-
 function siteUrl() {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
 }
 
 /**
+ * Cliente de Auth sin cookies, con la clave publicable.
+ *
+ * Sirve para pedirle a Auth un correo en nombre de otra persona (el enlace de
+ * la invitación) sin que esa llamada pise la sesión del super admin que vive en
+ * las cookies de la petición. No salta nada: es la misma clave del navegador.
+ */
+function createMailClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  )
+}
+
+/**
  * Bloquea o desbloquea el inicio de sesión en Auth.
  *
- * Si la clave de servicio no está configurada, la baja igual queda hecha en la
- * base —que es lo que RLS mira— y solo se pierde el bloqueo del login. Se avisa
- * por consola en vez de tumbar la acción y dejarla a medias.
+ * Lo hace la función `admin_ban_user` de Postgres, llamada con la sesión del
+ * usuario: la base vuelve a verificar que quien lo pide es super admin.
+ * Complementa a RLS, que ya niega los datos por el estado del perfil.
  */
 async function bloquearEnAuth(userId: string, bloquear: boolean) {
-  if (!hasAdminKey()) {
-    console.warn("SUPABASE_SERVICE_ROLE_KEY sin configurar: no se bloqueó el login de", userId)
-    return
-  }
-  const admin = createAdminClient()
-  await admin.auth.admin.updateUserById(userId, {
-    ban_duration: bloquear ? BLOQUEO_TOTAL : "none",
+  const supabase = await createClient()
+  const { error } = await supabase.rpc("admin_ban_user", {
+    target_user: userId,
+    bloquear,
   })
+  // La baja o suspensión ya quedó en el perfil, que es lo que RLS mira; si el
+  // bloqueo del login falló se avisa sin tumbar la acción.
+  if (error) console.error("admin_ban_user:", error.message)
 }
 
 function refrescar() {
@@ -59,46 +72,55 @@ export async function inviteUser(input: {
   role: UserRole
   company_ids: string[]
 }): Promise<Result> {
-  const session = await requireSuperAdmin()
+  await requireSuperAdmin()
 
   const email = input.email.trim().toLowerCase()
   const full_name = input.full_name.trim()
   if (full_name.length < 3) return { ok: false, error: "El nombre es demasiado corto." }
   if (!/.+@.+\..+/.test(email)) return { ok: false, error: "El correo no es válido." }
 
-  if (!hasAdminKey()) {
-    return {
-      ok: false,
-      error: "Falta SUPABASE_SERVICE_ROLE_KEY en el entorno: sin ella no se pueden crear cuentas.",
-    }
-  }
-
-  const admin = createAdminClient()
-
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-    data: { full_name, role: input.role, phone: input.phone?.trim() || null },
-    redirectTo: `${siteUrl()}/auth/confirm?next=/definir-clave`,
+  // La cuenta nace en la base, invitada y sin contraseña utilizable. La crea
+  // la función `admin_create_user` de Postgres, que vuelve a verificar que
+  // quien llama es super admin: no hay clave de servicio de por medio.
+  const supabase = await createClient()
+  const { data: userId, error } = await supabase.rpc("admin_create_user", {
+    p_email: email,
+    p_full_name: full_name,
+    p_role: input.role,
+    p_phone: input.phone?.trim() || undefined,
   })
 
-  if (error || !data?.user) {
+  if (error || !userId) {
+    return { ok: false, error: error?.message ?? "No se pudo crear el usuario." }
+  }
+
+  const asignacion = await asignarEmpresas(userId, input.company_ids, input.role)
+  if (!asignacion.ok) return asignacion
+
+  // El enlace para entrar y definir la contraseña: el mismo enlace de un solo
+  // uso de "olvidé mi clave", solo que lo dispara el super admin. Al canjearlo,
+  // Auth confirma el correo y el perfil pasa de invitado a activo.
+  const { error: envio } = await createMailClient().auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: `${siteUrl()}/auth/confirm?next=/definir-clave`,
+    },
+  })
+
+  if (envio) {
     return {
       ok: false,
-      error:
-        error?.message === "email rate limit exceeded"
-          ? "Supabase limitó el envío de correos. Configura un SMTP propio o copia el enlace de invitación a mano."
-          : (error?.message ?? "No se pudo crear el usuario."),
+      error: envio.message.includes("rate limit")
+        ? "La cuenta quedó creada, pero Supabase limitó el envío de correos. Configura un SMTP propio o reintenta en unos minutos."
+        : `La cuenta quedó creada, pero el correo no salió: ${envio.message}`,
     }
   }
 
-  const asignacion = await asignarEmpresas(data.user.id, input.company_ids, input.role)
-  if (!asignacion.ok) return asignacion
-
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "create",
     entity: "profiles",
-    entity_id: data.user.id,
+    entity_id: userId,
     after: { full_name, email, role: input.role, empresas: input.company_ids.length },
   })
 
@@ -165,8 +187,6 @@ export async function setUserRole(userId: string, role: UserRole): Promise<Resul
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "update",
     entity: "profiles",
     entity_id: userId,
@@ -202,8 +222,6 @@ export async function setUserActive(userId: string, activo: boolean): Promise<Re
   await bloquearEnAuth(userId, !activo)
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "update",
     entity: "profiles",
     entity_id: userId,
@@ -249,7 +267,7 @@ export async function updateUserProfile(
   userId: string,
   patch: { full_name: string; phone?: string },
 ): Promise<Result> {
-  const session = await requireSuperAdmin()
+  await requireSuperAdmin()
 
   const full_name = patch.full_name.trim()
   if (full_name.length < 3) return { ok: false, error: "El nombre es demasiado corto." }
@@ -262,8 +280,6 @@ export async function updateUserProfile(
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "update",
     entity: "profiles",
     entity_id: userId,
@@ -348,8 +364,6 @@ export async function setUserCompanies(
   }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "assign",
     entity: "company_users",
     entity_id: userId,
@@ -414,12 +428,7 @@ export async function createStaffAccounts(
   staffIds?: string[],
 ): Promise<Result & { cuentas?: CuentaCreada[] }> {
   const session = await requireSuperAdmin()
-  if (!hasAdminKey()) {
-    return { ok: false, error: "Falta SUPABASE_SERVICE_ROLE_KEY en el entorno." }
-  }
-
   const supabase = await createClient()
-  const admin = createAdminClient()
 
   const { data: empresa } = await supabase
     .from("companies")
@@ -455,26 +464,27 @@ export async function createStaffAccounts(
     const correo = `${usuario}@${empresa.slug}.${DOMINIO_PROVISIONAL}`
     const clave = claveTemporal()
 
-    const { data, error } = await admin.auth.admin.createUser({
-      email: correo,
-      password: clave,
-      // Sin esto la cuenta nace "invitada" y no puede entrar hasta confirmar un
-      // correo que nunca va a llegar.
-      email_confirm: true,
-      user_metadata: { full_name: persona.full_name, role: "asesor" },
+    // `p_confirmado`: sin esto la cuenta nace "invitada" y no puede entrar
+    // hasta confirmar un correo que nunca va a llegar.
+    const { data: userId, error } = await supabase.rpc("admin_create_user", {
+      p_email: correo,
+      p_full_name: persona.full_name,
+      p_role: "asesor",
+      p_password: clave,
+      p_confirmado: true,
     })
 
-    if (error || !data.user) {
+    if (error || !userId) {
       console.error("crear cuenta", persona.full_name, error?.message)
       continue
     }
 
     await Promise.all([
-      supabase.from("staff").update({ profile_id: data.user.id }).eq("id", persona.id),
+      supabase.from("staff").update({ profile_id: userId }).eq("id", persona.id),
       supabase.from("company_users").upsert(
         {
           company_id: companyId,
-          user_id: data.user.id,
+          user_id: userId,
           role: "asesor" as const,
           branch_id: cs.branch_id,
           removed_at: null,
@@ -488,8 +498,6 @@ export async function createStaffAccounts(
   }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "create",
     entity: "profiles",
     company_id: companyId,
@@ -508,24 +516,21 @@ export async function createStaffAccounts(
  * empresas y sus metas siguen exactamente donde estaban.
  */
 export async function changeUserEmail(userId: string, email: string): Promise<Result> {
-  const session = await requireSuperAdmin()
-  if (!hasAdminKey()) {
-    return { ok: false, error: "Falta SUPABASE_SERVICE_ROLE_KEY en el entorno." }
-  }
+  await requireSuperAdmin()
 
   const limpio = email.trim().toLowerCase()
   if (!/.+@.+\..+/.test(limpio)) return { ok: false, error: "El correo no es válido." }
 
-  const admin = createAdminClient()
-  const { error } = await admin.auth.admin.updateUserById(userId, {
-    email: limpio,
-    email_confirm: true,
+  // La función de Postgres actualiza Auth y la identidad; el trigger de la
+  // base sincroniza `profiles.email` solo.
+  const supabase = await createClient()
+  const { error } = await supabase.rpc("admin_change_email", {
+    target_user: userId,
+    p_email: limpio,
   })
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "update",
     entity: "profiles",
     entity_id: userId,
@@ -545,19 +550,17 @@ export async function changeUserEmail(userId: string, email: string): Promise<Re
 export async function resetUserPassword(
   userId: string,
 ): Promise<Result & { clave?: string }> {
-  const session = await requireSuperAdmin()
-  if (!hasAdminKey()) {
-    return { ok: false, error: "Falta SUPABASE_SERVICE_ROLE_KEY en el entorno." }
-  }
+  await requireSuperAdmin()
 
   const clave = claveTemporal()
-  const admin = createAdminClient()
-  const { error } = await admin.auth.admin.updateUserById(userId, { password: clave })
+  const supabase = await createClient()
+  const { error } = await supabase.rpc("admin_set_password", {
+    target_user: userId,
+    p_password: clave,
+  })
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "update",
     entity: "profiles",
     entity_id: userId,

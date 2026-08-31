@@ -68,9 +68,9 @@ export async function requireSession(): Promise<Session> {
 /**
  * Guarda de las acciones de administración.
  *
- * Es imprescindible antes de cualquier uso del cliente `service_role`, que
- * salta RLS: sin esta verificación, un asesor podría invitar usuarios llamando
- * a la Server Action directamente.
+ * Corta antes en el servidor lo que la base igual va a negar: las funciones
+ * `admin_*` de Postgres vuelven a verificar `is_super_admin()` por su cuenta,
+ * así que esto es la primera puerta, no la única.
  */
 export async function requireSuperAdmin(): Promise<Session> {
   const session = await requireSession()
