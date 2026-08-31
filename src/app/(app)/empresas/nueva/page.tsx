@@ -3,7 +3,7 @@
 import { ArrowLeft, ArrowRight, Check, Info, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
 import { CityCombobox } from "@/components/city-combobox"
@@ -53,6 +53,7 @@ export default function NuevaEmpresaPage() {
   const router = useRouter()
 
   const [step, setStep] = useState(1)
+  const [creando, startCreacion] = useTransition()
   const [name, setName] = useState("")
   const [nit, setNit] = useState("")
   const [city, setCity] = useState("Buga")
@@ -104,33 +105,52 @@ export default function NuevaEmpresaPage() {
     set(list.includes(value) ? list.filter((x) => x !== value) : [...list, value])
   }
 
-  async function submit() {
-    const resultado = await createCompany({
-      name,
-      nit,
-      city,
-      department,
-      accent_color: accent,
-      crm_label: crmLabel || name,
-      modules,
-      financing_codes: financing,
-      payment_codes: payments,
-      branches: sedes.map((x) => ({
-        name: x.name.trim(),
-        city: x.city.trim() || undefined,
-        department: x.department.trim() || undefined,
-      })),
-      // Un coordinador sin sede (-1) supervisa la empresa completa.
-      assignments: assignments.map((a) => ({ ...a, branch_index: Math.max(0, a.branch_index) })),
+  /**
+   * Crear la empresa.
+   *
+   * Va dentro de una transición para que el botón quede bloqueado mientras el
+   * servidor responde: el alta no es transaccional y cada clic crea una empresa
+   * nueva, así que sin ese bloqueo un doble clic deja duplicados.
+   */
+  function submit() {
+    startCreacion(async () => {
+      const resultado = await createCompany({
+        name,
+        nit,
+        city,
+        department,
+        accent_color: accent,
+        crm_label: crmLabel || name,
+        modules,
+        financing_codes: financing,
+        payment_codes: payments,
+        branches: sedes.map((x) => ({
+          name: x.name.trim(),
+          city: x.city.trim() || undefined,
+          department: x.department.trim() || undefined,
+        })),
+        // Un coordinador sin sede (-1) supervisa la empresa completa.
+        assignments: assignments.map((a) => ({ ...a, branch_index: Math.max(0, a.branch_index) })),
+      })
+      // Sin slug no se creó nada: el error se muestra y la pantalla se queda
+      // como está, con los datos escritos, para poder reintentar.
+      if (!resultado.slug) {
+        toast.error(resultado.error ?? "No se pudo crear la empresa.")
+        return
+      }
+      // Con slug pero con error, la empresa quedó a medio configurar: se entra a
+      // ella igual, que es donde se termina.
+      if (!resultado.ok) {
+        toast.warning(`${name} quedó incompleta`, {
+          description: resultado.error ?? "Termina de configurarla desde su pantalla.",
+        })
+      } else {
+        toast.success(`${name} creada`, {
+          description: `${sedes.length} sede(s), ${modules.length} módulo(s) y ${assignments.length} comercial(es).`,
+        })
+      }
+      router.push(`/e/${resultado.slug}`)
     })
-    if (!resultado.ok) {
-      toast.error(resultado.error ?? "No se pudo crear la empresa.")
-      if (!resultado.slug) return
-    }
-    toast.success(`${name} creada`, {
-      description: `${sedes.length} sede(s), ${modules.length} módulo(s) y ${assignments.length} comercial(es).`,
-    })
-    router.push(`/e/${resultado.slug}`)
   }
 
   return (
@@ -596,9 +616,12 @@ export default function NuevaEmpresaPage() {
             <ArrowRight className="size-4" />
           </Button>
         ) : (
-          <Button onClick={submit} disabled={!!nameError || modules.length === 0}>
+          <Button
+            onClick={submit}
+            disabled={!!nameError || modules.length === 0 || creando}
+          >
             <Check className="size-4" />
-            Crear empresa
+            {creando ? "Creando…" : "Crear empresa"}
           </Button>
         )}
       </div>
