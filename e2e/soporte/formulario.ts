@@ -1,6 +1,6 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test"
 
-import { irA } from "./reintento";
+import { irA } from "./reintento"
 
 /**
  * Gestos que se repiten en todos los formularios de captura.
@@ -11,15 +11,9 @@ import { irA } from "./reintento";
  */
 
 /** Abre el módulo de una empresa y espera a que la pantalla esté servida. */
-export async function abrirModulo(
-  pagina: Page,
-  empresa: string,
-  modulo: string,
-) {
-  await irA(pagina, `/e/${empresa}/${modulo}`);
-  await expect(pagina.locator("body")).not.toContainText(
-    "Módulo no habilitado",
-  );
+export async function abrirModulo(pagina: Page, empresa: string, modulo: string) {
+  await irA(pagina, `/e/${empresa}/${modulo}`)
+  await expect(pagina.locator("body")).not.toContainText("Módulo no habilitado")
 }
 
 /**
@@ -34,17 +28,13 @@ export async function abrirModulo(
  * Esperar al título además evita empezar a rellenar antes de que el diálogo
  * haya montado, con el primer `fill` cayendo en el vacío.
  */
-export async function abrirDialogo(
-  pagina: Page,
-  boton: RegExp,
-  titulo: RegExp,
-) {
+export async function abrirDialogo(pagina: Page, boton: RegExp, titulo: RegExp) {
   await abrirDialogoDe(
     pagina,
     pagina.getByRole("button", { name: boton }).first(),
     titulo,
     boton,
-  );
+  )
 }
 
 /**
@@ -59,30 +49,27 @@ export async function abrirDialogoDe(
   titulo: RegExp,
   descripcion: RegExp | string = "el disparador",
 ) {
-  await expect(
-    disparador,
-    `no hay botón ${descripcion} en la pantalla`,
-  ).toBeVisible({
+  await expect(disparador, `no hay botón ${descripcion} en la pantalla`).toBeVisible({
     timeout: 30_000,
-  });
+  })
 
-  const dialogo = pagina.getByRole("dialog");
+  const dialogo = pagina.getByRole("dialog")
 
   for (let intento = 1; intento <= 4; intento++) {
-    await disparador.click();
+    await disparador.click()
     try {
       await expect(dialogo.getByText(titulo).first()).toBeVisible({
         timeout: 5_000,
-      });
-      return;
+      })
+      return
     } catch {
       if (intento === 4) {
         throw new Error(
           `El diálogo ${titulo} no abrió tras 4 clics en ${descripcion}. ` +
             `O el botón no está enganchado, o el título cambió.`,
-        );
+        )
       }
-      await pagina.waitForTimeout(1500);
+      await pagina.waitForTimeout(1500)
     }
   }
 }
@@ -93,29 +80,25 @@ export async function abrirDialogoDe(
  * No es un `<select>` nativo: es un botón que abre una lista en un portal, así
  * que `selectOption` no sirve. Hay que pulsar y luego elegir la opción.
  */
-export async function elegir(
-  pagina: Page,
-  campo: string,
-  opcion: RegExp | string,
-) {
-  await pagina.locator(`#${campo}`).click();
-  await pagina.getByRole("option", { name: opcion }).first().click();
+export async function elegir(pagina: Page, campo: string, opcion: RegExp | string) {
+  await pagina.locator(`#${campo}`).click()
+  await pagina.getByRole("option", { name: opcion }).first().click()
 }
 
 /** La primera opción disponible de un desplegable, sea cual sea. */
 export async function elegirPrimera(pagina: Page, campo: string) {
-  await pagina.locator(`#${campo}`).click();
-  const opciones = pagina.getByRole("option");
-  await expect(opciones.first()).toBeVisible();
-  const texto = await opciones.first().innerText();
-  await opciones.first().click();
-  return texto.trim();
+  await pagina.locator(`#${campo}`).click()
+  const opciones = pagina.getByRole("option")
+  await expect(opciones.first()).toBeVisible()
+  const texto = await opciones.first().innerText()
+  await opciones.first().click()
+  return texto.trim()
 }
 
 /** Rellena varios campos de texto de una vez. */
 export async function rellenar(pagina: Page, campos: Record<string, string>) {
   for (const [id, valor] of Object.entries(campos)) {
-    await pagina.locator(`#${id}`).fill(valor);
+    await pagina.locator(`#${id}`).fill(valor)
   }
 }
 
@@ -126,17 +109,10 @@ export async function rellenar(pagina: Page, campos: Record<string, string>) {
  * abierto, algo falló, y la prueba lo dice aquí en vez de más adelante con un
  * mensaje que no tiene que ver.
  */
-export async function guardar(
-  pagina: Page,
-  boton: RegExp = /Guardar|Registrar|Crear/,
-) {
-  await pagina
-    .getByRole("dialog")
-    .getByRole("button", { name: boton })
-    .last()
-    .click();
+export async function guardar(pagina: Page, boton: RegExp = /Guardar|Registrar|Crear/) {
+  await pagina.getByRole("dialog").getByRole("button", { name: boton }).last().click()
   await expect(
     pagina.getByRole("dialog"),
     "el diálogo no se cerró: el guardado falló",
-  ).toBeHidden({ timeout: 30_000 });
+  ).toBeHidden({ timeout: 30_000 })
 }

@@ -1,6 +1,6 @@
-import { anotar } from "../soporte/anotaciones";
-import { expect, test } from "../soporte/fixtures";
-import { BASE_URL } from "../soporte/entorno";
+import { anotar } from "../soporte/anotaciones"
+import { expect, test } from "../soporte/fixtures"
+import { BASE_URL } from "../soporte/entorno"
 
 /**
  * ¿El despliegue sirve las páginas de forma fiable?
@@ -18,11 +18,11 @@ import { BASE_URL } from "../soporte/entorno";
  * Mientras falle, hay trabajo pendiente en el despliegue, no aquí.
  */
 
-const PETICIONES = 12;
+const PETICIONES = 12
 // Un 503 de cada doce ya es inaceptable para alguien intentando entrar a
 // trabajar. El umbral no es "que no pase nunca" porque un pico puntual es
 // tolerable; es "que no sea la norma".
-const FALLOS_TOLERADOS = 1;
+const FALLOS_TOLERADOS = 1
 
 test.describe("Estabilidad del despliegue", () => {
   test(
@@ -34,26 +34,25 @@ test.describe("Estabilidad del despliegue", () => {
         "El worker devuelve 503 (Cloudflare 1102) en buena parte de las peticiones. Esta prueba existe para que no quede escondida tras los reintentos del resto.",
     }),
     async ({ request }) => {
-      const fallos: number[] = [];
+      const fallos: number[] = []
 
       for (let i = 0; i < PETICIONES; i++) {
         const respuesta = await request.get(`${BASE_URL}/login`, {
           failOnStatusCode: false,
-        });
-        const cuerpo = await respuesta.text().catch(() => "");
+        })
+        const cuerpo = await respuesta.text().catch(() => "")
         const caido =
-          respuesta.status() >= 500 ||
-          /Worker exceeded resource limits|1102/i.test(cuerpo);
-        if (caido) fallos.push(respuesta.status());
+          respuesta.status() >= 500 || /Worker exceeded resource limits|1102/i.test(cuerpo)
+        if (caido) fallos.push(respuesta.status())
       }
 
       expect(
         fallos.length,
         `${fallos.length} de ${PETICIONES} peticiones a /login fallaron (${fallos.join(", ")}). ` +
           `Cloudflare 1102: el worker agota su límite de CPU. Los usuarios ven un error al entrar.`,
-      ).toBeLessThanOrEqual(FALLOS_TOLERADOS);
+      ).toBeLessThanOrEqual(FALLOS_TOLERADOS)
     },
-  );
+  )
 
   test(
     "la pantalla de empresas aguanta una navegación normal",
@@ -61,25 +60,20 @@ test.describe("Estabilidad del despliegue", () => {
       modulo: "Despliegue",
       rol: "super admin",
       tipo: "feature",
-      porque:
-        "Ir y volver entre empresas es lo que hace cualquiera al revisar el día.",
+      porque: "Ir y volver entre empresas es lo que hace cualquiera al revisar el día.",
     }),
     async ({ superAdmin }) => {
-      const fallos: string[] = [];
+      const fallos: string[] = []
 
       // Ir y volver, como haría alguien revisando varias empresas.
       for (let i = 0; i < 5; i++) {
         const respuesta = await superAdmin.goto("/empresas", {
           waitUntil: "domcontentloaded",
-        });
-        if ((respuesta?.status() ?? 0) >= 500)
-          fallos.push(`/empresas ${respuesta?.status()}`);
+        })
+        if ((respuesta?.status() ?? 0) >= 500) fallos.push(`/empresas ${respuesta?.status()}`)
       }
 
-      expect(
-        fallos,
-        `navegación normal rota: ${fallos.join(", ")}`,
-      ).toHaveLength(0);
+      expect(fallos, `navegación normal rota: ${fallos.join(", ")}`).toHaveLength(0)
     },
-  );
-});
+  )
+})

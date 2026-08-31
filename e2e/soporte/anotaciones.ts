@@ -26,10 +26,9 @@ export type Modulo =
   | "Dashboard"
   | "Acceso"
   | "Correo"
-  | "Despliegue";
+  | "Despliegue"
 
-export type Rol =
-  "super admin" | "coordinador" | "asesor" | "anónimo" | "suspendido";
+export type Rol = "super admin" | "coordinador" | "asesor" | "anónimo" | "suspendido"
 
 export type Tipo =
   /** Que la funcionalidad haga lo que dice. */
@@ -39,16 +38,16 @@ export type Tipo =
   /** Un fallo que ya ocurrió y no puede volver. */
   | "regresión"
   /** Que el dato quede bien guardado, no solo que la pantalla lo diga. */
-  | "integridad";
+  | "integridad"
 
 export interface Ficha {
-  modulo: Modulo;
-  rol?: Rol | Rol[];
-  tipo: Tipo;
+  modulo: Modulo
+  rol?: Rol | Rol[]
+  tipo: Tipo
   /** Por qué existe esta prueba. Obligatorio: sin motivo, no hay prueba. */
-  porque: string;
+  porque: string
   /** Qué se rompió, cuándo. Solo en las de tipo regresión. */
-  regresion?: string;
+  regresion?: string
 }
 
 /** El módulo como etiqueta filtrable: "Gestión diaria" → "@gestion-diaria". */
@@ -61,7 +60,7 @@ function etiquetaDe(texto: string): string {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
-  );
+  )
 }
 
 /**
@@ -78,20 +77,20 @@ export function anotar(ficha: Ficha) {
     ? Array.isArray(ficha.rol)
       ? ficha.rol.join(", ")
       : ficha.rol
-    : "cualquiera";
+    : "cualquiera"
 
   const anotaciones = [
     { type: "módulo", description: ficha.modulo },
     { type: "tipo", description: ficha.tipo },
     { type: "rol", description: roles },
     { type: "por qué", description: ficha.porque },
-  ];
+  ]
 
   if (ficha.regresion) {
-    anotaciones.push({ type: "regresión", description: ficha.regresion });
+    anotaciones.push({ type: "regresión", description: ficha.regresion })
   }
 
-  const etiquetas = [etiquetaDe(ficha.modulo), etiquetaDe(ficha.tipo)];
+  const etiquetas = [etiquetaDe(ficha.modulo), etiquetaDe(ficha.tipo)]
 
-  return { annotation: anotaciones, tag: etiquetas };
+  return { annotation: anotaciones, tag: etiquetas }
 }

@@ -1,11 +1,10 @@
-import { defineConfig, devices } from "@playwright/test";
-import { config as cargarEnv } from "dotenv";
+import { defineConfig, devices } from "@playwright/test"
+import { config as cargarEnv } from "dotenv"
 
-cargarEnv({ path: ".env.e2e" });
+cargarEnv({ path: ".env.e2e" })
 
 const BASE_URL =
-  process.env.E2E_BASE_URL ??
-  "https://comman-center.commandcentergenelypse.workers.dev";
+  process.env.E2E_BASE_URL ?? "https://comman-center.commandcentergenelypse.workers.dev"
 
 /**
  * Las pruebas corren contra el despliegue real, no contra un servidor local.
@@ -53,4 +52,4 @@ export default defineConfig({
   // Y para correr un trozo concreto están las etiquetas de `anotar()`:
   //   npx playwright test --grep @ventas
   projects: [{ name: "command-center", use: { ...devices["Desktop Chrome"] } }],
-});
+})

@@ -1,20 +1,20 @@
-import { config } from "dotenv";
+import { config } from "dotenv"
 
-config({ path: ".env.e2e" });
+config({ path: ".env.e2e" })
 
 function requerido(nombre: string): string {
-  const valor = process.env[nombre];
+  const valor = process.env[nombre]
   if (!valor) {
     throw new Error(
       `Falta ${nombre} en .env.e2e. Ese archivo no se versiona: pídeselo a quien montó las pruebas o vuelve a generarlo con e2e/README.md.`,
-    );
+    )
   }
-  return valor;
+  return valor
 }
 
-export const BASE_URL = requerido("E2E_BASE_URL");
-export const SUPABASE_URL = requerido("NEXT_PUBLIC_SUPABASE_URL");
-export const SUPABASE_KEY = requerido("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+export const BASE_URL = requerido("E2E_BASE_URL")
+export const SUPABASE_URL = requerido("NEXT_PUBLIC_SUPABASE_URL")
+export const SUPABASE_KEY = requerido("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY")
 
 /**
  * Prefijo de todo lo que crean las pruebas.
@@ -22,16 +22,15 @@ export const SUPABASE_KEY = requerido("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
  * No es cosmético: es el único criterio por el que la limpieza acepta borrar
  * algo. Ver `guardarraíl.ts`.
  */
-export const PREFIJO = "e2e-";
+export const PREFIJO = "e2e-"
 
-export type Rol =
-  "superAdmin" | "coordinador" | "asesorA" | "asesorB" | "suspendido";
+export type Rol = "superAdmin" | "coordinador" | "asesorA" | "asesorB" | "suspendido"
 
 export interface Cuenta {
-  rol: Rol;
-  email: string;
-  password: string;
-  nombre: string;
+  rol: Rol
+  email: string
+  password: string
+  nombre: string
 }
 
 export const CUENTAS: Record<Rol, Cuenta> = {
@@ -65,7 +64,7 @@ export const CUENTAS: Record<Rol, Cuenta> = {
     password: requerido("E2E_SUSPENDIDO_PASSWORD"),
     nombre: "E2E Suspendido",
   },
-};
+}
 
 /**
  * Las dos empresas del banco de pruebas.
@@ -74,8 +73,8 @@ export const CUENTAS: Record<Rol, Cuenta> = {
  * "lo de la empresa A no se ve desde la B", y eso no se puede probar con una
  * sola. El asesor A vive en la primera, el B en la segunda.
  */
-export const EMPRESA_A = `${PREFIJO}sandbox-a`;
-export const EMPRESA_B = `${PREFIJO}sandbox-b`;
+export const EMPRESA_A = `${PREFIJO}sandbox-a`
+export const EMPRESA_B = `${PREFIJO}sandbox-b`
 
 /** Empresas reales que las pruebas jamás deben tocar. Se comprueba en runtime. */
-export const EMPRESAS_REALES = ["tramites", "ruta-segura", "lv", "ttc", "cea"];
+export const EMPRESAS_REALES = ["tramites", "ruta-segura", "lv", "ttc", "cea"]

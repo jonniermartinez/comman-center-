@@ -1,4 +1,4 @@
-import { clienteDe, limpiarTodo } from "./api";
+import { clienteDe, limpiarTodo } from "./api"
 
 /**
  * Se lleva todo lo que crearon las pruebas.
@@ -11,10 +11,10 @@ import { clienteDe, limpiarTodo } from "./api";
  */
 export default async function desmontaje() {
   if (process.env.E2E_SIN_LIMPIEZA === "1") {
-    console.log("E2E_SIN_LIMPIEZA=1: se deja el banco de pruebas en pie.");
-    return;
+    console.log("E2E_SIN_LIMPIEZA=1: se deja el banco de pruebas en pie.")
+    return
   }
 
-  const admin = await clienteDe("superAdmin");
-  await limpiarTodo(admin);
+  const admin = await clienteDe("superAdmin")
+  await limpiarTodo(admin)
 }
