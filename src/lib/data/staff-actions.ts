@@ -40,7 +40,7 @@ export async function addStaffToCompany(input: {
   /** …o una nueva, por nombre. */
   full_name?: string
 }): Promise<Result> {
-  const session = await requireSession()
+  await requireSession()
   const supabase = await createClient()
 
   let staffId = input.staff_id
@@ -78,8 +78,6 @@ export async function addStaffToCompany(input: {
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "assign",
     entity: "company_staff",
     entity_id: staffId,
@@ -119,7 +117,7 @@ export async function removeStaffFromCompany(
   companyId: string,
   staffId: string,
 ): Promise<Result> {
-  const session = await requireSession()
+  await requireSession()
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -131,8 +129,6 @@ export async function removeStaffFromCompany(
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "unassign",
     entity: "company_staff",
     entity_id: staffId,
@@ -168,8 +164,6 @@ export async function linkStaffToProfile(
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "update",
     entity: "staff",
     entity_id: staffId,

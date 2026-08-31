@@ -58,8 +58,6 @@ export async function createBranch(input: {
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "create",
     entity: "branches",
     entity_id: data?.id,
@@ -75,15 +73,13 @@ export async function updateBranch(
   branchId: string,
   patch: { name?: string; city?: string | null; department?: string | null },
 ): Promise<Result> {
-  const session = await requireSession()
+  await requireSession()
   const supabase = await createClient()
 
   const { error } = await supabase.from("branches").update(patch).eq("id", branchId)
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "update",
     entity: "branches",
     entity_id: branchId,
@@ -95,7 +91,7 @@ export async function updateBranch(
 }
 
 export async function setPrimaryBranch(branchId: string): Promise<Result> {
-  const session = await requireSession()
+  await requireSession()
   const supabase = await createClient()
 
   const { data: sede } = await supabase
@@ -119,8 +115,6 @@ export async function setPrimaryBranch(branchId: string): Promise<Result> {
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "update",
     entity: "branches",
     entity_id: branchId,
@@ -137,7 +131,7 @@ export async function setPrimaryBranch(branchId: string): Promise<Result> {
  * contando en el acumulado de la empresa.
  */
 export async function archiveBranch(branchId: string): Promise<Result> {
-  const session = await requireSession()
+  await requireSession()
   const supabase = await createClient()
 
   const { data: sede } = await supabase
@@ -184,8 +178,6 @@ export async function archiveBranch(branchId: string): Promise<Result> {
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "archive",
     entity: "branches",
     entity_id: branchId,
@@ -197,7 +189,7 @@ export async function archiveBranch(branchId: string): Promise<Result> {
 }
 
 export async function restoreBranch(branchId: string): Promise<Result> {
-  const session = await requireSession()
+  await requireSession()
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -207,8 +199,6 @@ export async function restoreBranch(branchId: string): Promise<Result> {
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "restore",
     entity: "branches",
     entity_id: branchId,
@@ -258,8 +248,6 @@ export async function assignUserToCompany(
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "assign",
     entity: "company_users",
     entity_id: userId,
@@ -276,7 +264,7 @@ export async function unassignUserFromCompany(
   companyId: string,
   userId: string,
 ): Promise<Result> {
-  const session = await requireSession()
+  await requireSession()
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -289,8 +277,6 @@ export async function unassignUserFromCompany(
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "unassign",
     entity: "company_users",
     entity_id: userId,
