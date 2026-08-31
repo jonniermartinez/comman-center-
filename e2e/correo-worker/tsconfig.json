@@ -1,0 +1,15 @@
+{
+  // El worker corre sobre el runtime de Cloudflare, no sobre Node ni Next, así
+  // que necesita sus propios tipos. Queda fuera del tsconfig de la aplicación.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": [],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "tipos.d.ts"]
+}

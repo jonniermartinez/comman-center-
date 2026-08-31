@@ -30,5 +30,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    // El buzón de pruebas es un Worker aparte, con el runtime de Cloudflare y
+    // no el de Next. Si se typechequea con la app, `next build` falla por unos
+    // tipos que ahí no existen. Tiene su propio tsconfig.
+    "e2e/correo-worker"
+  ]
 }
