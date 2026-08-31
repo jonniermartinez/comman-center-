@@ -143,8 +143,6 @@ export async function createCompany(
   if (fallo?.error) return { ok: false, error: fallo.error.message, slug: company.slug }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "create",
     entity: "companies",
     entity_id: company.id,
@@ -167,15 +165,13 @@ export async function updateCompany(
     crm_label?: string | null
   },
 ): Promise<Result> {
-  const session = await requireSession()
+  await requireSession()
   const supabase = await createClient()
 
   const { error } = await supabase.from("companies").update(patch).eq("id", companyId)
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "update",
     entity: "companies",
     entity_id: companyId,
@@ -205,8 +201,6 @@ export async function archiveCompany(companyId: string, archivar: boolean): Prom
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: archivar ? "archive" : "restore",
     entity: "companies",
     entity_id: companyId,
@@ -239,8 +233,6 @@ export async function setCompanyModules(companyId: string, modules: string[]): P
   }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "update",
     entity: "company_modules",
     company_id: companyId,
@@ -263,7 +255,7 @@ export async function setCompanyCatalog(
   kind: "financing" | "payment",
   activeCodes: string[],
 ): Promise<Result> {
-  const session = await requireSession()
+  await requireSession()
   const supabase = await createClient()
 
   const tabla = kind === "financing" ? "company_financing_types" : "company_payment_methods"
@@ -285,8 +277,6 @@ export async function setCompanyCatalog(
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "update",
     entity: tabla,
     company_id: companyId,
@@ -300,24 +290,35 @@ export async function setCompanyCatalog(
 export interface CompanyDataCounts {
   sedes: number
   usuarios: number
-  kpi: number
-  gestion: number
+  comerciales: number
+  actividad: number
   ventas: number
-  facturacion: number
-  recaudo: number
+  pagos: number
+  caja: number
+  agendas: number
   objetivos: number
 }
 
-/** Qué se va a perder si se borra la empresa. Alimenta la confirmación. */
+/**
+ * Qué se va a perder si se borra la empresa. Alimenta la confirmación.
+ *
+ * Devuelve el motivo cuando no hay conteo: la pantalla lo dice en vez de
+ * quedarse contando para siempre, que es lo que pasaba mientras la función de
+ * Postgres nombraba tablas del modelo viejo.
+ */
 export async function companyDataCounts(
   companyId: string,
-): Promise<CompanyDataCounts | null> {
+): Promise<{ counts?: CompanyDataCounts; error?: string }> {
   const session = await requireSession()
-  if (!session.isSuperAdmin) return null
+  if (!session.isSuperAdmin) return { error: "Solo el super admin puede eliminar una empresa." }
 
   const supabase = await createClient()
-  const { data } = await supabase.rpc("company_data_counts", { target_company: companyId })
-  return (data as CompanyDataCounts | null) ?? null
+  const { data, error } = await supabase.rpc("company_data_counts", {
+    target_company: companyId,
+  })
+  if (error) return { error: error.message }
+  if (!data) return { error: "La base no devolvió el conteo." }
+  return { counts: data as unknown as CompanyDataCounts }
 }
 
 /**
@@ -366,7 +367,7 @@ export async function uploadCompanyLogo(
   companyId: string,
   formData: FormData,
 ): Promise<Result & { url?: string }> {
-  const session = await requireSession()
+  await requireSession()
   const archivo = formData.get("file")
 
   if (!(archivo instanceof File) || archivo.size === 0) {
@@ -397,8 +398,6 @@ export async function uploadCompanyLogo(
   if (error) return { ok: false, error: error.message }
 
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "update",
     entity: "companies",
     entity_id: companyId,
@@ -412,7 +411,7 @@ export async function uploadCompanyLogo(
 
 /** Quita el logo. La empresa vuelve a mostrarse con sus iniciales. */
 export async function removeCompanyLogo(companyId: string): Promise<Result> {
-  const session = await requireSession()
+  await requireSession()
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -424,8 +423,6 @@ export async function removeCompanyLogo(companyId: string): Promise<Result> {
   // El archivo se deja en Storage: pesa poco y así se puede recuperar si alguien
   // lo quitó por error.
   await logAudit({
-    actor_id: session.profile.id,
-    actor_name: session.profile.full_name,
     action: "update",
     entity: "companies",
     entity_id: companyId,
