@@ -85,6 +85,44 @@ Corregir lo de un compañero se permite y borrarlo no, y no es un descuido: una
 corrección deja rastro y se puede deshacer; un borrado no deja nada que
 revisar. La caja va aparte porque es el dinero físico del punto.
 
+## Los archivos van en el orden del software
+
+No en orden alfabético: en el orden en que se usa el sistema. Así el árbol de
+pruebas se lee como el recorrido de alguien que empieza de cero.
+
+```
+01-login            entrar
+02-usuarios         crear cuentas con cada rol
+03-empresas         dar de alta la empresa
+04-sedes            dónde opera
+05-equipo           quién trabaja ahí
+06-configuracion    qué módulos y catálogos usa
+07-objetivos        las metas del mes
+08-ventas   09-pagos   10-agendas   11-gestion-diaria   12-caja
+13-dashboard        lo que se mira cada día
+14-auditoria        quién hizo qué
+15..17              permisos y guardarraíl
+18-correo  19-estabilidad
+```
+
+### Una sola definición de "CRUD completo"
+
+Los cinco módulos de captura se comportan igual, así que sus ocho pruebas de
+capacidades viven una sola vez en `soporte/matriz.ts` y cada módulo las invoca
+con lo suyo:
+
+```ts
+test.describe("Ventas", () => {
+  for (const caso of capacidadesDe(VENTA)) test(caso.titulo, caso.ficha, caso.prueba)
+})
+```
+
+`capacidadesDe` devuelve definiciones en vez de registrar las pruebas, y no es
+un capricho: Playwright atribuye cada prueba al archivo donde se declara. Si
+`matriz.ts` llamara a `test()`, las cuarenta y cinco aparecerían amontonadas
+bajo ese archivo y el árbol dejaría de leerse por módulos. Declarándolas cada
+uno, el código se comparte igual y cada prueba sale donde le toca.
+
 ## Qué está cubierto
 
 **Seguridad** (`e2e/seguridad/`) — 29 pruebas

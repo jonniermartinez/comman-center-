@@ -1,22 +1,21 @@
-import { anotar, type Modulo } from "../soporte/anotaciones"
-import { empresaPorSlug, type Cliente } from "../soporte/api"
-import { agenda, diaDistinto, jornada, movimiento, pago, venta } from "../soporte/datos"
-import { EMPRESA_A, EMPRESA_B } from "../soporte/entorno"
-import { expect, test } from "../soporte/fixtures"
-import type { Rastro } from "../soporte/rastro"
+import { anotar, type Modulo } from "./anotaciones"
+import { empresaPorSlug, type Cliente } from "./api"
+import { venta } from "./datos"
+import { EMPRESA_A, EMPRESA_B } from "./entorno"
+import { expect } from "./fixtures"
+import type { Rastro } from "./rastro"
 
 /**
- * Quién puede hacer qué, registro por registro.
+ * La matriz de capacidades, escrita una sola vez.
  *
- * Una prueba por capacidad y con el nombre dicho en voz alta —"puede crear
- * venta", "no puede eliminar venta"— para que la lista de pruebas se lea como
- * la tabla de permisos del sistema. Cuando alguien pregunte "¿un asesor puede
- * borrar una venta?", la respuesta está en el nombre de una prueba que además
- * se ejecuta.
+ * Los cinco módulos de captura se comportan igual: se crea, se corrige, se
+ * borra, y cada rol llega hasta donde le corresponde. Escribir esas ocho
+ * pruebas cinco veces sería copiarlas cinco veces, y a la tercera copia una se
+ * queda sin actualizar cuando cambie una regla.
  *
- * Van contra la base con la sesión de cada rol, sin pasar por la interfaz: es
- * lo único que demuestra el permiso de verdad. Que la pantalla no pinte el
- * botón de borrar no impide a nadie llamar al endpoint.
+ * Aquí se define qué significa "CRUD completo" para un registro, y cada módulo
+ * la invoca con lo suyo. Si mañana se añade una regla, se añade una vez y los
+ * cinco módulos la prueban.
  */
 
 interface Registro {
@@ -61,56 +60,6 @@ interface Contexto {
   staffId?: string | null
 }
 
-const REGISTROS: Registro[] = [
-  {
-    singular: "venta",
-    modulo: "Ventas",
-    tabla: "sales",
-    campoEditable: "observacion",
-    fila: venta,
-    conResponsable: true,
-    borrable: true,
-  },
-  {
-    singular: "pago",
-    modulo: "Pagos",
-    tabla: "payments",
-    campoEditable: "observacion",
-    fila: pago,
-    conResponsable: false,
-    borrable: true,
-  },
-  {
-    singular: "agenda",
-    modulo: "Agendas",
-    tabla: "appointments",
-    campoEditable: "observacion",
-    fila: agenda,
-    conResponsable: true,
-    borrable: true,
-  },
-  {
-    singular: "movimiento de caja",
-    modulo: "Caja",
-    tabla: "cash_movements",
-    campoEditable: "observacion",
-    fila: movimiento,
-    conResponsable: false,
-    borrable: true,
-    soloAdmin: true,
-  },
-  {
-    singular: "jornada",
-    modulo: "Gestión diaria",
-    tabla: "daily_activity",
-    campoEditable: "notas",
-    fila: jornada,
-    conResponsable: true,
-    borrable: true,
-    unico: diaDistinto,
-  },
-]
-
 /**
  * Ata la fila a una venta cuando hace falta para saber de quién es.
  *
@@ -152,8 +101,43 @@ async function contexto(admin: Cliente, slug: string, staff?: string): Promise<C
   return { companyId: empresa.id, branchId: sede.id, staffId }
 }
 
-for (const r of REGISTROS) {
-  test.describe(r.modulo, () => {
+/** Una prueba lista para que el módulo la declare con su propio `test()`. */
+/**
+ * Los fixtures que puede pedir un caso.
+ *
+ * Se declara laxo a propósito: cada prueba desestructura los que necesita y
+ * Playwright solo monta esos. Tiparlo estricto obligaría a enumerar en cada
+ * caso los que no usa.
+ */
+export interface Caso {
+  titulo: string
+  ficha: ReturnType<typeof anotar>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prueba: (args: any) => Promise<void>
+}
+
+/**
+ * Las capacidades de un registro, como definiciones y no como pruebas ya
+ * registradas.
+ *
+ * Devolverlas en vez de llamar a `test()` aquí no es un capricho: Playwright
+ * atribuye cada prueba al archivo donde se declara, así que si se registraran
+ * en este módulo las cuarenta y cinco aparecerían amontonadas bajo
+ * `matriz.ts`, y el árbol dejaría de leerse como el recorrido del software.
+ * Declarándolas cada módulo, el código se comparte igual y cada prueba sale
+ * donde le toca.
+ */
+export function capacidadesDe(r: Registro): Caso[] {
+  const casos: Caso[] = []
+  const test = (
+    titulo: string,
+    ficha: ReturnType<typeof anotar>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    prueba: (args: any) => Promise<void>,
+  ) => {
+    casos.push({ titulo, ficha, prueba })
+  }
+  {
     // ------------------------------------------------------------
     // Coordinador: administra la empresa entera.
     // ------------------------------------------------------------
@@ -536,5 +520,9 @@ for (const r of REGISTROS) {
         expect(data ?? [], `el asesor de A leyó ${r.singular} de B`).toHaveLength(0)
       },
     )
-  })
+  }
+
+  return casos
 }
+
+export type { Registro }

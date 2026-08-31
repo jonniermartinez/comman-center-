@@ -123,3 +123,17 @@ export function diaDistinto(n: number) {
   const iso = fecha.toISOString().slice(0, 10)
   return { report_date: iso, period_month: mesDe(iso) }
 }
+
+/** La fecha de hoy, que es la que usan los formularios por defecto. */
+export const HOY = hoyISO()
+
+/**
+ * Una marca única para encontrar después la fila que creó la prueba.
+ *
+ * Los formularios no devuelven el id de lo que guardan, así que la única forma
+ * de comprobar que se persistió —y con qué valores— es buscarla por un nombre
+ * que no pueda chocar con nada.
+ */
+export function marca(que: string): string {
+  return `e2e-${que}-${Date.now().toString(36)}`
+}
