@@ -69,3 +69,57 @@ export function agenda(ctx: Contexto, extra: Record<string, unknown> = {}) {
     ...extra,
   }
 }
+
+/** Un movimiento de caja mínimo. `kind` es 'entrada' o 'salida'. */
+export function movimiento(ctx: Contexto, extra: Record<string, unknown> = {}) {
+  const fecha = hoyISO()
+  return {
+    company_id: ctx.companyId,
+    branch_id: ctx.branchId,
+    report_date: fecha,
+    period_month: mesDe(fecha),
+    kind: "entrada",
+    amount: 1000,
+    ...extra,
+  }
+}
+
+/**
+ * Una jornada mínima.
+ *
+ * Lleva `responsable_nombre` además de `staff_id`: la fila guarda una foto del
+ * nombre para que el histórico siga leyéndose aunque la persona se renombre.
+ */
+export function jornada(ctx: Contexto, extra: Record<string, unknown> = {}) {
+  const fecha = hoyISO()
+  return {
+    company_id: ctx.companyId,
+    branch_id: ctx.branchId,
+    staff_id: ctx.staffId ?? null,
+    responsable_nombre: "E2E",
+    report_date: fecha,
+    period_month: mesDe(fecha),
+    ...extra,
+  }
+}
+
+/**
+ * Un día distinto por prueba, hacia atrás desde hoy.
+ *
+ * `daily_activity` tiene única (empresa, sede, fecha, persona): una jornada por
+ * persona y día. Si varias pruebas usan la misma fecha chocan entre ellas, y el
+ * fallo parece un permiso mal puesto cuando en realidad es la regla del negocio
+ * funcionando. Nunca hacia delante: un trigger rechaza fechas futuras.
+ *
+ * Basta con una fecha por prueba porque cada corrida empieza con la empresa de
+ * pruebas recién creada. Corriendo con `E2E_SIN_LIMPIEZA=1` dos veces seguidas
+ * sí chocan: las jornadas no se pueden borrar —no hay política de DELETE— así
+ * que las de la corrida anterior siguen ocupando su día. Es esperado; para
+ * repetir, hay que dejar que el desmontaje se lleve la empresa.
+ */
+export function diaDistinto(n: number) {
+  const fecha = new Date()
+  fecha.setDate(fecha.getDate() - n)
+  const iso = fecha.toISOString().slice(0, 10)
+  return { report_date: iso, period_month: mesDe(iso) }
+}
