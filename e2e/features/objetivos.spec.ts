@@ -58,7 +58,7 @@ test.describe("Objetivos", () => {
         "Es la meta que de verdad importa: cuánto dinero tiene que facturar la empresa este " +
         "mes. Sin ella, la pantalla de objetivos no dice nada.",
     }),
-    async ({ apiCoordinador, apiSuperAdmin }) => {
+    async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
       const MES = mesAtras(1)
       const id = await empresaId(apiSuperAdmin, EMPRESA_A)
       await limpiarMetas(apiSuperAdmin, id, MES)
@@ -66,12 +66,12 @@ test.describe("Objetivos", () => {
       // 150 millones: el orden de magnitud real de una empresa mediana aquí.
       const META = 150_000_000
 
-      const { error } = await apiCoordinador.from("objectives").insert({
+      const { error } = await rastro.crear(apiCoordinador, "objectives", {
         company_id: id,
         period_month: MES,
         metric_code: METRICAS.moneda,
         target_value: META,
-      } as never)
+      })
       expect(error, `no se pudo fijar la meta: ${error?.message}`).toBeNull()
 
       const { data } = await apiSuperAdmin
@@ -102,7 +102,7 @@ test.describe("Objetivos", () => {
         "los miles de millones. Si la columna fuese un entero de 32 bits o un float, el " +
         "número se truncaría o se redondearía y la meta quedaría mal sin avisar a nadie.",
     }),
-    async ({ apiCoordinador, apiSuperAdmin }) => {
+    async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
       const MES = mesAtras(2)
       const id = await empresaId(apiSuperAdmin, EMPRESA_A)
       await limpiarMetas(apiSuperAdmin, id, MES)
@@ -110,12 +110,12 @@ test.describe("Objetivos", () => {
       // Fuera del rango de un int de 32 bits (2.147.483.647) a propósito.
       const META = 9_876_543_210
 
-      const { error } = await apiCoordinador.from("objectives").insert({
+      const { error } = await rastro.crear(apiCoordinador, "objectives", {
         company_id: id,
         period_month: MES,
         metric_code: METRICAS.moneda,
         target_value: META,
-      } as never)
+      })
       expect(error, `la base rechazó una cifra grande: ${error?.message}`).toBeNull()
 
       const { data } = await apiSuperAdmin
@@ -144,19 +144,19 @@ test.describe("Objetivos", () => {
         "Aunque en pesos no suelan usarse centavos, si la columna admite decimales tienen " +
         "que sobrevivir: una meta que se guarda redondeada descuadra el cumplimiento.",
     }),
-    async ({ apiCoordinador, apiSuperAdmin }) => {
+    async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
       const MES = mesAtras(3)
       const id = await empresaId(apiSuperAdmin, EMPRESA_A)
       await limpiarMetas(apiSuperAdmin, id, MES)
 
       const META = 1_234_567.89
 
-      await apiCoordinador.from("objectives").insert({
+      await rastro.crear(apiCoordinador, "objectives", {
         company_id: id,
         period_month: MES,
         metric_code: METRICAS.moneda,
         target_value: META,
-      } as never)
+      })
 
       const { data } = await apiSuperAdmin
         .from("objectives")
@@ -183,7 +183,7 @@ test.describe("Objetivos", () => {
         "porcentaje— y cada una se muestra distinta. Si solo se probara la de dinero, un " +
         "fallo en las otras dos pasaría desapercibido.",
     }),
-    async ({ apiCoordinador, apiSuperAdmin }) => {
+    async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
       const MES = mesAtras(4)
       const id = await empresaId(apiSuperAdmin, EMPRESA_A)
       await limpiarMetas(apiSuperAdmin, id, MES)
@@ -219,17 +219,17 @@ test.describe("Objetivos", () => {
       tipo: "feature",
       porque: "Las metas se ajustan a mitad de mes; fijarlas una sola vez no serviría.",
     }),
-    async ({ apiCoordinador, apiSuperAdmin }) => {
+    async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
       const MES = mesAtras(5)
       const id = await empresaId(apiSuperAdmin, EMPRESA_A)
       await limpiarMetas(apiSuperAdmin, id, MES)
 
-      await apiSuperAdmin.from("objectives").insert({
+      await rastro.crear(apiSuperAdmin, "objectives", {
         company_id: id,
         period_month: MES,
         metric_code: METRICAS.moneda,
         target_value: 100_000_000,
-      } as never)
+      })
 
       const { error } = await apiCoordinador
         .from("objectives")
@@ -262,16 +262,16 @@ test.describe("Objetivos", () => {
         "Poner su propia meta es poner su propia comisión. Las metas las fija quien " +
         "administra la empresa.",
     }),
-    async ({ apiAsesorA, apiSuperAdmin }) => {
+    async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
       const MES = mesAtras(6)
       const id = await empresaId(apiSuperAdmin, EMPRESA_A)
 
-      const { error } = await apiAsesorA.from("objectives").insert({
+      const { error } = await rastro.crear(apiAsesorA, "objectives", {
         company_id: id,
         period_month: MES,
         metric_code: METRICAS.moneda,
         target_value: 1,
-      } as never)
+      })
       expect(error, "un asesor se fijó su propia meta").toBeTruthy()
     },
   )
@@ -286,17 +286,17 @@ test.describe("Objetivos", () => {
         "Bajarse la meta es el atajo más obvio para cumplirla. Se comprueba el valor después " +
         "del UPDATE, no si dio error: una política mal escrita puede aceptar y no aplicar.",
     }),
-    async ({ apiAsesorA, apiSuperAdmin }) => {
+    async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
       const MES = mesAtras(7)
       const id = await empresaId(apiSuperAdmin, EMPRESA_A)
       await limpiarMetas(apiSuperAdmin, id, MES)
 
-      await apiSuperAdmin.from("objectives").insert({
+      await rastro.crear(apiSuperAdmin, "objectives", {
         company_id: id,
         period_month: MES,
         metric_code: METRICAS.moneda,
         target_value: 200_000_000,
-      } as never)
+      })
 
       await apiAsesorA
         .from("objectives")
@@ -326,16 +326,16 @@ test.describe("Objetivos", () => {
       tipo: "seguridad",
       porque: "Administrar una empresa no da permiso sobre las metas de las demás.",
     }),
-    async ({ apiCoordinador, apiSuperAdmin }) => {
+    async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
       const MES = mesAtras(7)
       const ajena = await empresaId(apiSuperAdmin, EMPRESA_B)
 
-      const { error } = await apiCoordinador.from("objectives").insert({
+      const { error } = await rastro.crear(apiCoordinador, "objectives", {
         company_id: ajena,
         period_month: MES,
         metric_code: METRICAS.moneda,
         target_value: 1,
-      } as never)
+      })
       expect(error, "el coordinador de A fijó una meta en B").toBeTruthy()
     },
   )
@@ -348,15 +348,15 @@ test.describe("Objetivos", () => {
       tipo: "seguridad",
       porque: "Las metas dicen cuánto factura un cliente: es información suya, de nadie más.",
     }),
-    async ({ apiAsesorA, apiSuperAdmin }) => {
+    async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
       const MES = mesAtras(8)
       const ajena = await empresaId(apiSuperAdmin, EMPRESA_B)
-      await apiSuperAdmin.from("objectives").insert({
+      await rastro.crear(apiSuperAdmin, "objectives", {
         company_id: ajena,
         period_month: MES,
         metric_code: METRICAS.moneda,
         target_value: 999_000_000,
-      } as never)
+      })
 
       const { data } = await apiAsesorA
         .from("objectives")

@@ -1,6 +1,17 @@
 import { test as base, type Page } from "@playwright/test"
 
-import { clienteDe, type Cliente } from "./api"
+import {
+  asignarAEmpresa,
+  borrarEmpresa,
+  clienteDe,
+  crearEmpresa,
+  empresaPorSlug,
+  vincularStaff,
+  type Cliente,
+} from "./api"
+import { CUENTAS } from "./entorno"
+import { nombreDePrueba } from "./guardarrail"
+import { nuevoRastro, type Rastro } from "./rastro"
 import { rutaSesion } from "./montaje"
 import type { Rol } from "./entorno"
 
@@ -30,6 +41,8 @@ export const test = base.extend<{
   apiCoordinador: Cliente
   apiAsesorA: Cliente
   apiAsesorB: Cliente
+  rastro: Rastro
+  empresaPropia: EmpresaPropia
 }>({
   superAdmin: async ({ browser }, usar) => {
     const { contexto, pagina } = await paginaComo("superAdmin", browser)
@@ -72,6 +85,56 @@ export const test = base.extend<{
     // proceso a propósito (ver `clienteDe`).
     await usar(await clienteDe("asesorB"))
   },
+
+  /**
+   * Apunta lo que la prueba crea y se lo lleva al terminar, pase lo que pase.
+   *
+   * Playwright ejecuta este desmontaje aunque la prueba falle o se agote el
+   * tiempo, que es exactamente cuando limpiar en la última línea del test no
+   * sirve de nada.
+   */
+  rastro: async ({ apiSuperAdmin }, usar) => {
+    const { rastro, limpiar } = nuevoRastro()
+    await usar(rastro)
+    await limpiar(apiSuperAdmin)
+  },
+
+  /**
+   * Una empresa ficticia entera, solo para esta prueba.
+   *
+   * Las pruebas no tocan las empresas del cliente ni de lejos: cada una que lo
+   * pida estrena la suya, con su sede y su equipo, y al terminar se borra
+   * completa. Eso se lleva de paso todo lo que se haya creado dentro, incluido
+   * lo que no se puede borrar fila a fila.
+   *
+   * Cuesta un par de segundos montarla, así que solo la piden las pruebas que
+   * escriben de verdad; las de permisos y lectura usan el banco compartido.
+   */
+  empresaPropia: async ({ apiSuperAdmin }, usar) => {
+    const nombre = nombreDePrueba("empresa")
+    await crearEmpresa(apiSuperAdmin, nombre)
+    await asignarAEmpresa(apiSuperAdmin, CUENTAS.coordinador.email, nombre, "coordinador")
+    await asignarAEmpresa(apiSuperAdmin, CUENTAS.asesorA.email, nombre, "asesor")
+    await vincularStaff(apiSuperAdmin, CUENTAS.asesorA.email, nombre)
+
+    const empresa = await empresaPorSlug(apiSuperAdmin, nombre)
+    const { data: sede } = await apiSuperAdmin
+      .from("branches")
+      .select("id")
+      .eq("company_id", empresa!.id)
+      .eq("is_primary", true)
+      .single()
+
+    await usar({ slug: nombre, companyId: empresa!.id, branchId: sede!.id })
+
+    await borrarEmpresa(apiSuperAdmin, nombre)
+  },
 })
+
+export interface EmpresaPropia {
+  slug: string
+  companyId: string
+  branchId: string
+}
 
 export { expect } from "@playwright/test"

@@ -3,6 +3,7 @@ import { empresaPorSlug, type Cliente } from "../soporte/api"
 import { agenda, diaDistinto, jornada, movimiento, pago, venta } from "../soporte/datos"
 import { EMPRESA_A, EMPRESA_B } from "../soporte/entorno"
 import { expect, test } from "../soporte/fixtures"
+import type { Rastro } from "../soporte/rastro"
 
 /**
  * Quién puede hacer qué, registro por registro.
@@ -119,16 +120,15 @@ const REGISTROS: Registro[] = [
  */
 async function conVenta(
   admin: Cliente,
+  rastro: Rastro,
   r: Registro,
   ctx: Contexto,
 ): Promise<Record<string, unknown>> {
   if (r.tabla !== "payments") return {}
 
-  const { data } = await admin
-    .from("sales")
-    .insert(venta(ctx) as never)
-    .select("id")
-    .single()
+  // Se apunta en el rastro: si no, cada prueba de pagos dejaba una venta
+  // huérfana en la base del cliente. Pasó, y se vio contando filas sobrantes.
+  const { data } = await rastro.crear(admin, "sales", venta(ctx))
   return { sale_id: data!.id }
 }
 
@@ -165,21 +165,20 @@ for (const r of REGISTROS) {
         tipo: "feature",
         porque: `Administrar la empresa incluye registrar ${r.singular} por cualquiera del equipo.`,
       }),
-      async ({ apiCoordinador, apiSuperAdmin }) => {
+      async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
         const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
 
-        const { data, error } = await apiCoordinador
-          .from(r.tabla)
-          .insert(r.fila(ctx, r.unico?.(1)) as never)
-          .select("id")
-          .single()
+        const { data, error } = await rastro.crear(
+          apiCoordinador,
+          r.tabla,
+          r.fila(ctx, r.unico?.(1)),
+        )
 
         expect(
           error,
           `el coordinador no pudo crear ${r.singular}: ${error?.message}`,
         ).toBeNull()
         expect(data?.id).toBeTruthy()
-        await apiSuperAdmin.from(r.tabla).delete().eq("id", data!.id)
       },
     )
 
@@ -191,13 +190,14 @@ for (const r of REGISTROS) {
         tipo: "feature",
         porque: "Corregir es tan habitual como registrar: se teclea mal y hay que arreglarlo.",
       }),
-      async ({ apiCoordinador, apiSuperAdmin }) => {
+      async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
         const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
-        const { data: creado } = await apiSuperAdmin
-          .from(r.tabla)
-          .insert(r.fila(ctx, r.unico?.(2)) as never)
-          .select("id")
-          .single()
+        const { data: creado } = await rastro.crear(
+          apiSuperAdmin,
+          r.tabla,
+          r.fila(ctx, r.unico?.(2)),
+        )
+        expect(creado?.id, "el montaje no pudo crear la fila").toBeTruthy()
 
         const { error } = await apiCoordinador
           .from(r.tabla)
@@ -208,7 +208,6 @@ for (const r of REGISTROS) {
           error,
           `el coordinador no pudo editar ${r.singular}: ${error?.message}`,
         ).toBeNull()
-        await apiSuperAdmin.from(r.tabla).delete().eq("id", creado!.id)
       },
     )
 
@@ -223,13 +222,13 @@ for (const r of REGISTROS) {
             "La base se lo permite (`can_manage_company`) aunque la aplicación todavía no " +
             "ofrezca el botón. Si algún día se añade, el permiso ya está donde debe.",
         }),
-        async ({ apiCoordinador, apiSuperAdmin }) => {
+        async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
           const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
-          const { data: creado } = await apiSuperAdmin
-            .from(r.tabla)
-            .insert(r.fila(ctx, r.unico?.(3)) as never)
-            .select("id")
-            .single()
+          const { data: creado, error } = await rastro.crear(
+            apiSuperAdmin,
+            r.tabla,
+            r.fila(ctx, r.unico?.(3)),
+          )
 
           await apiCoordinador.from(r.tabla).delete().eq("id", creado!.id)
 
@@ -253,13 +252,13 @@ for (const r of REGISTROS) {
             "parte del día y no se borra, se corrige. Si un día aparece una política, esta " +
             "prueba avisa.",
         }),
-        async ({ apiSuperAdmin, apiCoordinador }) => {
+        async ({ apiSuperAdmin, apiCoordinador, rastro }) => {
           const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
-          const { data: creado } = await apiSuperAdmin
-            .from(r.tabla)
-            .insert(r.fila(ctx, r.unico?.(4)) as never)
-            .select("id")
-            .single()
+          const { data: creado, error } = await rastro.crear(
+            apiSuperAdmin,
+            r.tabla,
+            r.fila(ctx, r.unico?.(4)),
+          )
 
           for (const cliente of [apiCoordinador, apiSuperAdmin]) {
             await cliente.from(r.tabla).delete().eq("id", creado!.id)
@@ -286,7 +285,7 @@ for (const r of REGISTROS) {
         tipo: "seguridad",
         porque: "Administrar una empresa no da ningún permiso sobre las demás.",
       }),
-      async ({ apiCoordinador, apiSuperAdmin }) => {
+      async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
         const ajena = await contexto(apiSuperAdmin, EMPRESA_B)
         const { error } = await apiCoordinador
           .from(r.tabla)
@@ -311,17 +310,17 @@ for (const r of REGISTROS) {
             "La caja es el dinero físico del punto y responde quien administra, no quien " +
             "vende. Es la única excepción a que el comercial maneje lo suyo.",
         }),
-        async ({ apiAsesorA, apiSuperAdmin }) => {
+        async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
           const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
 
           const { error: alCrear } = await apiAsesorA.from(r.tabla).insert(r.fila(ctx) as never)
           expect(alCrear, `un asesor creó ${r.singular}`).toBeTruthy()
 
-          const { data: creado } = await apiSuperAdmin
-            .from(r.tabla)
-            .insert(r.fila(ctx) as never)
-            .select("id")
-            .single()
+          const { data: creado, error } = await rastro.crear(
+            apiSuperAdmin,
+            r.tabla,
+            r.fila(ctx),
+          )
           expect(creado?.id, "el montaje no pudo crear la fila").toBeTruthy()
 
           await apiAsesorA
@@ -340,8 +339,6 @@ for (const r of REGISTROS) {
             (despues as unknown as Record<string, unknown>)[r.campoEditable],
             `un asesor corrigió ${r.singular}`,
           ).not.toBe("no debería poder")
-
-          await apiSuperAdmin.from(r.tabla).delete().eq("id", creado!.id)
         },
       )
     } else if (r.conResponsable) {
@@ -355,19 +352,18 @@ for (const r of REGISTROS) {
             "El comercial registra lo suyo, como en el Excel. Impedírselo obligaría a que un " +
             "coordinador transcriba lo de doce personas, que es garantizar el dato tarde y mal.",
         }),
-        async ({ apiAsesorA, apiSuperAdmin }) => {
+        async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
           const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
-          const { data, error } = await apiAsesorA
-            .from(r.tabla)
-            .insert(r.fila(ctx, r.unico?.(6)) as never)
-            .select("id")
-            .single()
+          const { data, error } = await rastro.crear(
+            apiAsesorA,
+            r.tabla,
+            r.fila(ctx, r.unico?.(6)),
+          )
 
           expect(
             error,
             `el asesor no pudo crear su ${r.singular}: ${error?.message}`,
           ).toBeNull()
-          await apiSuperAdmin.from(r.tabla).delete().eq("id", data!.id)
         },
       )
 
@@ -381,7 +377,7 @@ for (const r of REGISTROS) {
             "Firmar por otro rompería las comisiones y el histórico de cada quien, que es " +
             "justo lo que el sistema existe para llevar.",
         }),
-        async ({ apiAsesorA, apiSuperAdmin }) => {
+        async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
           const ajeno = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor B")
           const { error } = await apiAsesorA
             .from(r.tabla)
@@ -401,7 +397,7 @@ for (const r of REGISTROS) {
               ? "La caja es el dinero físico del punto y responde quien administra, no quien vende."
               : "Un pago cuelga de una venta: solo puede abonarlo quien puede tocar esa venta.",
         }),
-        async ({ apiAsesorA, apiSuperAdmin }) => {
+        async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
           const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
           const { error } = await apiAsesorA
             .from(r.tabla)
@@ -424,14 +420,14 @@ for (const r of REGISTROS) {
             "arreglarlo, el dato se queda mal hasta que aparezca un coordinador. Corregir deja " +
             "rastro y se puede volver a corregir; por eso se permite y borrar no.",
         }),
-        async ({ apiAsesorA, apiSuperAdmin }) => {
+        async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
           const ajeno = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor B")
-          const { data: creado } = await apiSuperAdmin
-            .from(r.tabla)
-            .insert(r.fila(ajeno, r.unico?.(9)) as never)
-            .select("id")
-            .single()
-          expect(creado?.id, "el montaje de la prueba no pudo crear la fila").toBeTruthy()
+          const { data: creado } = await rastro.crear(
+            apiSuperAdmin,
+            r.tabla,
+            r.fila(ajeno, r.unico?.(9)),
+          )
+          expect(creado?.id, "el montaje no pudo crear la fila").toBeTruthy()
 
           const { error } = await apiAsesorA
             .from(r.tabla)
@@ -451,8 +447,6 @@ for (const r of REGISTROS) {
             (despues as unknown as Record<string, unknown>)[r.campoEditable],
             "la corrección no se guardó",
           ).toBe("corregido por un compañero")
-
-          await apiSuperAdmin.from(r.tabla).delete().eq("id", creado!.id)
         },
       )
 
@@ -467,14 +461,14 @@ for (const r of REGISTROS) {
               "Si puede crearla y corregirla, tiene que poder quitarla cuando la metió por " +
               "error. Antes no podía, y la salida era dejarla en cero, que ensucia los informes.",
           }),
-          async ({ apiAsesorA, apiSuperAdmin }) => {
+          async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
             const mia = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
-            const atado = await conVenta(apiSuperAdmin, r, mia)
-            const { data: creado } = await apiSuperAdmin
-              .from(r.tabla)
-              .insert(r.fila(mia, { ...r.unico?.(10), ...atado }) as never)
-              .select("id")
-              .single()
+            const atado = await conVenta(apiSuperAdmin, rastro, r, mia)
+            const { data: creado, error } = await rastro.crear(
+              apiSuperAdmin,
+              r.tabla,
+              r.fila(mia, { ...r.unico?.(10), ...atado }),
+            )
             expect(creado?.id, "el montaje no pudo crear la fila").toBeTruthy()
 
             await apiAsesorA.from(r.tabla).delete().eq("id", creado!.id)
@@ -498,16 +492,16 @@ for (const r of REGISTROS) {
               "Corregir lo de otro deja rastro y se puede deshacer; borrarlo no deja nada que " +
               "revisar. Por eso el comercial corrige lo ajeno pero solo borra lo suyo.",
           }),
-          async ({ apiAsesorA, apiSuperAdmin }) => {
+          async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
             // A nombre del asesor B: si se crea a nombre de A, la prueba dice
             // "de un compañero" pero comprueba lo contrario y siempre falla.
             const ajeno = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor B")
-            const atado = await conVenta(apiSuperAdmin, r, ajeno)
-            const { data: creado } = await apiSuperAdmin
-              .from(r.tabla)
-              .insert(r.fila(ajeno, { ...r.unico?.(11), ...atado }) as never)
-              .select("id")
-              .single()
+            const atado = await conVenta(apiSuperAdmin, rastro, r, ajeno)
+            const { data: creado, error } = await rastro.crear(
+              apiSuperAdmin,
+              r.tabla,
+              r.fila(ajeno, { ...r.unico?.(11), ...atado }),
+            )
             expect(creado?.id, "el montaje no pudo crear la fila").toBeTruthy()
 
             await apiAsesorA.from(r.tabla).delete().eq("id", creado!.id)
@@ -520,8 +514,6 @@ for (const r of REGISTROS) {
               .eq("id", creado!.id)
               .maybeSingle()
             expect(sigue, `un asesor eliminó ${r.singular} de otra persona`).toBeTruthy()
-
-            await apiSuperAdmin.from(r.tabla).delete().eq("id", creado!.id)
           },
         )
       }
@@ -535,7 +527,7 @@ for (const r of REGISTROS) {
         tipo: "seguridad",
         porque: "El aislamiento entre empresas es el contrato con cada cliente.",
       }),
-      async ({ apiAsesorA, apiSuperAdmin }) => {
+      async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
         const ajena = await contexto(apiSuperAdmin, EMPRESA_B)
         const { data } = await apiAsesorA
           .from(r.tabla)
