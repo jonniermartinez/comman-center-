@@ -1,3 +1,4 @@
+import { anotar } from "../soporte/anotaciones"
 import { clienteAnonimo, empresaPorSlug, type Cliente } from "../soporte/api"
 import { venta } from "../soporte/datos"
 import { EMPRESA_A, EMPRESA_B } from "../soporte/entorno"
@@ -35,7 +36,16 @@ async function staffDe(admin: Cliente, nombre: string) {
 }
 
 test.describe("RLS: lo que la base entrega a cada rol", () => {
-  test("un anónimo no lee absolutamente nada", async () => {
+  test(
+    "un anónimo no lee absolutamente nada",
+    anotar({
+      modulo: "Acceso",
+      rol: "anónimo",
+      tipo: "seguridad",
+      porque:
+        "Sin sesión la base no puede soltar ni una fila. Es la primera línea y la que protege incluso si la aplicación entera se cayera.",
+    }),
+    async () => {
     const anonimo = clienteAnonimo()
 
     for (const tabla of ["companies", "profiles", "sales", "payments", "audit_log"] as const) {
@@ -46,7 +56,16 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
     }
   })
 
-  test("el asesor A no ve ni una fila de la empresa B", async ({ apiAsesorA, apiSuperAdmin }) => {
+  test(
+    "el asesor A no ve ni una fila de la empresa B",
+    anotar({
+      modulo: "Acceso",
+      rol: "asesor",
+      tipo: "seguridad",
+      porque:
+        "El aislamiento entre empresas es el contrato con el cliente: cada uno paga por ver lo suyo.",
+    }),
+    async ({ apiAsesorA, apiSuperAdmin }) => {
     const b = await contextoDe(apiSuperAdmin, EMPRESA_B)
 
     const { data: empresas } = await apiAsesorA.from("companies").select("slug")
@@ -61,7 +80,16 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
     }
   })
 
-  test("el asesor A no ve nada de las empresas reales del cliente", async ({ apiAsesorA }) => {
+  test(
+    "el asesor A no ve nada de las empresas reales del cliente",
+    anotar({
+      modulo: "Acceso",
+      rol: "asesor",
+      tipo: "seguridad",
+      porque:
+        "Las cuentas de prueba viven en la misma base que los datos reales. Si alcanzaran a CEA o TTC, las pruebas serían una fuga.",
+    }),
+    async ({ apiAsesorA }) => {
     const { data: empresas } = await apiAsesorA.from("companies").select("slug")
     const slugs = (empresas ?? []).map((e) => e.slug)
 
@@ -74,7 +102,16 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
     expect(ventas ?? []).toHaveLength(0)
   })
 
-  test("el asesor escribe lo suyo y solo lo suyo", async ({ apiAsesorA, apiSuperAdmin }) => {
+  test(
+    "el asesor escribe lo suyo y solo lo suyo",
+    anotar({
+      modulo: "Ventas",
+      rol: "asesor",
+      tipo: "seguridad",
+      porque:
+        "El comercial registra lo suyo; poder firmar a nombre de otro rompería las comisiones y el histórico de cada quien.",
+    }),
+    async ({ apiAsesorA, apiSuperAdmin }) => {
     const a = await contextoDe(apiSuperAdmin, EMPRESA_A)
     const b = await contextoDe(apiSuperAdmin, EMPRESA_B)
     const miStaff = await staffDe(apiSuperAdmin, "E2E Asesor A")
@@ -113,7 +150,16 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
     if (creada?.id) await apiSuperAdmin.from("sales").delete().eq("id", creada.id)
   })
 
-  test("el coordinador sí escribe lo de cualquiera de su empresa", async ({
+  test(
+    "el coordinador sí escribe lo de cualquiera de su empresa",
+    anotar({
+      modulo: "Ventas",
+      rol: "coordinador",
+      tipo: "feature",
+      porque:
+        "Es la diferencia de fondo entre los dos roles: el coordinador corrige lo de todo el equipo.",
+    }),
+    async ({
     apiCoordinador,
     apiSuperAdmin,
   }) => {
@@ -132,7 +178,16 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
     if (creada?.id) await apiSuperAdmin.from("sales").delete().eq("id", creada.id)
   })
 
-  test("el coordinador de A no toca la empresa B", async ({ apiCoordinador, apiSuperAdmin }) => {
+  test(
+    "el coordinador de A no toca la empresa B",
+    anotar({
+      modulo: "Acceso",
+      rol: "coordinador",
+      tipo: "seguridad",
+      porque:
+        "Administrar una empresa no da permiso sobre las demás.",
+    }),
+    async ({ apiCoordinador, apiSuperAdmin }) => {
     const b = await contextoDe(apiSuperAdmin, EMPRESA_B)
 
     const { data } = await apiCoordinador.from("sales").select("id").eq("company_id", b.companyId)
@@ -142,7 +197,16 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
     expect(error, "el coordinador de A escribió en B").toBeTruthy()
   })
 
-  test("nadie escribe el log de auditoría a mano", async ({ apiAsesorA, apiSuperAdmin }) => {
+  test(
+    "nadie escribe el log de auditoría a mano",
+    anotar({
+      modulo: "Auditoría",
+      rol: "super admin",
+      tipo: "seguridad",
+      porque:
+        "Un log falsificable no es evidencia de nada. Ni el super admin puede insertar a mano.",
+    }),
+    async ({ apiAsesorA, apiSuperAdmin }) => {
     // Ni el asesor ni el propio super admin: el log solo se escribe desde
     // `log_audit`, que estampa el actor a partir del token. Si esto se pudiera,
     // el log dejaría de ser evidencia de nada.
@@ -159,14 +223,32 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
     }
   })
 
-  test("el asesor no lee el log de auditoría", async ({ apiAsesorA }) => {
+  test(
+    "el asesor no lee el log de auditoría",
+    anotar({
+      modulo: "Auditoría",
+      rol: "asesor",
+      tipo: "seguridad",
+      porque:
+        "El log dice quién hizo qué en toda la plataforma: solo lo ve el super admin.",
+    }),
+    async ({ apiAsesorA }) => {
     const { data } = await apiAsesorA.from("audit_log").select("*").limit(1)
     expect(data ?? []).toHaveLength(0)
   })
 })
 
 test.describe("Escalada de privilegios", () => {
-  test("un asesor no puede crear cuentas", async ({ apiAsesorA }) => {
+  test(
+    "un asesor no puede crear cuentas",
+    anotar({
+      modulo: "Usuarios",
+      rol: "asesor",
+      tipo: "seguridad",
+      porque:
+        "Crear cuentas es la vía más corta a super admin. La base lo verifica por su cuenta, no la interfaz.",
+    }),
+    async ({ apiAsesorA }) => {
     const { error } = await apiAsesorA.rpc("admin_create_user", {
       p_email: "e2e-intruso@jonnier.com",
       p_full_name: "Intruso",
@@ -175,7 +257,16 @@ test.describe("Escalada de privilegios", () => {
     expect(error, "un asesor creó una cuenta de super admin").toBeTruthy()
   })
 
-  test("un coordinador tampoco administra cuentas", async ({ apiCoordinador }) => {
+  test(
+    "un coordinador tampoco administra cuentas",
+    anotar({
+      modulo: "Usuarios",
+      rol: "coordinador",
+      tipo: "seguridad",
+      porque:
+        "Administrar una empresa no es administrar la plataforma.",
+    }),
+    async ({ apiCoordinador }) => {
     const { error } = await apiCoordinador.rpc("admin_create_user", {
       p_email: "e2e-intruso-coord@jonnier.com",
       p_full_name: "Intruso",
@@ -184,7 +275,16 @@ test.describe("Escalada de privilegios", () => {
     expect(error, "un coordinador creó una cuenta").toBeTruthy()
   })
 
-  test("un asesor no cambia la contraseña de un super admin", async ({
+  test(
+    "un asesor no cambia la contraseña de un super admin",
+    anotar({
+      modulo: "Usuarios",
+      rol: "asesor",
+      tipo: "seguridad",
+      porque:
+        "Sería tomar el control del sistema entero con una sola llamada.",
+    }),
+    async ({
     apiAsesorA,
     apiSuperAdmin,
   }) => {
@@ -202,7 +302,16 @@ test.describe("Escalada de privilegios", () => {
     expect(error, "un asesor cambió la contraseña de un super admin").toBeTruthy()
   })
 
-  test("un asesor no se asciende a super admin", async ({ apiAsesorA }) => {
+  test(
+    "un asesor no se asciende a super admin",
+    anotar({
+      modulo: "Usuarios",
+      rol: "asesor",
+      tipo: "seguridad",
+      porque:
+        "Se comprueba el rol después del UPDATE, no si dio error: una política mal escrita puede aceptar la escritura y no aplicarla.",
+    }),
+    async ({ apiAsesorA }) => {
     const { data: yo } = await apiAsesorA.auth.getUser()
     await apiAsesorA.from("profiles").update({ role: "super_admin" }).eq("id", yo.user!.id)
 
@@ -216,7 +325,16 @@ test.describe("Escalada de privilegios", () => {
     expect(perfil?.role, "un asesor se ascendió a super admin").toBe("asesor")
   })
 
-  test("un asesor no borra una empresa", async ({ apiAsesorA, apiSuperAdmin }) => {
+  test(
+    "un asesor no borra una empresa",
+    anotar({
+      modulo: "Empresas",
+      rol: "asesor",
+      tipo: "seguridad",
+      porque:
+        "El borrado definitivo se lleva años de registros y no tiene vuelta atrás.",
+    }),
+    async ({ apiAsesorA, apiSuperAdmin }) => {
     const a = await contextoDe(apiSuperAdmin, EMPRESA_A)
 
     const { error } = await apiAsesorA.rpc("delete_company_cascade", {
