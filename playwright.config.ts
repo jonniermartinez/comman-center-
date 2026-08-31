@@ -1,10 +1,11 @@
-import { defineConfig, devices } from "@playwright/test"
-import { config as cargarEnv } from "dotenv"
+import { defineConfig, devices } from "@playwright/test";
+import { config as cargarEnv } from "dotenv";
 
-cargarEnv({ path: ".env.e2e" })
+cargarEnv({ path: ".env.e2e" });
 
 const BASE_URL =
-  process.env.E2E_BASE_URL ?? "https://comman-center.commandcentergenelypse.workers.dev"
+  process.env.E2E_BASE_URL ??
+  "https://comman-center.commandcentergenelypse.workers.dev";
 
 /**
  * Las pruebas corren contra el despliegue real, no contra un servidor local.
@@ -38,19 +39,18 @@ export default defineConfig({
     locale: "es-CO",
     timezoneId: "America/Bogota",
   },
-  projects: [
-    {
-      name: "seguridad",
-      testDir: "./e2e/seguridad",
-      use: { ...devices["Desktop Chrome"] },
-    },
-    {
-      name: "features",
-      testDir: "./e2e/features",
-      use: { ...devices["Desktop Chrome"] },
-      // Las features dan por hecho que la seguridad se sostiene. Si el
-      // aislamiento entre empresas está roto, lo que digan las demás sobra.
-      dependencies: ["seguridad"],
-    },
-  ],
-})
+  // Un solo proyecto a propósito.
+  //
+  // Antes eran dos, `seguridad` y `features`, con features dependiendo de
+  // seguridad. Sobre el papel estaba bien —si el aislamiento entre empresas
+  // está roto, lo demás sobra— pero en la práctica escondía la mitad de la
+  // suite: los editores solo listan el proyecto seleccionado, así que las
+  // pruebas de los módulos no aparecían por ningún lado.
+  //
+  // El orden se sigue pudiendo imponer donde importa, que es CI:
+  //   npm run e2e:seguridad && npm run e2e:features
+  //
+  // Y para correr un trozo concreto están las etiquetas de `anotar()`:
+  //   npx playwright test --grep @ventas
+  projects: [{ name: "command-center", use: { ...devices["Desktop Chrome"] } }],
+});

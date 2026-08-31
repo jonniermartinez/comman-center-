@@ -14,22 +14,22 @@
 
 /** Primero del mes de una fecha ISO: es lo que guarda `period_month`. */
 export function mesDe(fechaISO: string): string {
-  return `${fechaISO.slice(0, 7)}-01`
+  return `${fechaISO.slice(0, 7)}-01`;
 }
 
 export function hoyISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  return new Date().toISOString().slice(0, 10);
 }
 
 export interface Contexto {
-  companyId: string
-  branchId: string
-  staffId?: string | null
+  companyId: string;
+  branchId: string;
+  staffId?: string | null;
 }
 
 /** Una venta mínima pero completa: todo lo NOT NULL sin defecto. */
 export function venta(ctx: Contexto, extra: Record<string, unknown> = {}) {
-  const fecha = hoyISO()
+  const fecha = hoyISO();
   return {
     company_id: ctx.companyId,
     branch_id: ctx.branchId,
@@ -38,12 +38,12 @@ export function venta(ctx: Contexto, extra: Record<string, unknown> = {}) {
     period_month: mesDe(fecha),
     valor_final: 1000,
     ...extra,
-  }
+  };
 }
 
 /** Un pago mínimo. `amount` no tiene defecto, al contrario que en `sales`. */
 export function pago(ctx: Contexto, extra: Record<string, unknown> = {}) {
-  const fecha = hoyISO()
+  const fecha = hoyISO();
   return {
     company_id: ctx.companyId,
     branch_id: ctx.branchId,
@@ -51,7 +51,7 @@ export function pago(ctx: Contexto, extra: Record<string, unknown> = {}) {
     period_month: mesDe(fecha),
     amount: 1000,
     ...extra,
-  }
+  };
 }
 
 /**
@@ -67,5 +67,5 @@ export function agenda(ctx: Contexto, extra: Record<string, unknown> = {}) {
     staff_id: ctx.staffId ?? null,
     scheduled_at: new Date().toISOString(),
     ...extra,
-  }
+  };
 }

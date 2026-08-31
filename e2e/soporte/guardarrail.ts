@@ -1,4 +1,4 @@
-import { EMPRESAS_REALES, PREFIJO } from "./entorno"
+import { EMPRESAS_REALES, PREFIJO } from "./entorno";
 
 /**
  * Las pruebas corren contra producción, donde viven 16.500 ventas y 19.000
@@ -16,15 +16,15 @@ export class DatoProtegido extends Error {
     super(
       `GUARDARRAÍL: se intentó ${que} sobre "${valor}", que no es un dato de prueba. ` +
         `Solo se puede tocar lo que empiece por "${PREFIJO}". Esto corre contra producción.`,
-    )
-    this.name = "DatoProtegido"
+    );
+    this.name = "DatoProtegido";
   }
 }
 
 /** ¿Es algo que crearon las pruebas? Único criterio válido para destruir. */
 export function esDePrueba(nombreOSlug: string | null | undefined): boolean {
-  if (!nombreOSlug) return false
-  return nombreOSlug.trim().toLowerCase().startsWith(PREFIJO)
+  if (!nombreOSlug) return false;
+  return nombreOSlug.trim().toLowerCase().startsWith(PREFIJO);
 }
 
 /**
@@ -35,20 +35,23 @@ export function esDePrueba(nombreOSlug: string | null | undefined): boolean {
  * funcione, y justo por eso vale: si alguien un día relaja el prefijo, las
  * cinco empresas del cliente siguen protegidas.
  */
-export function exigirDePrueba(que: string, nombreOSlug: string | null | undefined): string {
-  const valor = (nombreOSlug ?? "").trim()
+export function exigirDePrueba(
+  que: string,
+  nombreOSlug: string | null | undefined,
+): string {
+  const valor = (nombreOSlug ?? "").trim();
 
   if (EMPRESAS_REALES.includes(valor.toLowerCase())) {
-    throw new DatoProtegido(`${que} (EMPRESA REAL DEL CLIENTE)`, valor)
+    throw new DatoProtegido(`${que} (EMPRESA REAL DEL CLIENTE)`, valor);
   }
   if (!esDePrueba(valor)) {
-    throw new DatoProtegido(que, valor)
+    throw new DatoProtegido(que, valor);
   }
-  return valor
+  return valor;
 }
 
 /** Nombre único para un recurso de prueba: siempre con prefijo, nunca repetido. */
 export function nombreDePrueba(que: string): string {
-  const sufijo = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
-  return `${PREFIJO}${que}-${sufijo}`
+  const sufijo = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  return `${PREFIJO}${que}-${sufijo}`;
 }

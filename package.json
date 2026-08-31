@@ -12,8 +12,10 @@
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "e2e": "playwright test",
-    "e2e:seguridad": "playwright test --project=seguridad",
-    "e2e:ui": "playwright test --ui"
+    "e2e:seguridad": "playwright test e2e/seguridad",
+    "e2e:ui": "playwright test --ui",
+    "e2e:features": "playwright test e2e/features",
+    "e2e:ci": "playwright test e2e/seguridad && playwright test e2e/features"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
