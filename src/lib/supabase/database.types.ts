@@ -1164,12 +1164,16 @@ export type Database = {
           amount: number
           branch_id: string
           company_id: string
+          contrato: string | null
           created_at: string
           created_by: string | null
           date_estimated: boolean
           id: string
+          licencia_id: string | null
+          licencia_nombre: string | null
           method_code: string | null
           observacion: string | null
+          pagare: string | null
           period_month: string
           recibo: string | null
           ref_credito: string | null
@@ -1182,17 +1186,22 @@ export type Database = {
           titular_nombre: string | null
           updated_at: string
           updated_by: string | null
+          voucher: string | null
         }
         Insert: {
           amount: number
           branch_id: string
           company_id: string
+          contrato?: string | null
           created_at?: string
           created_by?: string | null
           date_estimated?: boolean
           id?: string
+          licencia_id?: string | null
+          licencia_nombre?: string | null
           method_code?: string | null
           observacion?: string | null
+          pagare?: string | null
           period_month: string
           recibo?: string | null
           ref_credito?: string | null
@@ -1205,17 +1214,22 @@ export type Database = {
           titular_nombre?: string | null
           updated_at?: string
           updated_by?: string | null
+          voucher?: string | null
         }
         Update: {
           amount?: number
           branch_id?: string
           company_id?: string
+          contrato?: string | null
           created_at?: string
           created_by?: string | null
           date_estimated?: boolean
           id?: string
+          licencia_id?: string | null
+          licencia_nombre?: string | null
           method_code?: string | null
           observacion?: string | null
+          pagare?: string | null
           period_month?: string
           recibo?: string | null
           ref_credito?: string | null
@@ -1228,6 +1242,7 @@ export type Database = {
           titular_nombre?: string | null
           updated_at?: string
           updated_by?: string | null
+          voucher?: string | null
         }
         Relationships: [
           {
@@ -2176,6 +2191,29 @@ export type Database = {
       }
     }
     Functions: {
+      admin_ban_user: {
+        Args: { bloquear: boolean; target_user: string }
+        Returns: undefined
+      }
+      admin_change_email: {
+        Args: { p_email: string; target_user: string }
+        Returns: undefined
+      }
+      admin_create_user: {
+        Args: {
+          p_confirmado?: boolean
+          p_email: string
+          p_full_name: string
+          p_password?: string
+          p_phone?: string
+          p_role?: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: string
+      }
+      admin_set_password: {
+        Args: { p_password: string; target_user: string }
+        Returns: undefined
+      }
       can_manage_company: { Args: { target_company: string }; Returns: boolean }
       company_data_counts: { Args: { target_company: string }; Returns: Json }
       company_role: {
@@ -2186,10 +2224,22 @@ export type Database = {
         Args: { confirm_name: string; target_company: string }
         Returns: Json
       }
+      es_mi_registro: { Args: { target_staff: string }; Returns: boolean }
       has_company_access: { Args: { target_company: string }; Returns: boolean }
       is_active_user: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       link_payments_to_sales: { Args: never; Returns: number }
+      log_audit: {
+        Args: {
+          p_action: string
+          p_after?: Json
+          p_before?: Json
+          p_company_id?: string
+          p_entity: string
+          p_entity_id?: string
+        }
+        Returns: undefined
+      }
       me: { Args: never; Returns: Json }
       my_company_ids: { Args: never; Returns: string[] }
       my_role: {
