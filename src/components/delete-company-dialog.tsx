@@ -25,12 +25,13 @@ import {
 
 const FILAS: { key: keyof CompanyDataCounts; label: string }[] = [
   { key: "sedes", label: "Sedes" },
-  { key: "usuarios", label: "Asignaciones de comerciales" },
-  { key: "kpi", label: "Registros de KPI Diario" },
-  { key: "gestion", label: "Registros de Gestión Diaria" },
-  { key: "ventas", label: "Líneas de ventas" },
-  { key: "facturacion", label: "Líneas de facturación" },
-  { key: "recaudo", label: "Líneas de recaudo" },
+  { key: "usuarios", label: "Usuarios asignados" },
+  { key: "comerciales", label: "Comerciales" },
+  { key: "actividad", label: "Días de actividad diaria" },
+  { key: "ventas", label: "Ventas" },
+  { key: "pagos", label: "Pagos" },
+  { key: "caja", label: "Movimientos de caja" },
+  { key: "agendas", label: "Agendas" },
   { key: "objetivos", label: "Objetivos" },
 ]
 
@@ -59,15 +60,32 @@ export function DeleteCompanyDialog({
   const router = useRouter()
   const [confirmacion, setConfirmacion] = useState("")
   const [conteos, setConteos] = useState<CompanyDataCounts | null>(null)
+  const [errorConteo, setErrorConteo] = useState<string | null>(null)
   const [pendiente, startTransition] = useTransition()
 
-  useEffect(() => {
-    if (!open) {
+  // Se cuenta al abrir. Cerrar limpia lo escrito: el diálogo vive montado en la
+  // tarjeta de la empresa y sin esto, al reabrirlo, seguiría ahí el nombre de
+  // la vez anterior —ya confirmado— con el botón de borrar habilitado.
+  function cambiarApertura(siguiente: boolean) {
+    if (!siguiente) {
       setConfirmacion("")
       setConteos(null)
-      return
+      setErrorConteo(null)
     }
-    companyDataCounts(companyId).then(setConteos)
+    onOpenChange(siguiente)
+  }
+
+  useEffect(() => {
+    if (!open) return
+    let vigente = true
+    companyDataCounts(companyId).then((r) => {
+      if (!vigente) return
+      setConteos(r.counts ?? null)
+      setErrorConteo(r.error ?? null)
+    })
+    return () => {
+      vigente = false
+    }
   }, [open, companyId])
 
   const total = conteos ? Object.values(conteos).reduce((a, b) => a + Number(b), 0) : 0
@@ -75,7 +93,7 @@ export function DeleteCompanyDialog({
     confirmacion.trim().toLowerCase() === companyName.trim().toLowerCase()
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={cambiarApertura}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Eliminar {companyName} definitivamente</DialogTitle>
@@ -88,7 +106,11 @@ export function DeleteCompanyDialog({
 
         <div className="space-y-4">
           <div className="rounded-lg border">
-            {conteos === null ? (
+            {errorConteo ? (
+              <p className="p-3 text-sm text-destructive">
+                No se pudo contar lo que se va a borrar: {errorConteo}
+              </p>
+            ) : conteos === null ? (
               <p className="p-3 text-sm text-muted-foreground">Contando lo que se va a borrar…</p>
             ) : (
               <ul className="divide-y text-sm">
@@ -126,12 +148,12 @@ export function DeleteCompanyDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => cambiarApertura(false)}>
             Cancelar
           </Button>
           <Button
             variant="destructive"
-            disabled={!coincide || pendiente}
+            disabled={!coincide || pendiente || conteos === null}
             onClick={() =>
               startTransition(async () => {
                 const r = await deleteCompanyForever(companyId, confirmacion)
@@ -142,7 +164,7 @@ export function DeleteCompanyDialog({
                 toast.success(`${companyName} eliminada`, {
                   description: "La empresa y sus datos ya no existen en el sistema.",
                 })
-                onOpenChange(false)
+                cambiarApertura(false)
                 if (onDeleted) onDeleted()
                 else router.push("/empresas")
               })
