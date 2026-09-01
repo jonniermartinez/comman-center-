@@ -1,4 +1,12 @@
 import { crearUsuario } from "../soporte/acciones"
+import {
+  BUZON_INVITADO,
+  esperarCorreo,
+  hayBuzon,
+  limiteDeCorreoAlcanzado,
+  rutaDeConfirmacion,
+  vaciarBuzon,
+} from "../soporte/correo"
 import { abrirDialogo, elegir } from "../soporte/formulario"
 import { anotar } from "../soporte/anotaciones"
 import { clienteAnonimo, perfilPorEmail } from "../soporte/api"
@@ -34,7 +42,49 @@ const ROLES = [
   },
 ]
 
+/**
+ * Abre el menú de acciones de una persona en la lista.
+ *
+ * Se identifica por su correo y no por su nombre: el correo es único y el
+ * nombre no, así que buscando por nombre se podría abrir el menú de otra
+ * persona —y aquí las acciones incluyen eliminarla.
+ */
+async function abrirMenuDe(pagina: import("@playwright/test").Page, correo: string) {
+  await irA(pagina, "/admin/usuarios")
+  const fila = pagina.getByRole("row").filter({ hasText: correo })
+  await expect(fila, `no aparece ${correo} en la lista`).toBeVisible({ timeout: 30_000 })
+
+  // Se reintenta el clic: el botón se pinta en el HTML del servidor pero no
+  // responde hasta que React hidrata, y en este despliegue ese hueco es de
+  // segundos. Un clic ahí no falla, simplemente no abre nada.
+  const boton = fila.getByRole("button", { name: "Acciones" })
+  const menu = pagina.getByRole("menu")
+  for (let intento = 1; intento <= 4; intento++) {
+    await boton.click()
+    try {
+      await expect(menu).toBeVisible({ timeout: 4_000 })
+      return
+    } catch {
+      if (intento === 4) throw new Error(`El menú de ${correo} no abrió tras 4 clics`)
+      await pagina.waitForTimeout(1500)
+    }
+  }
+}
+
 test.describe("Usuarios", () => {
+  // La prueba de la invitación depende de que llegue un correo. Si no hay
+  // buzón, o si Supabase ya agotó su cuota de envíos, se marca saltada con el
+  // motivo en vez de fallar dos minutos después por algo ajeno al código.
+  test.beforeEach(async ({}, info) => {
+    if (!info.title.includes("le manda el correo")) return
+    test.skip(!hayBuzon(), "Sin E2E_MAIL_URL / E2E_MAIL_SECRET en .env.e2e")
+    test.skip(
+      await limiteDeCorreoAlcanzado("sonda-limite@ejemplo.invalid"),
+      "Supabase no admite más correos ahora mismo (429 over_email_send_rate_limit): " +
+        "el remitente por defecto va limitado a unos pocos por hora, hace falta SMTP propio.",
+    )
+  })
+
   for (const { rol, descripcion, etiqueta } of ROLES) {
     test(
       `el super admin puede crear un usuario con rol ${rol}`,
@@ -72,12 +122,112 @@ test.describe("Usuarios", () => {
           .toBe(rol)
 
         const perfil = await perfilPorEmail(apiSuperAdmin, email)
-        expect(perfil!.full_name, "el nombre no se guardó como se escribió").toBe(nombre)
-        expect(perfil!.status, "una cuenta invitada nace invitada").toBe("invitado")
         rastro.anotarUsuario(perfil!.id)
+        expect(perfil!.status, "una cuenta invitada nace invitada").toBe("invitado")
+
+        // Y se comprueba recargando la pantalla, que es donde lo ve la persona
+        // que acaba de crearla: que esté en la base pero no salga en la lista
+        // es un fallo igual de real, y no se detecta mirando solo la base.
+        await irA(superAdmin, "/admin/usuarios")
+        const fila = superAdmin.getByRole("row").filter({ hasText: email })
+        await expect(fila, `${email} no aparece en la lista tras recargar`).toBeVisible({
+          timeout: 30_000,
+        })
+        await expect(fila, "la lista no muestra el nombre que se escribió").toContainText(
+          nombre,
+        )
+        await expect(fila, "la lista no muestra que está invitado").toContainText(/Invitad/i)
+
+        // Y se elimina desde la propia pantalla, cerrando el ciclo.
+        await abrirMenuDe(superAdmin, email)
+        await superAdmin.getByRole("menuitem", { name: /Eliminar usuario/ }).click()
+        await superAdmin
+          .getByRole("alertdialog")
+          .getByRole("button", { name: /Eliminar usuario/ })
+          .click()
+
+        await expect
+          .poll(async () => (await perfilPorEmail(apiSuperAdmin, email))?.status, {
+            timeout: 30_000,
+            message: "el usuario no quedó eliminado tras usar el menú",
+          })
+          .toBe("eliminado")
       },
     )
   }
+
+  test(
+    "invitar a alguien le manda el correo con el que entra",
+    anotar({
+      modulo: "Usuarios",
+      rol: "super admin",
+      tipo: "feature",
+      porque:
+        "Es el ciclo completo del alta y el único camino por el que entra alguien nuevo: se " +
+        "crea desde la pantalla, le llega la invitación y con ese enlace define su clave. Si " +
+        "se rompe, nadie nuevo puede entrar al sistema y no se nota hasta que alguien lo " +
+        "intenta.",
+    }),
+    async ({ superAdmin, apiSuperAdmin, rastro }) => {
+      // Va a una dirección con regla de enrutamiento al buzón de pruebas: las
+      // demás caerían en el correo personal del dueño del dominio.
+      const email = BUZON_INVITADO
+      const nombre = "E2E Invitado Por Correo"
+
+      const previo = await perfilPorEmail(apiSuperAdmin, email)
+      if (previo) await apiSuperAdmin.rpc("purge_test_user", { target_user: previo.id })
+      await vaciarBuzon(email)
+
+      await irA(superAdmin, "/admin/usuarios")
+      await abrirDialogo(superAdmin, /Nuevo usuario/, /Nuevo usuario/)
+      await superAdmin.locator("#nombre").fill(nombre)
+      await superAdmin.locator("#email").fill(email)
+      await superAdmin.getByRole("button", { name: /Crear e invitar/ }).click()
+
+      await expect
+        .poll(async () => (await perfilPorEmail(apiSuperAdmin, email))?.id, { timeout: 30_000 })
+        .toBeTruthy()
+      const perfil = await perfilPorEmail(apiSuperAdmin, email)
+      rastro.anotarUsuario(perfil!.id)
+
+      // Y aparece en la lista, invitado, esperando a que acepte.
+      await irA(superAdmin, "/admin/usuarios")
+      const fila = superAdmin.getByRole("row").filter({ hasText: email })
+      await expect(fila, "el invitado no aparece en la lista").toBeVisible({ timeout: 30_000 })
+      await expect(fila).toContainText(/Invitad/i)
+
+      // Lo que de verdad decide si esa persona puede entrar: el correo.
+      const correo = await esperarCorreo(email)
+      expect(
+        correo.tokenHash,
+        `la invitación llegó sin enlace utilizable: ${correo.enlaces.join(" ")}`,
+      ).toBeTruthy()
+
+      // Y el enlace le lleva a definir su contraseña, en una sesión limpia.
+      const contextoInvitado = await superAdmin.context().browser()!.newContext()
+      const paginaInvitado = await contextoInvitado.newPage()
+      await paginaInvitado.goto(
+        `${test.info().project.use.baseURL}${rutaDeConfirmacion(correo, "/definir-clave")}`,
+      )
+      await expect(paginaInvitado, "el enlace no llevó a definir la clave").toHaveURL(
+        /definir-clave/,
+      )
+      await contextoInvitado.close()
+
+      // Se cierra el ciclo eliminándolo desde la pantalla.
+      await abrirMenuDe(superAdmin, email)
+      await superAdmin.getByRole("menuitem", { name: /Eliminar usuario/ }).click()
+      await superAdmin
+        .getByRole("alertdialog")
+        .getByRole("button", { name: /Eliminar usuario/ })
+        .click()
+      await expect
+        .poll(async () => (await perfilPorEmail(apiSuperAdmin, email))?.status, {
+          timeout: 30_000,
+        })
+        .toBe("eliminado")
+    },
+  )
 
   test(
     "no se puede crear dos usuarios con el mismo correo",
@@ -180,29 +330,6 @@ test.describe("Usuarios", () => {
  * base: que el diálogo se cierre no significa que haya pasado nada.
  */
 test.describe("Acciones sobre un usuario", () => {
-  /** Abre el menú de acciones de una persona en la lista. */
-  async function abrirMenuDe(pagina: import("@playwright/test").Page, nombre: string) {
-    await irA(pagina, "/admin/usuarios")
-    const fila = pagina.getByRole("row").filter({ hasText: nombre })
-    await expect(fila, `no aparece ${nombre} en la lista`).toBeVisible({ timeout: 30_000 })
-
-    // Se reintenta el clic: el botón se pinta en el HTML del servidor pero no
-    // responde hasta que React hidrata, y en este despliegue ese hueco es de
-    // segundos. Un clic ahí no falla, simplemente no abre nada.
-    const boton = fila.getByRole("button", { name: "Acciones" })
-    const menu = pagina.getByRole("menu")
-    for (let intento = 1; intento <= 4; intento++) {
-      await boton.click()
-      try {
-        await expect(menu).toBeVisible({ timeout: 4_000 })
-        return
-      } catch {
-        if (intento === 4) throw new Error(`El menú de ${nombre} no abrió tras 4 clics`)
-        await pagina.waitForTimeout(1500)
-      }
-    }
-  }
-
   test(
     "un super admin puede crear otro super admin y luego eliminarlo",
     anotar({
@@ -260,7 +387,7 @@ test.describe("Acciones sobre un usuario", () => {
       const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
       const nuevo = correoDePrueba("correo_nuevo")
 
-      await abrirMenuDe(superAdmin, cuenta.nombre)
+      await abrirMenuDe(superAdmin, cuenta.email)
       await superAdmin.getByRole("menuitem", { name: /Cambiar correo/ }).click()
       await superAdmin.locator("#correo-nuevo").fill(nuevo)
       await superAdmin
@@ -288,7 +415,7 @@ test.describe("Acciones sobre un usuario", () => {
     async ({ superAdmin, apiSuperAdmin, rastro }) => {
       const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
 
-      await abrirMenuDe(superAdmin, cuenta.nombre)
+      await abrirMenuDe(superAdmin, cuenta.email)
       await superAdmin.getByRole("menuitem", { name: /Restablecer contraseña/ }).click()
 
       // No abre diálogo: copia al portapapeles y enseña la clave en un aviso.
@@ -326,7 +453,7 @@ test.describe("Acciones sobre un usuario", () => {
     async ({ superAdmin, apiSuperAdmin, rastro }) => {
       const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
 
-      await abrirMenuDe(superAdmin, cuenta.nombre)
+      await abrirMenuDe(superAdmin, cuenta.email)
       await superAdmin.getByRole("menuitem", { name: /Suspender acceso/ }).click()
       await expect
         .poll(async () => (await perfilPorEmail(apiSuperAdmin, cuenta.email))?.status, {
@@ -336,7 +463,7 @@ test.describe("Acciones sobre un usuario", () => {
         .toBe("inactivo")
 
       // Y se puede deshacer, que es lo que la hace usable sin miedo.
-      await abrirMenuDe(superAdmin, cuenta.nombre)
+      await abrirMenuDe(superAdmin, cuenta.email)
       await superAdmin.getByRole("menuitem", { name: /^Activar/ }).click()
       await expect
         .poll(async () => (await perfilPorEmail(apiSuperAdmin, cuenta.email))?.status, {
@@ -361,7 +488,7 @@ test.describe("Acciones sobre un usuario", () => {
     async ({ superAdmin, apiSuperAdmin, rastro }) => {
       const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
 
-      await abrirMenuDe(superAdmin, cuenta.nombre)
+      await abrirMenuDe(superAdmin, cuenta.email)
       await superAdmin.getByRole("menuitem", { name: /Eliminar usuario/ }).click()
       // Pide confirmación: es lo que evita llevarse a alguien de un clic.
       await superAdmin
@@ -394,7 +521,7 @@ test.describe("Acciones sobre un usuario", () => {
     }),
     async ({ superAdmin, apiSuperAdmin, rastro }) => {
       const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
-      await abrirMenuDe(superAdmin, cuenta.nombre)
+      await abrirMenuDe(superAdmin, cuenta.email)
 
       for (const opcion of [
         /Editar y asignar empresas/,
