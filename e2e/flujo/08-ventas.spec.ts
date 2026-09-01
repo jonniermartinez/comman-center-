@@ -4,7 +4,6 @@ import { test } from "../soporte/fixtures"
 import { anotar } from "../soporte/anotaciones"
 import { empresaPorSlug } from "../soporte/api"
 import { HOY, marca } from "../soporte/datos"
-import { EMPRESA_A } from "../soporte/entorno"
 import { expect } from "../soporte/fixtures"
 import {
   abrirDialogo,
@@ -39,9 +38,9 @@ test.describe("Ventas por la pantalla", () => {
         "Es el dato del que cuelga todo lo demás: facturación, recaudo y las metas del mes. " +
         "Si el importe se guarda distinto de lo escrito, los informes mienten sin avisar.",
     }),
-    async ({ coordinador, apiSuperAdmin }) => {
+    async ({ coordinador, apiSuperAdmin, mundo }) => {
       const cliente = marca("venta")
-      await abrirModulo(coordinador, EMPRESA_A, "ventas")
+      await abrirModulo(coordinador, mundo.empresaA.slug, "ventas")
       await abrirDialogo(coordinador, /Nueva venta/, /Nueva venta/)
 
       await elegirPrimera(coordinador, "sede")
@@ -56,7 +55,7 @@ test.describe("Ventas por la pantalla", () => {
       })
       await guardar(coordinador)
 
-      const empresa = await empresaPorSlug(apiSuperAdmin, EMPRESA_A)
+      const empresa = await Promise.resolve({ id: mundo.empresaA.companyId })
       const { data: venta } = await apiSuperAdmin
         .from("sales")
         .select("id, licencia_nombre, valor_final, recaudo, report_date")
@@ -87,8 +86,8 @@ test.describe("Edición por la pantalla", () => {
         "El lápiz de edición se añadió en agosto de 2026 (commits 55317ed y 88acf7b) " +
         "en los cinco listados; antes solo se podía crear.",
     }),
-    async ({ coordinador, apiSuperAdmin }) => {
-      const empresa = await empresaPorSlug(apiSuperAdmin, EMPRESA_A)
+    async ({ coordinador, apiSuperAdmin, mundo }) => {
+      const empresa = await Promise.resolve({ id: mundo.empresaA.companyId })
       const { data: sede } = await apiSuperAdmin
         .from("branches")
         .select("id")
@@ -116,7 +115,7 @@ test.describe("Edición por la pantalla", () => {
         .select("id")
         .single()
 
-      await abrirModulo(coordinador, EMPRESA_A, "ventas")
+      await abrirModulo(coordinador, mundo.empresaA.slug, "ventas")
       await abrirDialogoDe(
         coordinador,
         coordinador

@@ -1,5 +1,5 @@
 import { anotar } from "../soporte/anotaciones"
-import { CUENTAS, EMPRESA_A, EMPRESA_B } from "../soporte/entorno"
+import { CUENTAS } from "../soporte/entorno"
 import { expect, test } from "../soporte/fixtures"
 import { irA } from "../soporte/reintento"
 
@@ -22,12 +22,12 @@ test.describe("Sin sesión", () => {
       porque:
         "Ninguna pantalla con datos puede abrirse sin sesión, ni escribiendo la dirección a mano.",
     }),
-    async ({ page }) => {
+    async ({ page, mundo }) => {
       for (const ruta of [
         "/empresas",
         "/admin/usuarios",
         "/admin/auditoria",
-        `/e/${EMPRESA_A}`,
+        `/e/${mundo.empresaA.slug}`,
       ]) {
         await irA(page, ruta)
         await expect(page, `${ruta} no exigió sesión`).toHaveURL(/\/login/)
@@ -65,7 +65,7 @@ test.describe("Sin sesión", () => {
       tipo: "seguridad",
       porque: "Lo mínimo exigible a un formulario de acceso.",
     }),
-    async ({ page }) => {
+    async ({ page, mundo }) => {
       await irA(page, "/login")
       await page.locator("#email").fill(CUENTAS.superAdmin.email)
       await page.locator("#password").fill("esta-no-es-la-clave")

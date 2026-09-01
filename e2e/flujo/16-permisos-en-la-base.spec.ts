@@ -1,7 +1,6 @@
 import { anotar } from "../soporte/anotaciones"
 import { clienteAnonimo, empresaPorSlug, type Cliente } from "../soporte/api"
 import { venta } from "../soporte/datos"
-import { EMPRESA_A, EMPRESA_B } from "../soporte/entorno"
 import { expect, test } from "../soporte/fixtures"
 
 /**
@@ -72,13 +71,13 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
       porque:
         "El aislamiento entre empresas es el contrato con el cliente: cada uno paga por ver lo suyo.",
     }),
-    async ({ apiAsesorA, apiSuperAdmin }) => {
-      const b = await contextoDe(apiSuperAdmin, EMPRESA_B)
+    async ({ apiAsesorA, apiSuperAdmin, mundo }) => {
+      const b = await contextoDe(apiSuperAdmin, mundo.empresaB.slug)
 
       const { data: empresas } = await apiAsesorA.from("companies").select("slug")
       const slugs = (empresas ?? []).map((e) => e.slug)
-      expect(slugs).toContain(EMPRESA_A)
-      expect(slugs, "el asesor A alcanza la empresa B").not.toContain(EMPRESA_B)
+      expect(slugs).toContain(mundo.empresaA.slug)
+      expect(slugs, "el asesor A alcanza la empresa B").not.toContain(mundo.empresaB.slug)
 
       // Y tampoco pidiéndola por su id, que es lo que haría alguien con la URL.
       for (const tabla of ["sales", "payments", "daily_activity", "appointments"] as const) {
@@ -97,7 +96,7 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
       porque:
         "Las cuentas de prueba viven en la misma base que los datos reales. Si alcanzaran a CEA o TTC, las pruebas serían una fuga.",
     }),
-    async ({ apiAsesorA }) => {
+    async ({ apiAsesorA, mundo }) => {
       const { data: empresas } = await apiAsesorA.from("companies").select("slug")
       const slugs = (empresas ?? []).map((e) => e.slug)
 
@@ -120,9 +119,9 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
       porque:
         "El comercial registra lo suyo; poder firmar a nombre de otro rompería las comisiones y el histórico de cada quien.",
     }),
-    async ({ apiAsesorA, apiSuperAdmin }) => {
-      const a = await contextoDe(apiSuperAdmin, EMPRESA_A)
-      const b = await contextoDe(apiSuperAdmin, EMPRESA_B)
+    async ({ apiAsesorA, apiSuperAdmin, mundo }) => {
+      const a = await contextoDe(apiSuperAdmin, mundo.empresaA.slug)
+      const b = await contextoDe(apiSuperAdmin, mundo.empresaB.slug)
       const miStaff = await staffDe(apiSuperAdmin, "E2E Asesor A")
       const otroStaff = await staffDe(apiSuperAdmin, "E2E Asesor B")
 
@@ -169,8 +168,8 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
       porque:
         "Es la diferencia de fondo entre los dos roles: el coordinador corrige lo de todo el equipo.",
     }),
-    async ({ apiCoordinador, apiSuperAdmin }) => {
-      const a = await contextoDe(apiSuperAdmin, EMPRESA_A)
+    async ({ apiCoordinador, apiSuperAdmin, mundo }) => {
+      const a = await contextoDe(apiSuperAdmin, mundo.empresaA.slug)
       const otroStaff = await staffDe(apiSuperAdmin, "E2E Asesor A")
 
       // Es la diferencia de fondo entre los dos roles: el comercial registra lo
@@ -197,8 +196,8 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
       tipo: "seguridad",
       porque: "Administrar una empresa no da permiso sobre las demás.",
     }),
-    async ({ apiCoordinador, apiSuperAdmin }) => {
-      const b = await contextoDe(apiSuperAdmin, EMPRESA_B)
+    async ({ apiCoordinador, apiSuperAdmin, mundo }) => {
+      const b = await contextoDe(apiSuperAdmin, mundo.empresaB.slug)
 
       const { data } = await apiCoordinador
         .from("sales")
@@ -220,7 +219,7 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
       porque:
         "Un log falsificable no es evidencia de nada. Ni el super admin puede insertar a mano.",
     }),
-    async ({ apiAsesorA, apiSuperAdmin }) => {
+    async ({ apiAsesorA, apiSuperAdmin, mundo }) => {
       // Ni el asesor ni el propio super admin: el log solo se escribe desde
       // `log_audit`, que estampa el actor a partir del token. Si esto se pudiera,
       // el log dejaría de ser evidencia de nada.
@@ -246,7 +245,7 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
       tipo: "seguridad",
       porque: "El log dice quién hizo qué en toda la plataforma: solo lo ve el super admin.",
     }),
-    async ({ apiAsesorA }) => {
+    async ({ apiAsesorA, mundo }) => {
       const { data } = await apiAsesorA.from("audit_log").select("*").limit(1)
       expect(data ?? []).toHaveLength(0)
     },
@@ -263,7 +262,7 @@ test.describe("Escalada de privilegios", () => {
       porque:
         "Crear cuentas es la vía más corta a super admin. La base lo verifica por su cuenta, no la interfaz.",
     }),
-    async ({ apiAsesorA }) => {
+    async ({ apiAsesorA, mundo }) => {
       const { error } = await apiAsesorA.rpc("admin_create_user", {
         p_email: "e2e-intruso@jonnier.com",
         p_full_name: "Intruso",
@@ -281,7 +280,7 @@ test.describe("Escalada de privilegios", () => {
       tipo: "seguridad",
       porque: "Administrar una empresa no es administrar la plataforma.",
     }),
-    async ({ apiCoordinador }) => {
+    async ({ apiCoordinador, mundo }) => {
       const { error } = await apiCoordinador.rpc("admin_create_user", {
         p_email: "e2e-intruso-coord@jonnier.com",
         p_full_name: "Intruso",
@@ -299,7 +298,7 @@ test.describe("Escalada de privilegios", () => {
       tipo: "seguridad",
       porque: "Sería tomar el control del sistema entero con una sola llamada.",
     }),
-    async ({ apiAsesorA, apiSuperAdmin }) => {
+    async ({ apiAsesorA, apiSuperAdmin, mundo }) => {
       const { data: victima } = await apiSuperAdmin
         .from("profiles")
         .select("id")
@@ -324,7 +323,7 @@ test.describe("Escalada de privilegios", () => {
       porque:
         "Se comprueba el rol después del UPDATE, no si dio error: una política mal escrita puede aceptar la escritura y no aplicarla.",
     }),
-    async ({ apiAsesorA }) => {
+    async ({ apiAsesorA, mundo }) => {
       const { data: yo } = await apiAsesorA.auth.getUser()
       await apiAsesorA.from("profiles").update({ role: "super_admin" }).eq("id", yo.user!.id)
 
@@ -347,8 +346,8 @@ test.describe("Escalada de privilegios", () => {
       tipo: "seguridad",
       porque: "El borrado definitivo se lleva años de registros y no tiene vuelta atrás.",
     }),
-    async ({ apiAsesorA, apiSuperAdmin }) => {
-      const a = await contextoDe(apiSuperAdmin, EMPRESA_A)
+    async ({ apiAsesorA, apiSuperAdmin, mundo }) => {
+      const a = await contextoDe(apiSuperAdmin, mundo.empresaA.slug)
 
       const { error } = await apiAsesorA.rpc("delete_company_cascade", {
         target_company: a.companyId,
@@ -356,7 +355,7 @@ test.describe("Escalada de privilegios", () => {
       })
       expect(error, "un asesor borró una empresa entera").toBeTruthy()
 
-      const sigue = await empresaPorSlug(apiSuperAdmin, EMPRESA_A)
+      const sigue = await Promise.resolve({ id: mundo.empresaA.companyId })
       expect(sigue, "la empresa desapareció").toBeTruthy()
     },
   )

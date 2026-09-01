@@ -1,6 +1,6 @@
 import { anotar } from "../soporte/anotaciones"
 import { empresaPorSlug, perfilPorEmail } from "../soporte/api"
-import { CUENTAS, EMPRESA_A } from "../soporte/entorno"
+import { CUENTAS } from "../soporte/entorno"
 import { expect, test } from "../soporte/fixtures"
 import { irA } from "../soporte/reintento"
 
@@ -28,11 +28,11 @@ test.describe("Sedes", () => {
         "Las sedes se archivan, nunca se borran: los registros históricos apuntan a ellas " +
         "y borrarlas dejaría huérfanos años de ventas.",
     }),
-    async ({ coordinador, apiSuperAdmin }) => {
-      const empresa = await empresaPorSlug(apiSuperAdmin, EMPRESA_A)
+    async ({ coordinador, apiSuperAdmin, mundo }) => {
+      const empresa = await Promise.resolve({ id: mundo.empresaA.companyId })
       const nombre = `e2e-sede-${Date.now().toString(36)}`
 
-      await irA(coordinador, `/e/${EMPRESA_A}/sedes`)
+      await irA(coordinador, `/e/${mundo.empresaA.slug}/sedes`)
       await coordinador
         .getByRole("button", { name: /Nueva sede|Añadir sede|Agregar/i })
         .first()
@@ -79,8 +79,8 @@ test.describe("Sedes", () => {
         "Si una sede cerrada sigue apareciendo en el desplegable, tarde o temprano alguien " +
         "registra una venta en un punto que ya no existe.",
     }),
-    async ({ coordinador, apiSuperAdmin }) => {
-      const empresa = await empresaPorSlug(apiSuperAdmin, EMPRESA_A)
+    async ({ coordinador, apiSuperAdmin, mundo }) => {
+      const empresa = await Promise.resolve({ id: mundo.empresaA.companyId })
       const nombre = `e2e-sede-cerrada-${Date.now().toString(36)}`
 
       const { data: sede } = await apiSuperAdmin
@@ -94,7 +94,7 @@ test.describe("Sedes", () => {
         .select("id")
         .single()
 
-      await irA(coordinador, `/e/${EMPRESA_A}/ventas`)
+      await irA(coordinador, `/e/${mundo.empresaA.slug}/ventas`)
       await coordinador
         .getByRole("button", { name: /Nueva venta/ })
         .first()

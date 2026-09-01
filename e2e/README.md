@@ -32,25 +32,36 @@ Aun así, la recomendación sigue siendo mover esto a una rama de Supabase o a u
 proyecto aparte en cuanto haya ocasión: los guardarraíles protegen del error
 previsible, no de todos.
 
-## El banco de pruebas
+## El plantel: diez cuentas fijas
 
-Lo monta `soporte/montaje.ts` antes de cada corrida, de forma idempotente, y lo
-deshace `soporte/desmontaje.ts` al final.
-
-| Cuenta | Rol | Dónde |
+| Cuenta | Rol | Para qué |
 |---|---|---|
-| `e2e_command_super_admin@jonnier.com` | super admin | toda la plataforma |
-| `e2e_coordinador@jonnier.com` | coordinador | empresa A |
-| `e2e_asesor_a@jonnier.com` | asesor | empresa A |
-| `e2e_asesor_b@jonnier.com` | asesor | empresa B |
-| `e2e_suspendido@jonnier.com` | asesor suspendido | ninguna |
+| `super_admin` | super admin | La semilla. La única que no puede crear nadie desde dentro |
+| `super_admin_2` | super admin | El relevo del rol con más poder |
+| `coordinador_a` | coordinador | Administra la empresa A |
+| `coordinador_b` | coordinador | Administra la B: administrar una no da permiso sobre otra |
+| `asesor_a1` | asesor | Comercial de A: registra lo suyo |
+| `asesor_a2` | asesor | Su compañero en A: sin él no se prueba "lo de otra persona" |
+| `asesor_b1` | asesor | Comercial de B: el aislamiento entre empresas |
+| `suspendido` | asesor | Suspendida de verdad: perfil inactivo y login bloqueado |
+| `sin_empresa` | asesor | Entra pero no está en ninguna empresa |
+| `reserva` | asesor | Libre, para la próxima prueba que necesite un rol más |
 
-Son **dos** empresas a propósito (`e2e-sandbox-a` y `e2e-sandbox-b`): casi toda
-la seguridad que hay que demostrar es "lo de A no se ve desde B", y eso no se
-puede probar con una sola.
+Todas son `e2e_command_<slug>@jonnier.com`, y sus contraseñas están en
+`.env.e2e`, que no se versiona.
 
-Las credenciales están en `.env.e2e`, que no se versiona. Para regenerarlo, ver
-"Volver a crear las cuentas" más abajo.
+**Se crean una vez y se reutilizan.** Ese es el punto: antes las creaba cada
+prueba y la pantalla de usuarios del cliente terminó con decenas de cuentas de
+mentira mezcladas con su gente. Lo que se monta y se destruye en cada corrida
+son **las empresas**, no las personas.
+
+Ninguna recibe correo. Nacen confirmadas y con contraseña, igual que hace la
+aplicación al dar de alta al equipo de una empresa sin esperar invitaciones.
+
+El fixture `mundo` crea dos empresas por proceso, mete a cada quien en la suya
+y al terminar las borra —lo que se lleva las asignaciones y todo lo capturado
+dentro. El barrido de arranque limpia lo que dejara una corrida interrumpida,
+pero **respeta el plantel**.
 
 ## Cómo están escritas
 

@@ -4,7 +4,6 @@ import { test } from "../soporte/fixtures"
 import { anotar } from "../soporte/anotaciones"
 import { empresaPorSlug } from "../soporte/api"
 import { HOY, marca } from "../soporte/datos"
-import { EMPRESA_A } from "../soporte/entorno"
 import { expect } from "../soporte/fixtures"
 import {
   abrirDialogo,
@@ -33,11 +32,11 @@ test.describe("Agendas por la pantalla", () => {
         "La agenda es el paso previo a la venta. Si no se guarda, el comercial pierde la " +
         "cita y nadie se entera hasta que el cliente no aparece.",
     }),
-    async ({ coordinador, apiSuperAdmin }) => {
-      const empresa = await empresaPorSlug(apiSuperAdmin, EMPRESA_A)
+    async ({ coordinador, apiSuperAdmin, mundo }) => {
+      const empresa = await Promise.resolve({ id: mundo.empresaA.companyId })
       const cliente = marca("agenda")
 
-      await abrirModulo(coordinador, EMPRESA_A, "agendas")
+      await abrirModulo(coordinador, mundo.empresaA.slug, "agendas")
       await abrirDialogo(coordinador, /Nueva agenda/, /Nueva agenda/)
 
       await elegirPrimera(coordinador, "sede")

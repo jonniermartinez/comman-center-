@@ -1,6 +1,6 @@
 import { test as base, type Browser, type Page } from "@playwright/test"
 
-import { desmontarMundo, montarMundo, type CuentaCreada, type Mundo } from "./acciones"
+import { desmontarMundo, montarMundo, type Mundo } from "./acciones"
 import {
   asignarAEmpresa,
   borrarEmpresa,
@@ -11,7 +11,7 @@ import {
   vincularStaff,
   type Cliente,
 } from "./api"
-import { BASE_URL } from "./entorno"
+import { BASE_URL, type Cuenta } from "./entorno"
 import { nombreDePrueba } from "./guardarrail"
 import { nuevoRastro, type Rastro } from "./rastro"
 import { SESION_SUPER_ADMIN } from "./montaje"
@@ -25,15 +25,14 @@ import { irA } from "./reintento"
  * es la que vale para seguridad: que a un asesor no se le pinte un botón no
  * demuestra nada, los botones se pintan con las herramientas del navegador.
  *
- * Las cuentas de esos roles no están sembradas: las crea el fixture `mundo` al
- * arrancar cada proceso, con las mismas funciones que usa la aplicación, y las
- * purga al terminar. Solo el super admin preexiste.
+ * Las cuentas son el plantel fijo de `CUENTAS`: diez, creadas una vez y
+ * reutilizadas. Lo que el fixture `mundo` monta y desmonta en cada corrida son
+ * las empresas; las personas se quedan, que es lo que evita que la pantalla de
+ * usuarios del cliente se llene de gente inventada.
  */
 
 /** Abre sesión por el formulario, como haría la persona a la que representa. */
-async function iniciarSesion(navegador: Browser, cuenta: CuentaCreada) {
-  if (!cuenta.password) throw new Error(`La cuenta ${cuenta.email} se creó sin clave`)
-
+async function iniciarSesion(navegador: Browser, cuenta: Cuenta) {
   const contexto = await navegador.newContext({ baseURL: BASE_URL })
   const pagina = await contexto.newPage()
   await irA(pagina, "/login")
@@ -49,8 +48,7 @@ async function iniciarSesion(navegador: Browser, cuenta: CuentaCreada) {
 }
 
 /** Un cliente de base con la sesión de una cuenta recién creada. */
-async function clienteDeCuenta(cuenta: CuentaCreada): Promise<Cliente> {
-  if (!cuenta.password) throw new Error(`La cuenta ${cuenta.email} se creó sin clave`)
+async function clienteDeCuenta(cuenta: Cuenta): Promise<Cliente> {
   const cliente = clienteAnonimo()
   const { error } = await cliente.auth.signInWithPassword({
     email: cuenta.email,
@@ -94,9 +92,8 @@ export const test = base.extend<
   /**
    * El equipo y las empresas con las que trabajan las pruebas.
    *
-   * Se monta una vez por proceso —no por prueba— porque crear seis cuentas y
-   * dos empresas antes de cada una de las ciento veinte costaría minutos y
-   * dispararía el límite de inicios de sesión de Auth.
+   * Se monta una vez por proceso, no por prueba: levantar dos empresas con su
+   * equipo antes de cada una de las ciento veinte costaría minutos.
    */
   mundo: [
     async ({}, usar) => {

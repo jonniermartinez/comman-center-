@@ -1,7 +1,6 @@
 import { anotar, type Modulo } from "./anotaciones"
-import { empresaPorSlug, type Cliente } from "./api"
+import type { Cliente } from "./api"
 import { venta } from "./datos"
-import { EMPRESA_A, EMPRESA_B } from "./entorno"
 import { expect } from "./fixtures"
 import type { Rastro } from "./rastro"
 
@@ -81,26 +80,6 @@ async function conVenta(
   return { sale_id: data!.id }
 }
 
-async function contexto(admin: Cliente, slug: string, staff?: string): Promise<Contexto> {
-  const empresa = await empresaPorSlug(admin, slug)
-  if (!empresa) throw new Error(`El montaje no dejó la empresa ${slug}`)
-
-  const { data: sede } = await admin
-    .from("branches")
-    .select("id")
-    .eq("company_id", empresa.id)
-    .eq("is_primary", true)
-    .single()
-  if (!sede) throw new Error(`${slug} no tiene sede principal`)
-
-  let staffId: string | null = null
-  if (staff) {
-    const { data } = await admin.from("staff").select("id").eq("full_name", staff).single()
-    staffId = data?.id ?? null
-  }
-  return { companyId: empresa.id, branchId: sede.id, staffId }
-}
-
 /** Una prueba lista para que el módulo la declare con su propio `test()`. */
 /**
  * Los fixtures que puede pedir un caso.
@@ -149,8 +128,8 @@ export function capacidadesDe(r: Registro): Caso[] {
         tipo: "feature",
         porque: `Administrar la empresa incluye registrar ${r.singular} por cualquiera del equipo.`,
       }),
-      async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
-        const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
+      async ({ apiCoordinador, apiSuperAdmin, rastro, mundo }) => {
+        const ctx = { ...mundo.empresaA, staffId: mundo.staffA }
 
         const { data, error } = await rastro.crear(
           apiCoordinador,
@@ -174,8 +153,8 @@ export function capacidadesDe(r: Registro): Caso[] {
         tipo: "feature",
         porque: "Corregir es tan habitual como registrar: se teclea mal y hay que arreglarlo.",
       }),
-      async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
-        const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
+      async ({ apiCoordinador, apiSuperAdmin, rastro, mundo }) => {
+        const ctx = { ...mundo.empresaA, staffId: mundo.staffA }
         const { data: creado } = await rastro.crear(
           apiSuperAdmin,
           r.tabla,
@@ -206,8 +185,8 @@ export function capacidadesDe(r: Registro): Caso[] {
             "La base se lo permite (`can_manage_company`) aunque la aplicación todavía no " +
             "ofrezca el botón. Si algún día se añade, el permiso ya está donde debe.",
         }),
-        async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
-          const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
+        async ({ apiCoordinador, apiSuperAdmin, rastro, mundo }) => {
+          const ctx = { ...mundo.empresaA, staffId: mundo.staffA }
           const { data: creado, error } = await rastro.crear(
             apiSuperAdmin,
             r.tabla,
@@ -236,8 +215,8 @@ export function capacidadesDe(r: Registro): Caso[] {
             "parte del día y no se borra, se corrige. Si un día aparece una política, esta " +
             "prueba avisa.",
         }),
-        async ({ apiSuperAdmin, apiCoordinador, rastro }) => {
-          const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
+        async ({ apiSuperAdmin, apiCoordinador, rastro, mundo }) => {
+          const ctx = { ...mundo.empresaA, staffId: mundo.staffA }
           const { data: creado, error } = await rastro.crear(
             apiSuperAdmin,
             r.tabla,
@@ -269,8 +248,8 @@ export function capacidadesDe(r: Registro): Caso[] {
         tipo: "seguridad",
         porque: "Administrar una empresa no da ningún permiso sobre las demás.",
       }),
-      async ({ apiCoordinador, apiSuperAdmin, rastro }) => {
-        const ajena = await contexto(apiSuperAdmin, EMPRESA_B)
+      async ({ apiCoordinador, apiSuperAdmin, rastro, mundo }) => {
+        const ajena = { ...mundo.empresaB, staffId: null }
         const { error } = await apiCoordinador
           .from(r.tabla)
           .insert(r.fila(ajena, r.unico?.(5)) as never)
@@ -294,8 +273,8 @@ export function capacidadesDe(r: Registro): Caso[] {
             "La caja es el dinero físico del punto y responde quien administra, no quien " +
             "vende. Es la única excepción a que el comercial maneje lo suyo.",
         }),
-        async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
-          const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
+        async ({ apiAsesorA, apiSuperAdmin, rastro, mundo }) => {
+          const ctx = { ...mundo.empresaA, staffId: mundo.staffA }
 
           const { error: alCrear } = await apiAsesorA.from(r.tabla).insert(r.fila(ctx) as never)
           expect(alCrear, `un asesor creó ${r.singular}`).toBeTruthy()
@@ -336,8 +315,8 @@ export function capacidadesDe(r: Registro): Caso[] {
             "El comercial registra lo suyo, como en el Excel. Impedírselo obligaría a que un " +
             "coordinador transcriba lo de doce personas, que es garantizar el dato tarde y mal.",
         }),
-        async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
-          const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
+        async ({ apiAsesorA, apiSuperAdmin, rastro, mundo }) => {
+          const ctx = { ...mundo.empresaA, staffId: mundo.staffA }
           const { data, error } = await rastro.crear(
             apiAsesorA,
             r.tabla,
@@ -361,8 +340,8 @@ export function capacidadesDe(r: Registro): Caso[] {
             "Firmar por otro rompería las comisiones y el histórico de cada quien, que es " +
             "justo lo que el sistema existe para llevar.",
         }),
-        async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
-          const ajeno = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor B")
+        async ({ apiAsesorA, apiSuperAdmin, rastro, mundo }) => {
+          const ajeno = { ...mundo.empresaA, staffId: mundo.staffA2 }
           const { error } = await apiAsesorA
             .from(r.tabla)
             .insert(r.fila(ajeno, r.unico?.(7)) as never)
@@ -381,8 +360,8 @@ export function capacidadesDe(r: Registro): Caso[] {
               ? "La caja es el dinero físico del punto y responde quien administra, no quien vende."
               : "Un pago cuelga de una venta: solo puede abonarlo quien puede tocar esa venta.",
         }),
-        async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
-          const ctx = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
+        async ({ apiAsesorA, apiSuperAdmin, rastro, mundo }) => {
+          const ctx = { ...mundo.empresaA, staffId: mundo.staffA }
           const { error } = await apiAsesorA
             .from(r.tabla)
             .insert(r.fila(ctx, r.unico?.(8)) as never)
@@ -404,8 +383,8 @@ export function capacidadesDe(r: Registro): Caso[] {
             "arreglarlo, el dato se queda mal hasta que aparezca un coordinador. Corregir deja " +
             "rastro y se puede volver a corregir; por eso se permite y borrar no.",
         }),
-        async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
-          const ajeno = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor B")
+        async ({ apiAsesorA, apiSuperAdmin, rastro, mundo }) => {
+          const ajeno = { ...mundo.empresaA, staffId: mundo.staffA2 }
           const { data: creado } = await rastro.crear(
             apiSuperAdmin,
             r.tabla,
@@ -445,8 +424,8 @@ export function capacidadesDe(r: Registro): Caso[] {
               "Si puede crearla y corregirla, tiene que poder quitarla cuando la metió por " +
               "error. Antes no podía, y la salida era dejarla en cero, que ensucia los informes.",
           }),
-          async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
-            const mia = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor A")
+          async ({ apiAsesorA, apiSuperAdmin, rastro, mundo }) => {
+            const mia = { ...mundo.empresaA, staffId: mundo.staffA }
             const atado = await conVenta(apiSuperAdmin, rastro, r, mia)
             const { data: creado, error } = await rastro.crear(
               apiSuperAdmin,
@@ -476,10 +455,10 @@ export function capacidadesDe(r: Registro): Caso[] {
               "Corregir lo de otro deja rastro y se puede deshacer; borrarlo no deja nada que " +
               "revisar. Por eso el comercial corrige lo ajeno pero solo borra lo suyo.",
           }),
-          async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
+          async ({ apiAsesorA, apiSuperAdmin, rastro, mundo }) => {
             // A nombre del asesor B: si se crea a nombre de A, la prueba dice
             // "de un compañero" pero comprueba lo contrario y siempre falla.
-            const ajeno = await contexto(apiSuperAdmin, EMPRESA_A, "E2E Asesor B")
+            const ajeno = { ...mundo.empresaA, staffId: mundo.staffA2 }
             const atado = await conVenta(apiSuperAdmin, rastro, r, ajeno)
             const { data: creado, error } = await rastro.crear(
               apiSuperAdmin,
@@ -511,8 +490,8 @@ export function capacidadesDe(r: Registro): Caso[] {
         tipo: "seguridad",
         porque: "El aislamiento entre empresas es el contrato con cada cliente.",
       }),
-      async ({ apiAsesorA, apiSuperAdmin, rastro }) => {
-        const ajena = await contexto(apiSuperAdmin, EMPRESA_B)
+      async ({ apiAsesorA, apiSuperAdmin, rastro, mundo }) => {
+        const ajena = { ...mundo.empresaB, staffId: null }
         const { data } = await apiAsesorA
           .from(r.tabla)
           .select("id")

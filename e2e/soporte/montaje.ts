@@ -49,30 +49,44 @@ async function barrerRestos(admin: Awaited<ReturnType<typeof clienteDe>>) {
     if (error) console.error(`barrido: quedó la empresa ${empresa.slug}: ${error.message}`)
   }
 
+  // Las diez del plantel son permanentes: se reutilizan en cada corrida y son
+  // justo lo que evita que la lista de usuarios del cliente se llene. Solo se
+  // purga lo que alguna prueba dejó suelto.
+  const delPlantel = new Set(Object.values(CUENTAS).map((c) => c.email))
   const { data: cuentas } = await admin
     .from("profiles")
     .select("id, email")
     .like("email", "e2e%")
-  for (const cuenta of cuentas ?? []) {
-    if (cuenta.email === CUENTAS.superAdmin.email) continue
+  const sueltas = (cuentas ?? []).filter((c) => !delPlantel.has(c.email))
+  for (const cuenta of sueltas) {
     const { error } = await admin.rpc("purge_test_user", { target_user: cuenta.id })
     if (error) console.error(`barrido: quedó la cuenta ${cuenta.email}: ${error.message}`)
   }
 
   // Las personas del catálogo son globales: no se las lleva ni borrar la
-  // empresa ni purgar la cuenta. Se quitan solo si no tienen nada a su nombre;
-  // si lo tuvieran, la llave foránea lo impediría y con razón.
-  const { data: personas } = await admin.from("staff").select("id").like("full_name", "E2E %")
-  for (const persona of personas ?? []) {
+  // empresa ni purgar la cuenta. Se quitan las que quedaron huérfanas, pero no
+  // las del plantel: esas están enlazadas a sus cuentas y se reutilizan.
+  const { data: personas } = await admin
+    .from("staff")
+    .select("id, profile_id")
+    .like("full_name", "E2E %")
+  const dePlantel = new Set(
+    ((await admin.from("profiles").select("id, email").like("email", "e2e%")).data ?? [])
+      .filter((p) => delPlantel.has(p.email))
+      .map((p) => p.id),
+  )
+  const huerfanas = (personas ?? []).filter(
+    (p) => !p.profile_id || !dePlantel.has(p.profile_id),
+  )
+  for (const persona of huerfanas) {
     await admin.from("company_staff").delete().eq("staff_id", persona.id)
     await admin.from("staff").delete().eq("id", persona.id)
   }
 
-  if (deAntes.length || (cuentas ?? []).length > 1 || (personas ?? []).length) {
+  if (deAntes.length || sueltas.length || huerfanas.length) {
     console.log(
-      `Barrido de restos: ${deAntes.length} empresa(s), ` +
-        `${Math.max(0, (cuentas ?? []).length - 1)} cuenta(s), ` +
-        `${(personas ?? []).length} persona(s) de una corrida anterior.`,
+      `Barrido de restos: ${deAntes.length} empresa(s), ${sueltas.length} cuenta(s), ` +
+        `${huerfanas.length} persona(s) de una corrida anterior.`,
     )
   }
 }

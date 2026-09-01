@@ -4,7 +4,6 @@ import { test } from "../soporte/fixtures"
 import { anotar } from "../soporte/anotaciones"
 import { empresaPorSlug } from "../soporte/api"
 import { HOY, marca } from "../soporte/datos"
-import { EMPRESA_A } from "../soporte/entorno"
 import { expect } from "../soporte/fixtures"
 import {
   abrirDialogo,
@@ -33,8 +32,8 @@ test.describe("Pagos por la pantalla", () => {
         "Un pago suelto no cuadra con nada. Lo que lo hace útil es el vínculo con la venta, " +
         "que es de donde sale el saldo pendiente de cada cliente.",
     }),
-    async ({ coordinador, apiSuperAdmin }) => {
-      const empresa = await empresaPorSlug(apiSuperAdmin, EMPRESA_A)
+    async ({ coordinador, apiSuperAdmin, mundo }) => {
+      const empresa = await Promise.resolve({ id: mundo.empresaA.companyId })
       const { data: sede } = await apiSuperAdmin
         .from("branches")
         .select("id")
@@ -64,7 +63,7 @@ test.describe("Pagos por la pantalla", () => {
         .select("id")
         .single()
 
-      await abrirModulo(coordinador, EMPRESA_A, "pagos")
+      await abrirModulo(coordinador, mundo.empresaA.slug, "pagos")
       await abrirDialogo(coordinador, /Registrar pago/, /Registrar pago/)
 
       await coordinador.locator("#buscar").fill(cliente)

@@ -4,7 +4,6 @@ import { test } from "../soporte/fixtures"
 import { anotar } from "../soporte/anotaciones"
 import { empresaPorSlug } from "../soporte/api"
 import { HOY, marca } from "../soporte/datos"
-import { EMPRESA_A } from "../soporte/entorno"
 import { expect } from "../soporte/fixtures"
 import {
   abrirDialogo,
@@ -34,8 +33,8 @@ test.describe("Gestión diaria por la pantalla", () => {
         "contactabilidad. Tiene una veintena de campos numéricos: si uno se descoloca, " +
         "los ratios salen mal y nadie lo nota mirando la pantalla.",
     }),
-    async ({ coordinador, apiSuperAdmin }) => {
-      const empresa = await empresaPorSlug(apiSuperAdmin, EMPRESA_A)
+    async ({ coordinador, apiSuperAdmin, mundo }) => {
+      const empresa = await Promise.resolve({ id: mundo.empresaA.companyId })
 
       // Una jornada por persona y día: si ya hay una de hoy, se quita antes.
       await apiSuperAdmin
@@ -44,7 +43,7 @@ test.describe("Gestión diaria por la pantalla", () => {
         .eq("company_id", empresa!.id)
         .eq("report_date", HOY)
 
-      await abrirModulo(coordinador, EMPRESA_A, "gestion-diaria")
+      await abrirModulo(coordinador, mundo.empresaA.slug, "gestion-diaria")
       await abrirDialogo(coordinador, /Registrar jornada/, /Registrar jornada/)
 
       await elegirPrimera(coordinador, "sede")

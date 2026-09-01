@@ -4,7 +4,6 @@ import { test } from "../soporte/fixtures"
 import { anotar } from "../soporte/anotaciones"
 import { empresaPorSlug } from "../soporte/api"
 import { HOY, marca } from "../soporte/datos"
-import { EMPRESA_A } from "../soporte/entorno"
 import { expect } from "../soporte/fixtures"
 import {
   abrirDialogo,
@@ -39,11 +38,11 @@ test.describe("Caja por la pantalla", () => {
         "Es dinero físico del punto y quien responde por él es quien administra. " +
         "Un importe mal guardado es un descuadre que alguien tiene que explicar.",
     }),
-    async ({ coordinador, apiSuperAdmin }) => {
-      const empresa = await empresaPorSlug(apiSuperAdmin, EMPRESA_A)
+    async ({ coordinador, apiSuperAdmin, mundo }) => {
+      const empresa = await Promise.resolve({ id: mundo.empresaA.companyId })
       const quien = marca("caja")
 
-      await abrirModulo(coordinador, EMPRESA_A, "caja")
+      await abrirModulo(coordinador, mundo.empresaA.slug, "caja")
       await abrirDialogo(coordinador, /Nuevo movimiento/, /Nuevo movimiento/)
 
       await elegirPrimera(coordinador, "sede")

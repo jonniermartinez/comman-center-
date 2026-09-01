@@ -1,6 +1,6 @@
 import { anotar } from "../soporte/anotaciones"
 import { empresaPorSlug, perfilPorEmail } from "../soporte/api"
-import { CUENTAS, EMPRESA_A } from "../soporte/entorno"
+import { CUENTAS } from "../soporte/entorno"
 import { expect, test } from "../soporte/fixtures"
 import { irA } from "../soporte/reintento"
 
@@ -27,11 +27,11 @@ test.describe("Dashboard", () => {
         "Es la primera pantalla que ve cualquiera al entrar a una empresa. Si falla, la " +
         "aplicación parece rota entera aunque el resto funcione.",
     }),
-    async ({ coordinador, asesorA }) => {
+    async ({ coordinador, asesorA, mundo }) => {
       for (const pagina of [coordinador, asesorA]) {
-        await irA(pagina, `/e/${EMPRESA_A}`)
+        await irA(pagina, `/e/${mundo.empresaA.slug}`)
         await expect(pagina.locator("body")).not.toContainText(/Application error|Unhandled/i)
-        await expect(pagina.locator("body")).toContainText(EMPRESA_A)
+        await expect(pagina.locator("body")).toContainText(mundo.empresaA.slug)
       }
     },
   )
@@ -46,7 +46,7 @@ test.describe("Dashboard", () => {
         "La tira de totales del inicio agrega todas las empresas. Si contase las archivadas, " +
         "las cifras del mes saldrían infladas sin explicación visible.",
     }),
-    async ({ superAdmin }) => {
+    async ({ superAdmin, mundo }) => {
       await irA(superAdmin, "/empresas")
       await expect(superAdmin.locator("body")).toContainText(/Ventas del mes/i)
       await expect(superAdmin.locator("body")).toContainText(/Facturación del mes/i)

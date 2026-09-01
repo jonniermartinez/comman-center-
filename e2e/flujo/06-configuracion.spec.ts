@@ -1,6 +1,6 @@
 import { anotar } from "../soporte/anotaciones"
 import { empresaPorSlug, perfilPorEmail } from "../soporte/api"
-import { CUENTAS, EMPRESA_A } from "../soporte/entorno"
+import { CUENTAS } from "../soporte/entorno"
 import { expect, test } from "../soporte/fixtures"
 import { irA } from "../soporte/reintento"
 
@@ -27,8 +27,8 @@ test.describe("Configuración de la empresa", () => {
         "No todas las empresas usan todos los módulos. Si apagarlo solo lo quitase del menú, " +
         "seguiría accesible escribiendo la dirección.",
     }),
-    async ({ coordinador, apiSuperAdmin }) => {
-      const empresa = await empresaPorSlug(apiSuperAdmin, EMPRESA_A)
+    async ({ coordinador, apiSuperAdmin, mundo }) => {
+      const empresa = await Promise.resolve({ id: mundo.empresaA.companyId })
 
       await apiSuperAdmin
         .from("company_modules")
@@ -36,7 +36,7 @@ test.describe("Configuración de la empresa", () => {
         .eq("company_id", empresa!.id)
         .eq("module_code", "caja")
 
-      await irA(coordinador, `/e/${EMPRESA_A}/caja`)
+      await irA(coordinador, `/e/${mundo.empresaA.slug}/caja`)
       await expect(
         coordinador.locator("body"),
         "un módulo apagado sigue abriéndose por URL",
@@ -58,8 +58,8 @@ test.describe("Configuración de la empresa", () => {
         "Los catálogos se marcan inactivos, no se borran: si una financiación vuelve a " +
         "usarse, las ventas antiguas que la referencian tienen que seguir teniendo sentido.",
     }),
-    async ({ apiSuperAdmin }) => {
-      const empresa = await empresaPorSlug(apiSuperAdmin, EMPRESA_A)
+    async ({ apiSuperAdmin, mundo }) => {
+      const empresa = await Promise.resolve({ id: mundo.empresaA.companyId })
 
       const { data: antes } = await apiSuperAdmin
         .from("company_financing_types")

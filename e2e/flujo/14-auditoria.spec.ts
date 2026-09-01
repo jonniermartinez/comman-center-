@@ -1,6 +1,6 @@
 import { anotar } from "../soporte/anotaciones"
 import { empresaPorSlug, perfilPorEmail } from "../soporte/api"
-import { CUENTAS, EMPRESA_A } from "../soporte/entorno"
+import { CUENTAS } from "../soporte/entorno"
 import { expect, test } from "../soporte/fixtures"
 import { irA } from "../soporte/reintento"
 
@@ -31,8 +31,8 @@ test.describe("Auditoría", () => {
         "Durante semanas no se escribió ni una línea: logAudit reventaba por una clave " +
         "ausente y el error se tragaba la operación entera (31/08/2026).",
     }),
-    async ({ apiSuperAdmin }) => {
-      const empresa = await empresaPorSlug(apiSuperAdmin, EMPRESA_A)
+    async ({ apiSuperAdmin, mundo }) => {
+      const empresa = await Promise.resolve({ id: mundo.empresaA.companyId })
 
       const { count: antes } = await apiSuperAdmin
         .from("audit_log")
@@ -80,7 +80,7 @@ test.describe("Auditoría", () => {
       tipo: "feature",
       porque: "De poco sirve un log que se escribe pero no se puede consultar.",
     }),
-    async ({ superAdmin }) => {
+    async ({ superAdmin, mundo }) => {
       await irA(superAdmin, "/admin/auditoria")
       await expect(superAdmin.locator("body")).not.toContainText(/Application error/i)
       await expect(superAdmin.getByRole("row").first()).toBeVisible()

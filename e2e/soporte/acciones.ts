@@ -8,6 +8,7 @@ import {
   vincularStaff,
   type Cliente,
 } from "./api"
+import { CUENTAS, type Cuenta } from "./entorno"
 import { nombreDePrueba } from "./guardarrail"
 import type { Rastro } from "./rastro"
 import { irA } from "./reintento"
@@ -166,26 +167,29 @@ export async function empresaConEquipo(admin: Cliente, rastro: Rastro) {
 }
 
 /**
- * El mundo que necesitan las pruebas, creado como lo crearía una persona.
+ * El mundo que necesitan las pruebas: dos empresas con su equipo dentro.
  *
- * Un solo super admin preexiste, con su contraseña. Todo lo demás —las cuentas
- * del equipo, sus roles, las empresas— lo levanta esto llamando a las mismas
- * funciones que usa la aplicación, y se purga entero al terminar. Así la base
- * del cliente no acumula usuarios de prueba entre corridas.
+ * Las personas ya existen —son el plantel fijo de `CUENTAS`— así que aquí solo
+ * se crean las empresas y se mete a cada quien en la suya. Al terminar se
+ * borran las empresas y las cuentas siguen ahí para la próxima corrida: por eso
+ * la pantalla de usuarios del cliente no se llena de gente inventada.
  *
- * Se monta una vez por proceso de Playwright, no una por prueba: crear seis
- * cuentas y dos empresas antes de cada una de las ciento veinte pruebas
- * costaría minutos y dispararía el límite de inicios de sesión de Auth.
+ * Se monta una vez por proceso de Playwright, no una por prueba.
  */
 export interface Mundo {
   empresaA: { slug: string; companyId: string; branchId: string }
   empresaB: { slug: string; companyId: string; branchId: string }
-  coordinador: CuentaCreada
-  asesorA: CuentaCreada
-  asesorB: CuentaCreada
-  suspendido: CuentaCreada
-  /** Las personas del catálogo que hubo que crear. Se borran al desmontar. */
-  staff: string[]
+  coordinador: Cuenta
+  asesorA: Cuenta
+  /** El compañero del asesor A, en su misma empresa. */
+  asesorA2: Cuenta
+  asesorB: Cuenta
+  suspendido: Cuenta
+  sinEmpresa: Cuenta
+  /** La persona del catálogo de cada asesor, que es quien figura como responsable. */
+  staffA: string
+  staffA2: string
+  staffB: string
 }
 
 export async function montarMundo(admin: Cliente): Promise<Mundo> {
@@ -194,21 +198,18 @@ export async function montarMundo(admin: Cliente): Promise<Mundo> {
   await crearEmpresa(admin, slugA)
   await crearEmpresa(admin, slugB)
 
-  const coordinador = await crearUsuario(admin, null, "coordinador", { conAcceso: true })
-  const asesorA = await crearUsuario(admin, null, "asesor", { conAcceso: true })
-  const asesorB = await crearUsuario(admin, null, "asesor", { conAcceso: true })
-  const suspendido = await crearUsuario(admin, null, "asesor", { conAcceso: true })
+  await asignarAEmpresa(admin, CUENTAS.coordinadorA.email, slugA, "coordinador")
+  await asignarAEmpresa(admin, CUENTAS.asesorA1.email, slugA, "asesor")
+  await asignarAEmpresa(admin, CUENTAS.asesorA2.email, slugA, "asesor")
+  await asignarAEmpresa(admin, CUENTAS.coordinadorB.email, slugB, "coordinador")
+  await asignarAEmpresa(admin, CUENTAS.asesorB1.email, slugB, "asesor")
 
-  await asignarAEmpresa(admin, coordinador.email, slugA, "coordinador")
-  await asignarAEmpresa(admin, asesorA.email, slugA, "asesor")
-  await asignarAEmpresa(admin, asesorB.email, slugB, "asesor")
-  const staffA = await vincularStaff(admin, asesorA.email, slugA)
-  const staffB = await vincularStaff(admin, asesorB.email, slugB)
-
-  // La cuenta suspendida se suspende de verdad: perfil inactivo, que es lo que
-  // mira RLS, y login bloqueado en Auth.
-  await admin.from("profiles").update({ status: "inactivo" }).eq("id", suspendido.id)
-  await admin.rpc("admin_ban_user", { target_user: suspendido.id, bloquear: true })
+  // Sin persona del catálogo enlazada, un asesor no puede registrar a su
+  // nombre. `vincularStaff` reutiliza la que ya exista para esa cuenta, así que
+  // se crean una vez y no se multiplican entre corridas.
+  const staffA = await vincularStaff(admin, CUENTAS.asesorA1.email, slugA)
+  const staffA2 = await vincularStaff(admin, CUENTAS.asesorA2.email, slugA)
+  const staffB = await vincularStaff(admin, CUENTAS.asesorB1.email, slugB)
 
   const datos = async (slug: string) => {
     const empresa = await empresaPorSlug(admin, slug)
@@ -224,28 +225,27 @@ export async function montarMundo(admin: Cliente): Promise<Mundo> {
   return {
     empresaA: await datos(slugA),
     empresaB: await datos(slugB),
-    coordinador,
-    asesorA,
-    asesorB,
-    suspendido,
-    staff: [staffA, staffB],
+    coordinador: CUENTAS.coordinadorA,
+    asesorA: CUENTAS.asesorA1,
+    asesorA2: CUENTAS.asesorA2,
+    asesorB: CUENTAS.asesorB1,
+    suspendido: CUENTAS.suspendido,
+    sinEmpresa: CUENTAS.sinEmpresa,
+    staffA,
+    staffA2,
+    staffB,
   }
 }
 
-/** Se lleva el mundo entero: las empresas y, sobre todo, las cuentas. */
+/**
+ * Se lleva las empresas y nada más.
+ *
+ * Las cuentas y sus personas del catálogo se quedan: son el plantel, y
+ * recrearlas en cada corrida es justo lo que llenaba la base de basura. Borrar
+ * la empresa ya deshace las asignaciones y todo lo capturado dentro.
+ */
 export async function desmontarMundo(admin: Cliente, mundo: Mundo) {
   for (const empresa of [mundo.empresaA, mundo.empresaB]) {
     await borrarEmpresa(admin, empresa.slug).catch((e) => console.error("desmontarMundo:", e))
-  }
-  for (const cuenta of [mundo.coordinador, mundo.asesorA, mundo.asesorB, mundo.suspendido]) {
-    const { error } = await admin.rpc("purge_test_user", { target_user: cuenta.id })
-    if (error) console.error(`desmontarMundo: quedó ${cuenta.email}: ${error.message}`)
-  }
-
-  // Las personas del catálogo van aparte: son globales, así que ni el borrado
-  // de la empresa ni la purga de la cuenta se las llevan.
-  for (const staffId of mundo.staff) {
-    const { error } = await admin.from("staff").delete().eq("id", staffId)
-    if (error) console.error(`desmontarMundo: quedó la persona ${staffId}: ${error.message}`)
   }
 }
