@@ -161,53 +161,15 @@ movimiento de caja y las ediciones de cada uno. La infraestructura ya está
 —cuentas, empresas, sedes, catálogos, persona enlazada— así que es escribir los
 casos, no montar nada.
 
-### Los flujos que dependen del correo
+### Los flujos que dependen del correo (fuera de la suite)
 
-**Ya funcionan.** `e2e/features/correo.spec.ts` cubre recuperación de
-contraseña, invitación de usuario, que un enlace de un solo uso no sirva dos
-veces, y que pedir recuperación de un correo inexistente no delate si existe.
+No hay pruebas de correo. El remitente por defecto de Supabase va limitado a
+unos pocos envíos por hora, así que una prueba que dependa de recibir un correo
+falla por la cuota y no por el código: ruido rojo que no dice nada.
 
-Detrás hay un Email Worker propio, `e2e/correo-worker/`, desplegado en la
-cuenta **Jonnier** (donde vive la zona `jonnier.com`; Email Routing solo entrega
-a workers de su misma cuenta). Hace falta porque Email Routing **solo reenvía**:
-no guarda nada ni tiene API de lectura.
-
-No se reutilizó `gurwi-e2e-mail`, que ya existía en esa zona: solo rescata
-códigos de seis dígitos y tira el resto, y los correos de Supabase traen un
-enlace. Además es de otro proyecto.
-
-```
-GET    /correos?email=…   →  { correos: [...] }   lista, más reciente primero
-DELETE /correos?email=…   →  vacía el buzón
-```
-Ambos con `Authorization: Bearer $E2E_MAIL_SECRET`.
-
-#### Ninguna prueba manda correo a un buzón personal
-
-La zona tiene un catch-all que reenvía todo lo no enrutado a
-`jonnieralejandrom@gmail.com`. Por eso **las siete direcciones de prueba tienen
-regla explícita** apuntando al worker, y todas comparten un prefijo propio del
-proyecto:
-
-```
-e2e_command_*@jonnier.com
-```
-
-Un prefijo por proyecto, igual que `gurwi-e2e-mail` tiene el suyo: así se sabe
-de un vistazo de quién es cada dirección, y el worker rechaza todo lo demás.
-
-Hay **diez direcciones registradas**, declaradas en `soporte/correo.ts` bajo
-`BUZONES`. Email Routing no admite comodines en direcciones personalizadas, así
-que cada una va creada de una en una en la zona: **una dirección que no esté en
-esa lista no está enrutada**, y su correo caería en el catch-all del dominio.
-
-Se coge una de la lista; no se inventa. `reserva` está libre a propósito para
-la próxima prueba que necesite correo sin tocar la configuración del dominio.
-
-> **Al añadir una dirección de prueba nueva, crea primero su regla de
-> enrutamiento.** Sin regla cae en el catch-all y llega al correo personal. Por
-> eso la prueba que necesita una dirección inexistente usa `.invalid`, no
-> `jonnier.com`.
+La infraestructura sí está montada y lista, por si se retoma cuando haya SMTP
+propio: un Email Worker en `e2e/correo-worker/`, diez direcciones enrutadas y
+`soporte/correo.ts` para leerlas. Ninguna prueba la usa hoy.
 
 ## Dos cosas rotas que encontraron estas pruebas
 

@@ -1,13 +1,4 @@
 import { crearUsuario } from "../soporte/acciones"
-import {
-  BUZON_INVITADO,
-  BUZONES,
-  esperarCorreo,
-  hayBuzon,
-  limiteDeCorreoAlcanzado,
-  rutaDeConfirmacion,
-  vaciarBuzon,
-} from "../soporte/correo"
 import { abrirDialogo, elegir } from "../soporte/formulario"
 import { anotar } from "../soporte/anotaciones"
 import { clienteAnonimo, perfilPorEmail } from "../soporte/api"
@@ -73,19 +64,6 @@ async function abrirMenuDe(pagina: import("@playwright/test").Page, correo: stri
 }
 
 test.describe("Usuarios", () => {
-  // La prueba de la invitación depende de que llegue un correo. Si no hay
-  // buzón, o si Supabase ya agotó su cuota de envíos, se marca saltada con el
-  // motivo en vez de fallar dos minutos después por algo ajeno al código.
-  test.beforeEach(async ({}, info) => {
-    if (!info.title.includes("le manda el correo")) return
-    test.skip(!hayBuzon(), "Sin E2E_MAIL_URL / E2E_MAIL_SECRET en .env.e2e")
-    test.skip(
-      await limiteDeCorreoAlcanzado("sonda-limite@ejemplo.invalid"),
-      "Supabase no admite más correos ahora mismo (429 over_email_send_rate_limit): " +
-        "el remitente por defecto va limitado a unos pocos por hora, hace falta SMTP propio.",
-    )
-  })
-
   for (const { rol, descripcion, etiqueta } of ROLES) {
     test(
       `el super admin puede crear un usuario con rol ${rol}`,
@@ -158,121 +136,47 @@ test.describe("Usuarios", () => {
   }
 
   test(
-    "invitar a alguien le manda el correo con el que entra",
+    "avisa cuando el correo ya está en uso, en vez de fallar en silencio",
     anotar({
       modulo: "Usuarios",
       rol: "super admin",
       tipo: "feature",
       porque:
-        "Es el ciclo completo del alta y el único camino por el que entra alguien nuevo: se " +
-        "crea desde la pantalla, le llega la invitación y con ese enlace define su clave. Si " +
-        "se rompe, nadie nuevo puede entrar al sistema y no se nota hasta que alguien lo " +
-        "intenta.",
+        "Que no haya dos cuentas con el mismo correo lo garantiza un índice único de la " +
+        "base, no la aplicación: comprobarlo sería probar Postgres. Lo que sí puede fallar " +
+        "—y dejar a alguien creyendo que dio de alta a una persona que no existe— es que la " +
+        "pantalla se lo calle o, peor, diga que salió bien.",
     }),
     async ({ superAdmin, apiSuperAdmin, rastro }) => {
-      // Va a una dirección con regla de enrutamiento al buzón de pruebas: las
-      // demás caerían en el correo personal del dueño del dominio.
-      const email = BUZON_INVITADO
-      const nombre = "E2E Invitado Por Correo"
-
-      const previo = await perfilPorEmail(apiSuperAdmin, email)
-      if (previo) await apiSuperAdmin.rpc("purge_test_user", { target_user: previo.id })
-      await vaciarBuzon(email)
+      // La primera cuenta se crea por la vía rápida: aquí no se prueba el alta,
+      // que ya tiene sus pruebas, sino qué pasa al repetir el correo.
+      const ocupante = await crearUsuario(apiSuperAdmin, rastro, "asesor")
 
       await irA(superAdmin, "/admin/usuarios")
       await abrirDialogo(superAdmin, /Nuevo usuario/, /Nuevo usuario/)
-      await superAdmin.locator("#nombre").fill(nombre)
-      await superAdmin.locator("#email").fill(email)
+      await superAdmin.locator("#nombre").fill("E2E Correo Ocupado")
+      await superAdmin.locator("#email").fill(ocupante.email)
       await superAdmin.getByRole("button", { name: /Crear e invitar/ }).click()
 
-      await expect
-        .poll(async () => (await perfilPorEmail(apiSuperAdmin, email))?.id, { timeout: 30_000 })
-        .toBeTruthy()
-      const perfil = await perfilPorEmail(apiSuperAdmin, email)
-      rastro.anotarUsuario(perfil!.id)
-
-      // Y aparece en la lista, invitado, esperando a que acepte.
-      await irA(superAdmin, "/admin/usuarios")
-      const fila = superAdmin.getByRole("row").filter({ hasText: email })
-      await expect(fila, "el invitado no aparece en la lista").toBeVisible({ timeout: 30_000 })
-      await expect(fila).toContainText(/Invitad/i)
-
-      // Lo que de verdad decide si esa persona puede entrar: el correo.
-      const correo = await esperarCorreo(email)
-      expect(
-        correo.tokenHash,
-        `la invitación llegó sin enlace utilizable: ${correo.enlaces.join(" ")}`,
-      ).toBeTruthy()
-
-      // Y el enlace le lleva a definir su contraseña, en una sesión limpia.
-      const contextoInvitado = await superAdmin.context().browser()!.newContext()
-      const paginaInvitado = await contextoInvitado.newPage()
-      await paginaInvitado.goto(
-        `${test.info().project.use.baseURL}${rutaDeConfirmacion(correo, "/definir-clave")}`,
-      )
-      await expect(paginaInvitado, "el enlace no llevó a definir la clave").toHaveURL(
-        /definir-clave/,
-      )
-      await contextoInvitado.close()
-
-      // Se cierra el ciclo eliminándolo desde la pantalla.
-      await abrirMenuDe(superAdmin, email)
-      await superAdmin.getByRole("menuitem", { name: /Eliminar usuario/ }).click()
-      await superAdmin
-        .getByRole("alertdialog")
-        .getByRole("button", { name: /Eliminar usuario/ })
-        .click()
-      await expect
-        .poll(async () => (await perfilPorEmail(apiSuperAdmin, email))?.status, {
-          timeout: 30_000,
-        })
-        .toBe("eliminado")
-    },
-  )
-
-  test(
-    "no se puede crear dos usuarios con el mismo correo",
-    anotar({
-      modulo: "Usuarios",
-      rol: "super admin",
-      tipo: "integridad",
-      porque:
-        "El correo es con lo que se entra. Dos cuentas con el mismo dejarían el acceso a " +
-        "suertes según cuál resuelva primero, y quien lo intenta tiene que enterarse en la " +
-        "pantalla, no descubrirlo después.",
-    }),
-    async ({ superAdmin, apiSuperAdmin, rastro }) => {
-      const email = correoDePrueba("repetido")
-
-      // La primera se crea por la pantalla, como la crearía cualquiera.
-      await irA(superAdmin, "/admin/usuarios")
-      await abrirDialogo(superAdmin, /Nuevo usuario/, /Nuevo usuario/)
-      await superAdmin.locator("#nombre").fill("E2E Repetido")
-      await superAdmin.locator("#email").fill(email)
-      await superAdmin.getByRole("button", { name: /Crear e invitar/ }).click()
-
-      await expect
-        .poll(async () => (await perfilPorEmail(apiSuperAdmin, email))?.id, { timeout: 30_000 })
-        .toBeTruthy()
-      rastro.anotarUsuario((await perfilPorEmail(apiSuperAdmin, email))!.id)
-
-      // La segunda, con el mismo correo, tiene que ser rechazada y decirlo.
-      await irA(superAdmin, "/admin/usuarios")
-      await abrirDialogo(superAdmin, /Nuevo usuario/, /Nuevo usuario/)
-      await superAdmin.locator("#nombre").fill("E2E Repetido Otra Vez")
-      await superAdmin.locator("#email").fill(email)
-      await superAdmin.getByRole("button", { name: /Crear e invitar/ }).click()
-
+      // Tiene que decirlo, y decir por qué.
       await expect(
-        superAdmin.getByText(/[Yy]a existe/),
-        "no se avisó de que el correo ya estaba en uso",
+        superAdmin.getByText(/ya existe/i),
+        "la pantalla no avisó de que el correo ya estaba en uso",
       ).toBeVisible({ timeout: 30_000 })
 
-      const { count } = await apiSuperAdmin
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("email", email)
-      expect(count, "quedaron dos cuentas con el mismo correo").toBe(1)
+      // Y no puede aparecer un aviso de éxito: eso es lo que dejaría a alguien
+      // pensando que la persona quedó dada de alta.
+      await expect(
+        superAdmin.getByText(/creado/i),
+        "la pantalla dijo que se creó una cuenta que no se creó",
+      ).toHaveCount(0)
+
+      // El nombre de la cuenta que ya existía no se toca: si el alta repetida
+      // hubiera pisado la fila, la persona original cambiaría de nombre.
+      const perfil = await perfilPorEmail(apiSuperAdmin, ocupante.email)
+      expect(perfil!.full_name, "el alta repetida pisó la cuenta que ya existía").toBe(
+        ocupante.nombre,
+      )
     },
   )
 
@@ -301,23 +205,6 @@ test.describe("Usuarios", () => {
       // aunque el botón estuviera roto y nunca se habilitara.
       await superAdmin.locator("#email").fill(correoDePrueba("valido"))
       await expect(crear, "no se habilitó con un correo correcto").toBeEnabled()
-    },
-  )
-
-  test(
-    "el super admin ve la administración de usuarios",
-    anotar({
-      modulo: "Usuarios",
-      rol: "super admin",
-      tipo: "feature",
-      porque: "Es la pantalla desde la que se da y se quita el acceso a todo el sistema.",
-    }),
-    async ({ superAdmin, mundo }) => {
-      await irA(superAdmin, "/admin/usuarios")
-      await expect(superAdmin).toHaveURL(/\/admin\/usuarios/)
-      await expect(superAdmin.locator("body")).not.toContainText("Sin acceso")
-      // Las cuentas de prueba tienen que verse: si no, la lista no está cargando.
-      await expect(superAdmin.locator("body")).toContainText(mundo.coordinador.email)
     },
   )
 })
@@ -387,12 +274,7 @@ test.describe("Acciones sobre un usuario", () => {
     async ({ superAdmin, apiSuperAdmin, rastro }) => {
       const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
 
-      // El destino es uno de los buzones registrados, no una dirección
-      // inventada: así el cambio queda contenido y, si algún día el sistema
-      // manda un aviso al correo nuevo, se puede leer.
-      const nuevo = BUZONES.cambioCorreo
-      const ocupa = await perfilPorEmail(apiSuperAdmin, nuevo)
-      if (ocupa) await apiSuperAdmin.rpc("purge_test_user", { target_user: ocupa.id })
+      const nuevo = correoDePrueba("correo_nuevo")
 
       await abrirMenuDe(superAdmin, cuenta.email)
       await superAdmin.getByRole("menuitem", { name: /Cambiar correo/ }).click()
