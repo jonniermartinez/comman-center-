@@ -7,6 +7,7 @@ import { requireSession } from "@/lib/auth/session"
 import { SessionProvider } from "@/lib/auth/session-context"
 import { loadSnapshot } from "@/lib/data/snapshot"
 import { PeriodoProvider } from "@/lib/store/periodo"
+import { mesActivo } from "@/lib/store/periodo-server"
 import { BASE_VACIA, RemoteProvider } from "@/lib/store/remote"
 
 /**
@@ -25,6 +26,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   // Suspendido o eliminado: no se consulta nada, no se muestran ceros.
   const snapshot = session.isActive ? await loadSnapshot() : BASE_VACIA
+  // El mes elegido se resuelve acá, en el servidor, para que el primer render
+  // del cliente coincida con el suyo y no haya salto de hidratación.
+  const mes = await mesActivo()
 
   return (
     <SessionProvider
@@ -46,7 +50,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <RemoteProvider value={snapshot}>
         <SessionKeeper />
         <Suspense>
-          <PeriodoProvider>
+          <PeriodoProvider mesInicial={mes}>
             <AppShell>{children}</AppShell>
           </PeriodoProvider>
         </Suspense>
