@@ -3,6 +3,7 @@ import fs from "node:fs"
 import path from "node:path"
 
 import { clienteDe } from "./api"
+import { esDePrueba } from "./guardarrail"
 import { BASE_URL, CUENTAS } from "./entorno"
 import { irA } from "./reintento"
 
@@ -22,6 +23,60 @@ export const SESION_SUPER_ADMIN = path.join(CARPETA_SESIONES, "superAdmin.json")
  * equivalente al primer usuario de la instalación, el que no puede crear nadie
  * porque no habría quién.
  */
+/**
+ * Barre lo que dejó una corrida anterior.
+ *
+ * El desmontaje de Playwright no se ejecuta si el proceso se mata: basta con
+ * parar las pruebas desde el editor para que las empresas, las cuentas y las
+ * personas de esa corrida se queden en la base del cliente. Pasó, y en una
+ * tarde se acumularon nueve empresas y sesenta y cuatro personas.
+ *
+ * Por eso se limpia también al empezar, no solo al terminar: así una corrida
+ * interrumpida se cura sola en la siguiente en vez de sumar.
+ *
+ * Solo toca lo que lleva el prefijo de pruebas, y las personas solo si no
+ * tienen ni un registro a su nombre.
+ */
+async function barrerRestos(admin: Awaited<ReturnType<typeof clienteDe>>) {
+  const { data: empresas } = await admin.from("companies").select("id, slug, name")
+  const deAntes = (empresas ?? []).filter((c) => esDePrueba(c.slug) && esDePrueba(c.name))
+
+  for (const empresa of deAntes) {
+    const { error } = await admin.rpc("delete_company_cascade", {
+      target_company: empresa.id,
+      confirm_name: empresa.name,
+    })
+    if (error) console.error(`barrido: quedó la empresa ${empresa.slug}: ${error.message}`)
+  }
+
+  const { data: cuentas } = await admin
+    .from("profiles")
+    .select("id, email")
+    .like("email", "e2e%")
+  for (const cuenta of cuentas ?? []) {
+    if (cuenta.email === CUENTAS.superAdmin.email) continue
+    const { error } = await admin.rpc("purge_test_user", { target_user: cuenta.id })
+    if (error) console.error(`barrido: quedó la cuenta ${cuenta.email}: ${error.message}`)
+  }
+
+  // Las personas del catálogo son globales: no se las lleva ni borrar la
+  // empresa ni purgar la cuenta. Se quitan solo si no tienen nada a su nombre;
+  // si lo tuvieran, la llave foránea lo impediría y con razón.
+  const { data: personas } = await admin.from("staff").select("id").like("full_name", "E2E %")
+  for (const persona of personas ?? []) {
+    await admin.from("company_staff").delete().eq("staff_id", persona.id)
+    await admin.from("staff").delete().eq("id", persona.id)
+  }
+
+  if (deAntes.length || (cuentas ?? []).length > 1 || (personas ?? []).length) {
+    console.log(
+      `Barrido de restos: ${deAntes.length} empresa(s), ` +
+        `${Math.max(0, (cuentas ?? []).length - 1)} cuenta(s), ` +
+        `${(personas ?? []).length} persona(s) de una corrida anterior.`,
+    )
+  }
+}
+
 export default async function montaje() {
   const admin = await clienteDe("superAdmin")
   const { data } = await admin.rpc("me")
@@ -32,6 +87,8 @@ export default async function montaje() {
         `nada: revísala en la base o vuelve a darle clave con admin_set_password.`,
     )
   }
+
+  await barrerRestos(admin)
 
   fs.mkdirSync(CARPETA_SESIONES, { recursive: true })
   const navegador = await chromium.launch()

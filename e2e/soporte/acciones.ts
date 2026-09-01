@@ -138,7 +138,14 @@ export async function empresaConEquipo(admin: Cliente, rastro: Rastro) {
   await asignarAEmpresa(admin, coordinador.email, slug, "coordinador")
   await asignarAEmpresa(admin, asesor.email, slug, "asesor")
   // Sin persona del equipo enlazada, el asesor no puede registrar a su nombre.
+  //
+  // Y hay que apuntarla: `staff` es un catálogo global —una persona puede
+  // trabajar en varias empresas—, así que borrar la empresa no se la lleva, y
+  // purgar la cuenta solo suelta el enlace. Sin esto se acumulan para siempre:
+  // pasaron de 2 a 64 en una tarde, apareciendo como comerciales en los
+  // desplegables del cliente.
   const staffId = await vincularStaff(admin, asesor.email, slug)
+  rastro.anotar("staff", staffId)
 
   const empresa = await empresaPorSlug(admin, slug)
   const { data: sede } = await admin
@@ -177,6 +184,8 @@ export interface Mundo {
   asesorA: CuentaCreada
   asesorB: CuentaCreada
   suspendido: CuentaCreada
+  /** Las personas del catálogo que hubo que crear. Se borran al desmontar. */
+  staff: string[]
 }
 
 export async function montarMundo(admin: Cliente): Promise<Mundo> {
@@ -193,8 +202,8 @@ export async function montarMundo(admin: Cliente): Promise<Mundo> {
   await asignarAEmpresa(admin, coordinador.email, slugA, "coordinador")
   await asignarAEmpresa(admin, asesorA.email, slugA, "asesor")
   await asignarAEmpresa(admin, asesorB.email, slugB, "asesor")
-  await vincularStaff(admin, asesorA.email, slugA)
-  await vincularStaff(admin, asesorB.email, slugB)
+  const staffA = await vincularStaff(admin, asesorA.email, slugA)
+  const staffB = await vincularStaff(admin, asesorB.email, slugB)
 
   // La cuenta suspendida se suspende de verdad: perfil inactivo, que es lo que
   // mira RLS, y login bloqueado en Auth.
@@ -219,6 +228,7 @@ export async function montarMundo(admin: Cliente): Promise<Mundo> {
     asesorA,
     asesorB,
     suspendido,
+    staff: [staffA, staffB],
   }
 }
 
@@ -230,5 +240,12 @@ export async function desmontarMundo(admin: Cliente, mundo: Mundo) {
   for (const cuenta of [mundo.coordinador, mundo.asesorA, mundo.asesorB, mundo.suspendido]) {
     const { error } = await admin.rpc("purge_test_user", { target_user: cuenta.id })
     if (error) console.error(`desmontarMundo: quedó ${cuenta.email}: ${error.message}`)
+  }
+
+  // Las personas del catálogo van aparte: son globales, así que ni el borrado
+  // de la empresa ni la purga de la cuenta se las llevan.
+  for (const staffId of mundo.staff) {
+    const { error } = await admin.from("staff").delete().eq("id", staffId)
+    if (error) console.error(`desmontarMundo: quedó la persona ${staffId}: ${error.message}`)
   }
 }
