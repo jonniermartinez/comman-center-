@@ -185,6 +185,14 @@ e2e_command_*@jonnier.com
 Un prefijo por proyecto, igual que `gurwi-e2e-mail` tiene el suyo: así se sabe
 de un vistazo de quién es cada dirección, y el worker rechaza todo lo demás.
 
+Hay **diez direcciones registradas**, declaradas en `soporte/correo.ts` bajo
+`BUZONES`. Email Routing no admite comodines en direcciones personalizadas, así
+que cada una va creada de una en una en la zona: **una dirección que no esté en
+esa lista no está enrutada**, y su correo caería en el catch-all del dominio.
+
+Se coge una de la lista; no se inventa. `reserva` está libre a propósito para
+la próxima prueba que necesite correo sin tocar la configuración del dominio.
+
 > **Al añadir una dirección de prueba nueva, crea primero su regla de
 > enrutamiento.** Sin regla cae en el catch-all y llega al correo personal. Por
 > eso la prueba que necesita una dirección inexistente usa `.invalid`, no

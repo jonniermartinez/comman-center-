@@ -13,15 +13,40 @@ const URL_BUZON = process.env.E2E_MAIL_URL
 const SECRETO = process.env.E2E_MAIL_SECRET
 
 /**
- * Los buzones con regla de enrutamiento hacia el worker.
+ * Los diez buzones registrados.
  *
- * Son fijos y no inventados sobre la marcha: Email Routing solo enruta
- * direcciones declaradas una a una, así que una dirección nueva sin su regla
- * caería en el catch-all de la zona —o sea, en el correo personal del dueño
- * del dominio.
+ * Email Routing no admite comodines en direcciones personalizadas: cada una va
+ * declarada de una en una en la zona. Una dirección que no esté aquí **no está
+ * enrutada**, así que su correo cae en el catch-all del dominio —el buzón
+ * personal de su dueño— y las pruebas no lo verían de todos modos.
+ *
+ * Por eso están todas juntas y con nombre: se coge una de esta lista, no se
+ * inventa. Si hicieran falta más, primero se crea su regla en Cloudflare.
+ *
+ * `reserva` está libre a propósito, para la próxima prueba que necesite correo
+ * sin tener que tocar la configuración del dominio.
  */
-export const BUZON_INVITADO = "e2e_command_invitado@jonnier.com"
-export const BUZON_RECUPERA = "e2e_command_recupera@jonnier.com"
+export const BUZONES = {
+  /** La cuenta semilla, la única que preexiste. */
+  superAdmin: "e2e_command_super_admin@jonnier.com",
+  /** Alta por invitación: se crea desde la pantalla y entra por el enlace. */
+  invitado: "e2e_command_invitado@jonnier.com",
+  /** Recuperación de contraseña. */
+  recupera: "e2e_command_recupera@jonnier.com",
+  /** Destino al que se cambia un correo, para que el cambio quede contenido. */
+  cambioCorreo: "e2e_command_cambio_correo@jonnier.com",
+  /** El segundo super admin del ciclo de relevo. */
+  relevo: "e2e_command_relevo@jonnier.com",
+  coordinador: "e2e_command_coordinador@jonnier.com",
+  asesorA: "e2e_command_asesor_a@jonnier.com",
+  asesorB: "e2e_command_asesor_b@jonnier.com",
+  suspendido: "e2e_command_suspendido@jonnier.com",
+  /** Libre. */
+  reserva: "e2e_command_reserva@jonnier.com",
+} as const
+
+export const BUZON_INVITADO = BUZONES.invitado
+export const BUZON_RECUPERA = BUZONES.recupera
 
 export interface Correo {
   asunto: string

@@ -1,6 +1,7 @@
 import { crearUsuario } from "../soporte/acciones"
 import {
   BUZON_INVITADO,
+  BUZONES,
   esperarCorreo,
   hayBuzon,
   limiteDeCorreoAlcanzado,
@@ -385,7 +386,13 @@ test.describe("Acciones sobre un usuario", () => {
     }),
     async ({ superAdmin, apiSuperAdmin, rastro }) => {
       const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
-      const nuevo = correoDePrueba("correo_nuevo")
+
+      // El destino es uno de los buzones registrados, no una dirección
+      // inventada: así el cambio queda contenido y, si algún día el sistema
+      // manda un aviso al correo nuevo, se puede leer.
+      const nuevo = BUZONES.cambioCorreo
+      const ocupa = await perfilPorEmail(apiSuperAdmin, nuevo)
+      if (ocupa) await apiSuperAdmin.rpc("purge_test_user", { target_user: ocupa.id })
 
       await abrirMenuDe(superAdmin, cuenta.email)
       await superAdmin.getByRole("menuitem", { name: /Cambiar correo/ }).click()
