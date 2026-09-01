@@ -12,9 +12,16 @@ config({ path: ".env.e2e" })
 const URL_BUZON = process.env.E2E_MAIL_URL
 const SECRETO = process.env.E2E_MAIL_SECRET
 
-/** Direcciones que el worker acepta. Fuera de este patrón el correo se rechaza. */
-export const BUZON_INVITADO = "e2e-cc-invitado@jonnier.com"
-export const BUZON_RECUPERA = "e2e-cc-recupera@jonnier.com"
+/**
+ * Los buzones con regla de enrutamiento hacia el worker.
+ *
+ * Son fijos y no inventados sobre la marcha: Email Routing solo enruta
+ * direcciones declaradas una a una, así que una dirección nueva sin su regla
+ * caería en el catch-all de la zona —o sea, en el correo personal del dueño
+ * del dominio.
+ */
+export const BUZON_INVITADO = "e2e_command_invitado@jonnier.com"
+export const BUZON_RECUPERA = "e2e_command_recupera@jonnier.com"
 
 export interface Correo {
   asunto: string

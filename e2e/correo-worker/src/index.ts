@@ -2,7 +2,7 @@ import PostalMime from "postal-mime"
 
 /**
  * Buzón de pruebas: recibe los correos que Supabase manda a las direcciones
- * `e2e-cc-*@jonnier.com` y los deja leer por HTTP.
+ * `e2e_command_*@jonnier.com` y los deja leer por HTTP.
  *
  * Hace falta porque Email Routing de Cloudflare **solo reenvía**: no guarda
  * nada y no tiene API de lectura. Sin algo así, los dos flujos que dependen del
@@ -18,13 +18,14 @@ import PostalMime from "postal-mime"
 /**
  * Buzones que este worker acepta.
  *
- * `e2e-cc-*` son los de las pruebas de correo. `e2e_*` son las cuentas de rol:
- * no se leen nunca, pero se enrutan aquí igualmente para que **nada** de las
- * pruebas acabe en el buzón personal por el catch-all de la zona.
+ * Un solo prefijo para todo Command Center, igual que `gurwi-e2e-mail` tiene el
+ * suyo: así se sabe de un vistazo qué proyecto usa cada dirección, y añadir una
+ * nueva no obliga a decidir a qué patrón pertenece.
  *
- * No se reclama `e2e-*` a secas: ese prefijo es de gurwi-e2e-mail.
+ * Todo lo que no encaje se rechaza. Las direcciones reales del dominio
+ * —hello@, soporte@, y lo que caiga en el catch-all— ni pasan por aquí.
  */
-const DESTINATARIO = /^(e2e-cc-[a-z0-9-]+|e2e_[a-z0-9_]+)@jonnier\.com$/
+const DESTINATARIO = /^e2e_command_[a-z0-9_]+@jonnier\.com$/
 /** Un cuarto de hora: lo que puede tardar una prueba, no más. */
 const TTL_SEGUNDOS = 900
 const MAX_POR_BUZON = 10

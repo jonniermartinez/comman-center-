@@ -89,7 +89,7 @@ export async function crearUsuario(
   const sufijo = `${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`
   // Se puede pedir una dirección concreta: las pruebas de correo necesitan una
   // de las que tienen regla de enrutamiento hacia el buzón, y esas son fijas.
-  const email = opciones.email ?? `e2e_${rol}_${sufijo}@jonnier.com`
+  const email = opciones.email ?? `e2e_command_${rol}_${sufijo}@jonnier.com`
   const nombre = `E2E ${rol} ${sufijo}`
   // Con acceso, la cuenta nace confirmada y con clave: es lo que hace la
   // aplicación al dar de alta al equipo de una empresa sin esperar correos.

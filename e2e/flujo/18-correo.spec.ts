@@ -192,7 +192,7 @@ test.describe("Flujos por correo", () => {
       // enrutamiento y caería en el catch-all de la zona, que reenvía al buzón
       // personal. Las pruebas no mandan correo a nadie de verdad.
       await irA(page, "/recuperar")
-      await page.locator("#email").fill("e2e-cc-no-existe@ejemplo.invalid")
+      await page.locator("#email").fill("e2e_command_no_existe@ejemplo.invalid")
       await page.getByRole("button", { name: /Enviar enlace/ }).click()
 
       await expect(page.locator("body")).not.toContainText(/no existe|not found|sin cuenta/i)

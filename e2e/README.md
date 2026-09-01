@@ -39,7 +39,7 @@ deshace `soporte/desmontaje.ts` al final.
 
 | Cuenta | Rol | Dónde |
 |---|---|---|
-| `e2e_super_admin@jonnier.com` | super admin | toda la plataforma |
+| `e2e_command_super_admin@jonnier.com` | super admin | toda la plataforma |
 | `e2e_coordinador@jonnier.com` | coordinador | empresa A |
 | `e2e_asesor_a@jonnier.com` | asesor | empresa A |
 | `e2e_asesor_b@jonnier.com` | asesor | empresa B |
@@ -175,9 +175,15 @@ Ambos con `Authorization: Bearer $E2E_MAIL_SECRET`.
 
 La zona tiene un catch-all que reenvía todo lo no enrutado a
 `jonnieralejandrom@gmail.com`. Por eso **las siete direcciones de prueba tienen
-regla explícita** apuntando al worker: las dos de correo (`e2e-cc-invitado`,
-`e2e-cc-recupera`) y las cinco cuentas de rol (`e2e_*`), que no se leen nunca
-pero se enrutan igual para que no acaben en el buzón personal.
+regla explícita** apuntando al worker, y todas comparten un prefijo propio del
+proyecto:
+
+```
+e2e_command_*@jonnier.com
+```
+
+Un prefijo por proyecto, igual que `gurwi-e2e-mail` tiene el suyo: así se sabe
+de un vistazo de quién es cada dirección, y el worker rechaza todo lo demás.
 
 > **Al añadir una dirección de prueba nueva, crea primero su regla de
 > enrutamiento.** Sin regla cae en el catch-all y llega al correo personal. Por

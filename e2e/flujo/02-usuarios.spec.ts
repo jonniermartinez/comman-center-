@@ -24,7 +24,7 @@ import { irA } from "../soporte/reintento"
 
 /** Un correo que no choca con nadie y que se limpia al terminar. */
 function correoDePrueba(rol: string) {
-  return `e2e_nuevo_${rol}_${Date.now().toString(36)}@jonnier.com`
+  return `e2e_command_nuevo_${rol}_${Date.now().toString(36)}@jonnier.com`
 }
 
 /** Los tres roles, con el texto que los identifica en el desplegable. */
