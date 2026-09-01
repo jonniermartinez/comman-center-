@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -26,7 +25,6 @@ import {
   businessDaysElapsed,
   businessDaysInMonth,
   monthLabel,
-  monthOf,
 } from "@/lib/kpi"
 import { useObjectiveProgress } from "@/lib/data/client-queries"
 import {
@@ -39,6 +37,7 @@ import {
   useDb,
   useEffectiveToday,
 } from "@/lib/store/hooks"
+import { usePeriodo } from "@/lib/store/periodo"
 
 export default function ObjetivosPage() {
   const company = useActiveCompany()
@@ -47,7 +46,7 @@ export default function ObjetivosPage() {
   const members = useCompanyMembers(company.id)
   const canManage = useCanManage(company.id)
 
-  const [month, setMonth] = useState(monthOf(today))
+  const { mes: month } = usePeriodo()
 
   // Meta y real vienen juntos de `v_objective_progress`: calcular el real acá
   // sería repetir en TypeScript las sumas que ya hace Postgres, y es cuestión
@@ -113,18 +112,6 @@ export default function ObjetivosPage() {
         description={`Metas de ${company.name} por mes y por responsable. El cumplimiento se calcula contra el acumulado real y se proyecta según días hábiles.`}
         actions={
           <>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="mes" className="sr-only">
-                Mes
-              </Label>
-              <Input
-                id="mes"
-                type="month"
-                value={month.slice(0, 7)}
-                onChange={(e) => e.target.value && setMonth(`${e.target.value}-01`)}
-                className="w-40"
-              />
-            </div>
             {canManage && (
               <Button
                 variant="outline"

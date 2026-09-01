@@ -38,10 +38,11 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { formatCOPShort, formatNumber, formatPercent, todayISO } from "@/lib/format"
-import { monthLabel, monthOf } from "@/lib/kpi"
+import { monthLabel } from "@/lib/kpi"
 import { useCompanyMonthly } from "@/lib/data/client-queries"
 import { archiveCompany } from "@/lib/data/companies-actions"
 import { useDb, useIsSuperAdmin, useVisibleCompanies } from "@/lib/store/hooks"
+import { usePeriodo } from "@/lib/store/periodo"
 import type { Company } from "@/lib/store/types"
 
 /**
@@ -56,7 +57,8 @@ export default function EmpresasPage() {
   const companies = useVisibleCompanies(showArchived)
 
   const today = todayISO()
-  const month = monthOf(today)
+  // El mes lo manda el filtro de la barra superior, común a toda la aplicación.
+  const { mes: month } = usePeriodo()
   // Los totales del mes los calcula Postgres: son 16.000 ventas y 19.000 pagos.
   const { datos: mensual } = useCompanyMonthly(month)
 
