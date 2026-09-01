@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext } from "react"
 
 import { todayISO } from "@/lib/format"
 import { monthOf } from "@/lib/kpi"
+import { COOKIE_MES } from "@/lib/store/periodo-cookie"
 
 /**
  * Mes que están mirando todas las pantallas de resumen.
@@ -15,49 +16,64 @@ import { monthOf } from "@/lib/kpi"
  * en cada una, y el día 1 de mes todas arrancaban vacías a la vez sin forma
  * evidente de mirar atrás.
  *
- * Se refleja en la URL como `?mes=YYYY-MM` porque el dashboard de la empresa se
- * arma en el servidor y un contexto de cliente no le llega. La URL además hace
- * que el enlace a un mes concreto se pueda compartir.
+ * La elección se guarda en una cookie, no solo en la URL. Colgarle `?mes=` a
+ * cada enlace era imposible de sostener: bastaba con entrar a una empresa desde
+ * el botón de su tarjeta —o desde el selector de empresa— para volver al mes en
+ * curso, y cada enlace nuevo nacía con el mismo agujero. La cookie además la lee
+ * el servidor, que es donde se arma el dashboard.
+ *
+ * La URL sigue mandando cuando trae `?mes=`, para que el enlace a un mes
+ * concreto se pueda compartir y abra donde debe.
  */
 interface Periodo {
   /** Mes activo en formato `YYYY-MM-01`. */
   mes: string
   setMes: (mes: string) => void
-  /** Añade `?mes=` a un enlace cuando el mes elegido no es el actual. */
-  conMes: (href: string) => string
 }
 
 const PeriodoContext = createContext<Periodo | null>(null)
 
-export function PeriodoProvider({ children }: { children: React.ReactNode }) {
+export function PeriodoProvider({
+  mesInicial,
+  children,
+}: {
+  /** Lo resuelve el servidor leyendo la cookie: así el primer render coincide. */
+  mesInicial: string
+  children: React.ReactNode
+}) {
   const actual = monthOf(todayISO())
   const router = useRouter()
   const params = useSearchParams()
 
-  // El mes se deriva de la URL en vez de duplicarse en un estado: así el botón
-  // de atrás del navegador devuelve el mes que se estaba viendo.
+  // La URL manda sobre la cookie, y se lee en vez de copiarse a un estado: así
+  // el botón de atrás del navegador devuelve el mes que se estaba viendo.
   const enUrl = params.get("mes")
-  const mes = enUrl && /^\d{4}-\d{2}$/.test(enUrl) ? `${enUrl}-01` : actual
+  const mes = enUrl && /^\d{4}-\d{2}$/.test(enUrl) ? `${enUrl}-01` : mesInicial
 
   const setMes = useCallback(
     (nuevo: string) => {
+      const corto = nuevo.slice(0, 7)
+      // Un año de vida: el mes elegido es una preferencia de trabajo, no una
+      // sesión. `SameSite=Lax` porque solo la lee esta aplicación.
+      document.cookie = `${COOKIE_MES}=${corto}; path=/; max-age=31536000; SameSite=Lax`
+
       const params = new URLSearchParams(window.location.search)
       if (nuevo === actual) params.delete("mes")
-      else params.set("mes", nuevo.slice(0, 7))
+      else params.set("mes", corto)
       const query = params.toString()
-      router.replace(query ? `${window.location.pathname}?${query}` : window.location.pathname)
+      const destino = query
+        ? `${window.location.pathname}?${query}`
+        : window.location.pathname
+
+      router.replace(destino)
+      // La cookie la leen las pantallas de servidor; sin esto el dashboard se
+      // quedaría con el mes que trajo del render anterior.
+      router.refresh()
     },
     [actual, router],
   )
 
-  const conMes = useCallback(
-    (href: string) => (mes === actual ? href : `${href}?mes=${mes.slice(0, 7)}`),
-    [actual, mes],
-  )
-
-  return (
-    <PeriodoContext.Provider value={{ mes, setMes, conMes }}>{children}</PeriodoContext.Provider>
-  )
+  return <PeriodoContext.Provider value={{ mes, setMes }}>{children}</PeriodoContext.Provider>
 }
 
 export function usePeriodo(): Periodo {

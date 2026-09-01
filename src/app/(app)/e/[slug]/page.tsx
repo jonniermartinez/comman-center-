@@ -17,7 +17,8 @@ import {
 import { getCompanyContext } from "@/lib/data/company"
 import { loadDashboard } from "@/lib/data/dashboard"
 import { formatCOP, formatCOPShort, formatNumber, formatPercent, todayISO } from "@/lib/format"
-import { monthLabel, monthOf } from "@/lib/kpi"
+import { monthLabel } from "@/lib/kpi"
+import { mesActivo } from "@/lib/store/periodo-server"
 
 /**
  * Dashboard de la empresa.
@@ -36,7 +37,7 @@ export default async function DashboardPage({
   if (!company) notFound()
 
   const hoy = todayISO()
-  const mes = typeof sp.mes === "string" ? `${sp.mes}-01` : monthOf(hoy)
+  const mes = await mesActivo(sp.mes)
   const datos = await loadDashboard(company.id, mes)
 
   return (

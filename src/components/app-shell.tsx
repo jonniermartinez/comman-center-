@@ -44,7 +44,6 @@ import {
   useIsSuperAdmin,
   useVisibleCompanies,
 } from "@/lib/store/hooks"
-import { usePeriodo } from "@/lib/store/periodo"
 import type { ModuleCode } from "@/lib/store/types"
 
 /**
@@ -302,14 +301,10 @@ function NavLink({
   icon: React.ComponentType<{ className?: string }>
   active: boolean
 }) {
-  // El mes elegido viaja con el enlace: cambiar de pantalla no debe devolver a
-  // uno al mes en curso cuando se está revisando otro.
-  const { conMes } = usePeriodo()
-
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={active} tooltip={label} className="h-[38px]">
-        <Link href={conMes(href)}>
+        <Link href={href}>
           <Icon className="size-[18px]" />
           <span className="text-sm">{label}</span>
           {active && (
