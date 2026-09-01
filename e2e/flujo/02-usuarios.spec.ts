@@ -1,4 +1,5 @@
 import { crearUsuario } from "../soporte/acciones"
+import { abrirDialogo, elegir } from "../soporte/formulario"
 import { anotar } from "../soporte/anotaciones"
 import { clienteAnonimo, perfilPorEmail } from "../soporte/api"
 import { expect, test } from "../soporte/fixtures"
@@ -18,14 +19,23 @@ function correoDePrueba(rol: string) {
   return `e2e_nuevo_${rol}_${Date.now().toString(36)}@jonnier.com`
 }
 
+/** Los tres roles, con el texto que los identifica en el desplegable. */
 const ROLES = [
-  { rol: "asesor" as const, descripcion: "registra lo suyo" },
-  { rol: "coordinador" as const, descripcion: "administra una empresa" },
-  { rol: "super_admin" as const, descripcion: "administra la plataforma" },
+  { rol: "asesor" as const, etiqueta: "Asesor", descripcion: "registra lo suyo" },
+  {
+    rol: "coordinador" as const,
+    etiqueta: "Coordinador",
+    descripcion: "administra una empresa",
+  },
+  {
+    rol: "super_admin" as const,
+    etiqueta: "Super Admin",
+    descripcion: "administra la plataforma",
+  },
 ]
 
 test.describe("Usuarios", () => {
-  for (const { rol, descripcion } of ROLES) {
+  for (const { rol, descripcion, etiqueta } of ROLES) {
     test(
       `el super admin puede crear un usuario con rol ${rol}`,
       anotar({
@@ -33,28 +43,38 @@ test.describe("Usuarios", () => {
         rol: "super admin",
         tipo: "feature",
         porque:
-          `Un ${rol} ${descripcion}. Si el alta con ese rol se rompe, no hay forma de meter ` +
-          "gente nueva al sistema y no se nota hasta que alguien lo intenta.",
+          `Un ${rol} ${descripcion}. Se hace por la pantalla, que es como se hace de verdad: ` +
+          "llamar a la función de la base por debajo probaría el permiso, no el formulario, y " +
+          "un campo mal enlazado pasaría desapercibido.",
       }),
-      async ({ apiSuperAdmin, rastro }) => {
+      async ({ superAdmin, apiSuperAdmin, rastro }) => {
         const email = correoDePrueba(rol)
+        const nombre = `E2E Nuevo ${rol}`
 
-        const { data: id, error } = await apiSuperAdmin.rpc("admin_create_user", {
-          p_email: email,
-          p_full_name: `E2E Nuevo ${rol}`,
-          p_role: rol,
-        })
-        expect(error, `no se pudo crear un ${rol}: ${error?.message}`).toBeNull()
-        expect(id, "la base no devolvió el identificador de la cuenta").toBeTruthy()
+        await irA(superAdmin, "/admin/usuarios")
+        await abrirDialogo(superAdmin, /Nuevo usuario/, /Nuevo usuario/)
 
-        // El perfil lo crea un trigger a partir de la cuenta de Auth: si no
-        // aparece, la cuenta existe pero es inservible.
+        await superAdmin.locator("#nombre").fill(nombre)
+        await superAdmin.locator("#email").fill(email)
+        await elegir(superAdmin, "rol", etiqueta)
+
+        await superAdmin.getByRole("button", { name: /Crear e invitar/ }).click()
+
+        // La cuenta tiene que existir con el rol que se eligió en el
+        // desplegable. Se espera a la base y no al aviso de pantalla: el aviso
+        // puede salir en rojo porque el correo de invitación no salga —el
+        // remitente de Supabase va limitado— y la cuenta estar creada igual.
+        await expect
+          .poll(async () => (await perfilPorEmail(apiSuperAdmin, email))?.role, {
+            timeout: 30_000,
+            message: `no apareció la cuenta ${email} tras crearla desde la pantalla`,
+          })
+          .toBe(rol)
+
         const perfil = await perfilPorEmail(apiSuperAdmin, email)
-        expect(perfil, "la cuenta se creó sin perfil").toBeTruthy()
-        expect(perfil!.role, "el rol no es el que se pidió").toBe(rol)
-        expect(perfil!.status, "una cuenta nueva nace invitada").toBe("invitado")
-
-        rastro.anotarUsuario(id as string)
+        expect(perfil!.full_name, "el nombre no se guardó como se escribió").toBe(nombre)
+        expect(perfil!.status, "una cuenta invitada nace invitada").toBe("invitado")
+        rastro.anotarUsuario(perfil!.id)
       },
     )
   }
@@ -67,46 +87,69 @@ test.describe("Usuarios", () => {
       tipo: "integridad",
       porque:
         "El correo es con lo que se entra. Dos cuentas con el mismo dejarían el acceso a " +
-        "suertes según cuál resuelva primero.",
+        "suertes según cuál resuelva primero, y quien lo intenta tiene que enterarse en la " +
+        "pantalla, no descubrirlo después.",
     }),
-    async ({ apiSuperAdmin, rastro }) => {
+    async ({ superAdmin, apiSuperAdmin, rastro }) => {
       const email = correoDePrueba("repetido")
 
-      const { data: id } = await apiSuperAdmin.rpc("admin_create_user", {
-        p_email: email,
-        p_full_name: "E2E Repetido",
-        p_role: "asesor",
-      })
+      // La primera se crea por la pantalla, como la crearía cualquiera.
+      await irA(superAdmin, "/admin/usuarios")
+      await abrirDialogo(superAdmin, /Nuevo usuario/, /Nuevo usuario/)
+      await superAdmin.locator("#nombre").fill("E2E Repetido")
+      await superAdmin.locator("#email").fill(email)
+      await superAdmin.getByRole("button", { name: /Crear e invitar/ }).click()
 
-      const { error } = await apiSuperAdmin.rpc("admin_create_user", {
-        p_email: email,
-        p_full_name: "E2E Repetido Otra Vez",
-        p_role: "asesor",
-      })
-      expect(error, "se crearon dos cuentas con el mismo correo").toBeTruthy()
-      rastro.anotarUsuario(id as string)
+      await expect
+        .poll(async () => (await perfilPorEmail(apiSuperAdmin, email))?.id, { timeout: 30_000 })
+        .toBeTruthy()
+      rastro.anotarUsuario((await perfilPorEmail(apiSuperAdmin, email))!.id)
+
+      // La segunda, con el mismo correo, tiene que ser rechazada y decirlo.
+      await irA(superAdmin, "/admin/usuarios")
+      await abrirDialogo(superAdmin, /Nuevo usuario/, /Nuevo usuario/)
+      await superAdmin.locator("#nombre").fill("E2E Repetido Otra Vez")
+      await superAdmin.locator("#email").fill(email)
+      await superAdmin.getByRole("button", { name: /Crear e invitar/ }).click()
+
+      await expect(
+        superAdmin.getByText(/[Yy]a existe/),
+        "no se avisó de que el correo ya estaba en uso",
+      ).toBeVisible({ timeout: 30_000 })
+
+      const { count } = await apiSuperAdmin
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("email", email)
+      expect(count, "quedaron dos cuentas con el mismo correo").toBe(1)
     },
   )
 
   test(
-    "un correo mal escrito no crea cuenta",
+    "un correo mal escrito no deja crear la cuenta",
     anotar({
       modulo: "Usuarios",
       rol: "super admin",
       tipo: "integridad",
       porque:
-        "Una cuenta con un correo inválido no puede recibir su invitación: nace muerta y " +
-        "ocupa sitio en la lista de usuarios.",
+        "El formulario tiene que frenarlo antes de enviarlo. Una cuenta con un correo " +
+        "inválido no puede recibir su invitación: nace muerta y ocupa sitio en la lista.",
     }),
-    async ({ apiSuperAdmin }) => {
-      for (const malo of ["sin-arroba", "@sin-nombre.com", "sin punto@dominio", ""]) {
-        const { error } = await apiSuperAdmin.rpc("admin_create_user", {
-          p_email: malo,
-          p_full_name: "E2E Inválido",
-          p_role: "asesor",
-        })
-        expect(error, `se aceptó el correo "${malo}"`).toBeTruthy()
+    async ({ superAdmin }) => {
+      await irA(superAdmin, "/admin/usuarios")
+      await abrirDialogo(superAdmin, /Nuevo usuario/, /Nuevo usuario/)
+      await superAdmin.locator("#nombre").fill("E2E Correo Inválido")
+
+      const crear = superAdmin.getByRole("button", { name: /Crear e invitar/ })
+      for (const malo of ["sin-arroba", "@sin-nombre.com", "sin espacio@dominio"]) {
+        await superAdmin.locator("#email").fill(malo)
+        await expect(crear, `el formulario aceptó el correo "${malo}"`).toBeDisabled()
       }
+
+      // Y con uno bien escrito sí deja continuar: si no, la prueba pasaría
+      // aunque el botón estuviera roto y nunca se habilitara.
+      await superAdmin.locator("#email").fill(correoDePrueba("valido"))
+      await expect(crear, "no se habilitó con un correo correcto").toBeEnabled()
     },
   )
 
@@ -171,6 +214,10 @@ test.describe("Acciones sobre un usuario", () => {
         "crear nadie de fuera. Si crear al segundo falla, no hay relevo posible; si " +
         "eliminarlo falla, queda una cuenta con acceso total que nadie quería.",
     }),
+    // Este va por la base a propósito: lo que se comprueba es el ciclo del rol
+    // —crear el segundo super admin y luego quitarlo— y purgar de verdad una
+    // cuenta no es algo que la pantalla ofrezca, porque para una persona real
+    // la baja es lógica y conserva el histórico.
     async ({ apiSuperAdmin }) => {
       const email = correoDePrueba("relevo")
 
@@ -276,20 +323,27 @@ test.describe("Acciones sobre un usuario", () => {
         "Tiene que cortar el acceso de verdad —en la base, no solo en el menú— y poder " +
         "deshacerse si fue un error.",
     }),
-    async ({ apiSuperAdmin, rastro }) => {
+    async ({ superAdmin, apiSuperAdmin, rastro }) => {
       const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
 
-      await apiSuperAdmin.from("profiles").update({ status: "inactivo" }).eq("id", cuenta.id)
-      await apiSuperAdmin.rpc("admin_ban_user", { target_user: cuenta.id, bloquear: true })
+      await abrirMenuDe(superAdmin, cuenta.nombre)
+      await superAdmin.getByRole("menuitem", { name: /Suspender acceso/ }).click()
+      await expect
+        .poll(async () => (await perfilPorEmail(apiSuperAdmin, cuenta.email))?.status, {
+          timeout: 30_000,
+          message: "la suspensión no llegó al perfil",
+        })
+        .toBe("inactivo")
 
-      const suspendido = await perfilPorEmail(apiSuperAdmin, cuenta.email)
-      expect(suspendido!.status, "la suspensión no llegó al perfil").toBe("inactivo")
-
-      await apiSuperAdmin.from("profiles").update({ status: "activo" }).eq("id", cuenta.id)
-      await apiSuperAdmin.rpc("admin_ban_user", { target_user: cuenta.id, bloquear: false })
-
-      const reactivado = await perfilPorEmail(apiSuperAdmin, cuenta.email)
-      expect(reactivado!.status, "no se pudo reactivar").toBe("activo")
+      // Y se puede deshacer, que es lo que la hace usable sin miedo.
+      await abrirMenuDe(superAdmin, cuenta.nombre)
+      await superAdmin.getByRole("menuitem", { name: /^Activar/ }).click()
+      await expect
+        .poll(async () => (await perfilPorEmail(apiSuperAdmin, cuenta.email))?.status, {
+          timeout: 30_000,
+          message: "no se pudo reactivar",
+        })
+        .toBe("activo")
     },
   )
 
@@ -304,15 +358,26 @@ test.describe("Acciones sobre un usuario", () => {
         "pasado tienen que seguir cuadrando y diciendo su nombre. Por eso es baja lógica y " +
         "no un borrado.",
     }),
-    async ({ apiSuperAdmin, rastro }) => {
+    async ({ superAdmin, apiSuperAdmin, rastro }) => {
       const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
 
-      const { error } = await apiSuperAdmin.rpc("soft_delete_user", { target_user: cuenta.id })
-      expect(error, `no se pudo eliminar: ${error?.message}`).toBeNull()
+      await abrirMenuDe(superAdmin, cuenta.nombre)
+      await superAdmin.getByRole("menuitem", { name: /Eliminar usuario/ }).click()
+      // Pide confirmación: es lo que evita llevarse a alguien de un clic.
+      await superAdmin
+        .getByRole("alertdialog")
+        .getByRole("button", { name: /Eliminar usuario/ })
+        .click()
+
+      await expect
+        .poll(async () => (await perfilPorEmail(apiSuperAdmin, cuenta.email))?.status, {
+          timeout: 30_000,
+          message: "el borrado no llegó al perfil",
+        })
+        .toBe("eliminado")
 
       const perfil = await perfilPorEmail(apiSuperAdmin, cuenta.email)
       expect(perfil, "la fila desapareció; tenía que quedarse marcada").toBeTruthy()
-      expect(perfil!.status).toBe("eliminado")
       expect(perfil!.deleted_at, "no quedó constancia de cuándo se eliminó").toBeTruthy()
     },
   )
