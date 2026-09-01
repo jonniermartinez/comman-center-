@@ -51,14 +51,13 @@ test.describe("Ventas por la pantalla", () => {
         documento: "1234567890",
         celular: "3001234567",
         valor: "1500000",
-        recaudo: "500000",
       })
       await guardar(coordinador)
 
       const empresa = await Promise.resolve({ id: mundo.empresaA.companyId })
       const { data: venta } = await apiSuperAdmin
         .from("sales")
-        .select("id, licencia_nombre, valor_final, recaudo, report_date")
+        .select("id, licencia_nombre, valor_final, report_date")
         .eq("company_id", empresa!.id)
         .eq("licencia_nombre", cliente)
         .maybeSingle()

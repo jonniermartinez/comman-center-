@@ -15,17 +15,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { slugify } from "@/lib/format"
 import { createCompany } from "@/lib/data/companies-actions"
 import { useDb, useIsSuperAdmin } from "@/lib/store/hooks"
-import { MODULES, type ModuleCode, type UserRole } from "@/lib/store/types"
+import { MODULES, type ModuleCode } from "@/lib/store/types"
 import { cn } from "@/lib/utils"
 
 const PASOS = [
@@ -33,17 +26,9 @@ const PASOS = [
   { n: 2, title: "Sedes", hint: "Dónde opera la empresa" },
   { n: 3, title: "Módulos", hint: "Qué formularios va a usar" },
   { n: 4, title: "Comercial", hint: "Financiaciones y recaudo" },
-  { n: 5, title: "Equipo", hint: "Comerciales por sede" },
 ]
 
 const COLORES = ["#0f766e", "#7c3aed", "#b45309", "#1d4ed8", "#be123c", "#0f172a"]
-
-type Assignment = {
-  user_id: string
-  role: Exclude<UserRole, "super_admin">
-  /** Índice dentro de `sedes`. Un coordinador puede quedar sin sede: -1. */
-  branch_index: number
-}
 
 type SedeDraft = { name: string; city: string; department: string }
 
@@ -63,7 +48,6 @@ export default function NuevaEmpresaPage() {
   const [modules, setModules] = useState<ModuleCode[]>(["ventas", "pagos", "actividad_diaria", "agendas", "caja"])
   const [financing, setFinancing] = useState<string[]>(db.financing_types.map((f) => f.code))
   const [payments, setPayments] = useState<string[]>(db.payment_methods.map((p) => p.code))
-  const [assignments, setAssignments] = useState<Assignment[]>([])
   const [sedes, setSedes] = useState<SedeDraft[]>([
     { name: "Sede principal", city: "Buga", department: "Valle del Cauca" },
   ])
@@ -89,17 +73,7 @@ export default function NuevaEmpresaPage() {
   const sedesValidas = sedes.length > 0 && sedes.every((x) => x.name.trim().length > 1)
 
   const canAdvance =
-    step === 1
-      ? !nameError
-      : step === 2
-        ? sedesValidas
-        : step === 3
-          ? modules.length > 0
-          : step === 4
-            ? financing.length > 0
-            : true
-
-  const asignables = db.profiles.filter((p) => !p.deleted_at && p.role !== "super_admin")
+    step === 1 ? !nameError : step === 2 ? sedesValidas : modules.length > 0
 
   function toggle<T>(list: T[], value: T, set: (next: T[]) => void) {
     set(list.includes(value) ? list.filter((x) => x !== value) : [...list, value])
@@ -129,8 +103,6 @@ export default function NuevaEmpresaPage() {
           city: x.city.trim() || undefined,
           department: x.department.trim() || undefined,
         })),
-        // Un coordinador sin sede (-1) supervisa la empresa completa.
-        assignments: assignments.map((a) => ({ ...a, branch_index: Math.max(0, a.branch_index) })),
       })
       // Sin slug no se creó nada: el error se muestra y la pantalla se queda
       // como está, con los datos escritos, para poder reintentar.
@@ -146,7 +118,7 @@ export default function NuevaEmpresaPage() {
         })
       } else {
         toast.success(`${name} creada`, {
-          description: `${sedes.length} sede(s), ${modules.length} módulo(s) y ${assignments.length} comercial(es).`,
+          description: `${sedes.length} sede(s) y ${modules.length} módulo(s). Asigna el equipo desde la empresa.`,
         })
       }
       router.push(`/e/${resultado.slug}`)
@@ -157,7 +129,7 @@ export default function NuevaEmpresaPage() {
     <div className="mx-auto max-w-3xl">
       <PageHeader
         title="Nueva empresa"
-        description="Una empresa cliente con sus módulos, su configuración comercial y su equipo."
+        description="Una empresa cliente con sus módulos y su configuración comercial."
         actions={
           <Button asChild variant="ghost" size="sm">
             <Link href="/empresas">
@@ -168,7 +140,7 @@ export default function NuevaEmpresaPage() {
         }
       />
 
-      <ol className="mb-6 grid grid-cols-3 gap-2 sm:grid-cols-5">
+      <ol className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {PASOS.map((p) => {
           const done = step > p.n
           const active = step === p.n
@@ -477,96 +449,6 @@ export default function NuevaEmpresaPage() {
                   ))}
                 </div>
               </div>
-            </>
-          )}
-
-          {step === 5 && (
-            <>
-              <p className="text-sm text-muted-foreground">
-                Asigna usuarios existentes. Los nuevos se crean en Usuarios y también se pueden
-                asignar después.
-              </p>
-              <div className="space-y-2">
-                {asignables.map((profile) => {
-                  const assignment = assignments.find((a) => a.user_id === profile.id)
-                  return (
-                    <div
-                      key={profile.id}
-                      className={cn(
-                        "flex items-center gap-3 border p-3",
-                        assignment ? "border-primary bg-accent/40" : "",
-                      )}
-                    >
-                      <Checkbox
-                        checked={!!assignment}
-                        onCheckedChange={(checked) =>
-                          setAssignments((prev) =>
-                            checked
-                              ? [...prev, { user_id: profile.id, role: "asesor", branch_index: 0 }]
-                              : prev.filter((a) => a.user_id !== profile.id),
-                          )
-                        }
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{profile.full_name}</p>
-                        <p className="truncate text-xs text-muted-foreground">{profile.email}</p>
-                      </div>
-                      {profile.status === "invitado" && (
-                        <Badge variant="outline" className="text-[10px]">
-                          Invitado
-                        </Badge>
-                      )}
-                      <Select
-                        value={assignment?.role ?? "asesor"}
-                        disabled={!assignment}
-                        onValueChange={(role) =>
-                          setAssignments((prev) =>
-                            prev.map((a) =>
-                              a.user_id === profile.id
-                                ? { ...a, role: role as Assignment["role"] }
-                                : a,
-                            ),
-                          )
-                        }
-                      >
-                        <SelectTrigger size="sm" className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="asesor">Asesor</SelectItem>
-                          <SelectItem value="coordinador">Coordinador</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      <Select
-                        value={String(assignment?.branch_index ?? 0)}
-                        disabled={!assignment || sedes.length <= 1}
-                        onValueChange={(idx) =>
-                          setAssignments((prev) =>
-                            prev.map((a) =>
-                              a.user_id === profile.id
-                                ? { ...a, branch_index: Number(idx) }
-                                : a,
-                            ),
-                          )
-                        }
-                      >
-                        <SelectTrigger size="sm" className="w-36">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sedes.map((sede, i) => (
-                            <SelectItem key={i} value={String(i)}>
-                              {sede.name || `Sede ${i + 1}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )
-                })}
-              </div>
-
               <div className="border-t pt-4 text-sm">
                 <p className="font-medium">Resumen</p>
                 <ul className="mt-2 space-y-1 text-muted-foreground">
@@ -590,10 +472,10 @@ export default function NuevaEmpresaPage() {
                     Financiaciones: <span className="text-foreground">{financing.length}</span> ·
                     Medios de recaudo: <span className="text-foreground">{payments.length}</span>
                   </li>
-                  <li>
-                    Comerciales: <span className="text-foreground">{assignments.length}</span>
-                  </li>
                 </ul>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  El equipo se asigna después, desde Equipo dentro de la empresa.
+                </p>
               </div>
             </>
           )}
@@ -610,7 +492,7 @@ export default function NuevaEmpresaPage() {
           Atrás
         </Button>
 
-        {step < 5 ? (
+        {step < 4 ? (
           <Button onClick={() => setStep((s) => s + 1)} disabled={!canAdvance}>
             Siguiente
             <ArrowRight className="size-4" />
@@ -618,7 +500,9 @@ export default function NuevaEmpresaPage() {
         ) : (
           <Button
             onClick={submit}
-            disabled={!!nameError || modules.length === 0 || creando}
+            disabled={
+              !!nameError || modules.length === 0 || financing.length === 0 || creando
+            }
           >
             <Check className="size-4" />
             {creando ? "Creando…" : "Crear empresa"}

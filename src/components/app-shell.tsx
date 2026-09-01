@@ -18,6 +18,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { CompanySwitcher } from "@/components/company-switcher"
+import { FiltroMes } from "@/components/filtro-mes"
 import { MobileNotice } from "@/components/mobile-notice"
 import { UserMenu } from "@/components/user-menu"
 import {
@@ -43,7 +44,21 @@ import {
   useIsSuperAdmin,
   useVisibleCompanies,
 } from "@/lib/store/hooks"
+import { usePeriodo } from "@/lib/store/periodo"
 import type { ModuleCode } from "@/lib/store/types"
+
+/**
+ * Pantallas que resumen un mes y por tanto obedecen al filtro de la barra.
+ *
+ * Los listados de captura —ventas, pagos, gestión— quedan fuera a propósito:
+ * tienen filtros de "desde / hasta" propios y dos controles de fecha peleando
+ * por lo mismo confunden más de lo que ayudan.
+ */
+function resumeUnMes(pathname: string): boolean {
+  if (pathname === "/empresas") return true
+  const seccion = pathname.split("/")[3]
+  return pathname.startsWith("/e/") && (!seccion || seccion === "objetivos" || seccion === "sedes")
+}
 
 interface NavItem {
   href: string
@@ -257,6 +272,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <h1 className="flex-1 truncate text-base font-medium sm:text-lg">
                 {tituloDe(pathname, !!company)}
               </h1>
+              {resumeUnMes(pathname) && <FiltroMes />}
             </header>
 
             <div className="flex-1 p-4 sm:p-6">{children}</div>
@@ -286,10 +302,14 @@ function NavLink({
   icon: React.ComponentType<{ className?: string }>
   active: boolean
 }) {
+  // El mes elegido viaja con el enlace: cambiar de pantalla no debe devolver a
+  // uno al mes en curso cuando se está revisando otro.
+  const { conMes } = usePeriodo()
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={active} tooltip={label} className="h-[38px]">
-        <Link href={href}>
+        <Link href={conMes(href)}>
           <Icon className="size-[18px]" />
           <span className="text-sm">{label}</span>
           {active && (

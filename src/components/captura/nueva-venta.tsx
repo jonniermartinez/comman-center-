@@ -98,13 +98,16 @@ export function NuevaVenta({
   const [estado, setEstado] = useState(registro?.state_code ?? "")
   const [valor, setValor] = useState(Number(registro?.valor_inicial ?? 0))
   const [descuento, setDescuento] = useState(Number(registro?.descuento ?? 0))
-  const [recaudo, setRecaudo] = useState(Number(registro?.recaudo ?? 0))
   const [cantidad, setCantidad] = useState(Number(registro?.cantidad_final ?? 1))
   const [observacion, setObservacion] = useState(registro?.observacion ?? "")
   const [pendiente, startTransition] = useTransition()
 
   const valorFinal = Math.max(0, valor - descuento)
-  const saldo = Math.max(0, valorFinal - recaudo)
+  // Lo recaudado son los pagos ya registrados contra esta venta; acá solo se
+  // muestra para que el saldo cuadre con lo que se está editando.
+  const recaudado = Number(registro?.recaudo ?? 0)
+  // Sin piso en cero: un saldo negativo es un sobrepago y hay que verlo.
+  const saldo = valorFinal - recaudado
   const persona = staff.find((s) => s.id === staffId)
   const valido = !!branchId && nombre.trim().length > 2 && valorFinal > 0 && fecha <= hoy
 
@@ -184,7 +187,7 @@ export function NuevaVenta({
             options={estados.map((e) => ({ value: e.code, label: e.name }))} />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-3">
           <div className="min-w-0 space-y-2">
             <Label htmlFor="valor">Valor</Label>
             <MoneyInput id="valor" value={valor} onValueChange={setValor} />
@@ -192,10 +195,6 @@ export function NuevaVenta({
           <div className="min-w-0 space-y-2">
             <Label htmlFor="descuento">Descuento</Label>
             <MoneyInput id="descuento" value={descuento} onValueChange={setDescuento} />
-          </div>
-          <div className="min-w-0 space-y-2">
-            <Label htmlFor="recaudo">Abonado hoy</Label>
-            <MoneyInput id="recaudo" value={recaudo} onValueChange={setRecaudo} />
           </div>
           <div className="min-w-0 space-y-2">
             <Label htmlFor="cantidad">Licencias</Label>
@@ -216,13 +215,17 @@ export function NuevaVenta({
             Valor final: <strong className="tabular-nums">{formatCOP(valorFinal)}</strong>
           </span>
           <span>
+            Recaudado: <strong className="tabular-nums">{formatCOP(recaudado)}</strong>
+          </span>
+          <span>
             Saldo:{" "}
             <strong className={saldo > 0 ? "tabular-nums text-amber-600" : "tabular-nums"}>
               {formatCOP(saldo)}
             </strong>
           </span>
           <span className="text-xs text-muted-foreground">
-            El saldo se calcula: valor final menos lo abonado.
+            El recaudo se registra en Pagos, no acá: el saldo es el valor final menos los pagos
+            de esta venta.
           </span>
         </div>
 
@@ -262,8 +265,6 @@ export function NuevaVenta({
                   adicion: 0,
                   descuento,
                   valor_final: valorFinal,
-                  recaudo,
-                  saldo,
                   cantidad_final: cantidad,
                   observacion: observacion.trim() || null,
                 })

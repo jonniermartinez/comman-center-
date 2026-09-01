@@ -420,8 +420,9 @@ export interface CuentaCreada {
  * histórico, porque lo que ata los registros es el identificador de la persona,
  * no su correo.
  *
- * Cuando llegue el correo real se cambia con `changeUserEmail` y no se rompe
- * nada: el identificador de la cuenta no cambia.
+ * El correo provisional se queda: cambiarlo se quitó de la aplicación. Si algún
+ * día hace falta, se hace en la base y el identificador de la cuenta no cambia,
+ * así que su histórico y sus empresas siguen donde estaban.
  */
 export async function createStaffAccounts(
   companyId: string,
@@ -508,64 +509,4 @@ export async function createStaffAccounts(
   return { ok: true, cuentas }
 }
 
-/**
- * Cambia el correo de una cuenta.
- *
- * Es lo que se hace cuando llega el correo real de alguien que entró con uno
- * provisional. No toca el identificador de la cuenta, así que su histórico, sus
- * empresas y sus metas siguen exactamente donde estaban.
- */
-export async function changeUserEmail(userId: string, email: string): Promise<Result> {
-  await requireSuperAdmin()
 
-  const limpio = email.trim().toLowerCase()
-  if (!/.+@.+\..+/.test(limpio)) return { ok: false, error: "El correo no es válido." }
-
-  // La función de Postgres actualiza Auth y la identidad; el trigger de la
-  // base sincroniza `profiles.email` solo.
-  const supabase = await createClient()
-  const { error } = await supabase.rpc("admin_change_email", {
-    target_user: userId,
-    p_email: limpio,
-  })
-  if (error) return { ok: false, error: error.message }
-
-  await logAudit({
-    action: "update",
-    entity: "profiles",
-    entity_id: userId,
-    after: { email: limpio },
-  })
-
-  refrescar()
-  return { ok: true }
-}
-
-/**
- * Pone una contraseña temporal nueva.
- *
- * Hace falta mientras haya cuentas con correo provisional: no pueden recuperar
- * la contraseña por email porque ese buzón no existe.
- */
-export async function resetUserPassword(
-  userId: string,
-): Promise<Result & { clave?: string }> {
-  await requireSuperAdmin()
-
-  const clave = claveTemporal()
-  const supabase = await createClient()
-  const { error } = await supabase.rpc("admin_set_password", {
-    target_user: userId,
-    p_password: clave,
-  })
-  if (error) return { ok: false, error: error.message }
-
-  await logAudit({
-    action: "update",
-    entity: "profiles",
-    entity_id: userId,
-    after: { password: "restablecida" },
-  })
-
-  return { ok: true, clave }
-}

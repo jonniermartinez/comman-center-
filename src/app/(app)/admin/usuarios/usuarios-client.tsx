@@ -1,6 +1,6 @@
 "use client"
 
-import { AtSign, Info, KeyRound, MoreHorizontal, Pencil, RotateCcw, Trash2, UserPlus } from "lucide-react"
+import { Info, MoreHorizontal, Pencil, RotateCcw, Trash2, UserPlus } from "lucide-react"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
@@ -57,10 +57,8 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDate, initials } from "@/lib/format"
 import {
-  changeUserEmail,
   deleteUser,
   inviteUser,
-  resetUserPassword,
   restoreUser,
   setUserActive,
   setUserCompanies,
@@ -85,7 +83,6 @@ export function UsuariosClient({
   const [vista, setVista] = useState<Vista>("activos")
   const [aEliminar, setAEliminar] = useState<UserRow | null>(null)
   const [aEditar, setAEditar] = useState<UserRow | null>(null)
-  const [aCambiarCorreo, setACambiarCorreo] = useState<UserRow | null>(null)
   const [pendiente, startTransition] = useTransition()
 
   const visibles = users.filter((u) => (vista === "activos" ? !u.deleted_at : !!u.deleted_at))
@@ -261,45 +258,6 @@ export function UsuariosClient({
                                 <Pencil className="size-4" />
                                 Editar y asignar empresas
                               </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => setACambiarCorreo(profile)}>
-                                <AtSign className="size-4" />
-                                Cambiar correo
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={() =>
-                                  startTransition(async () => {
-                                    const r = await resetUserPassword(profile.id)
-                                    if (!r.ok || !r.clave) {
-                                      toast.error(r.error ?? "No se pudo restablecer.")
-                                      return
-                                    }
-                                    // Copiar es una comodidad; enseñar la clave
-                                    // es imprescindible. Si el portapapeles
-                                    // falla —permiso denegado, contexto no
-                                    // seguro— y se copiara antes de avisar, la
-                                    // contraseña quedaría cambiada y sin que
-                                    // nadie la haya visto: esa persona se queda
-                                    // fuera y solo se arregla con otro
-                                    // restablecimiento.
-                                    const copiada = await navigator.clipboard
-                                      .writeText(r.clave)
-                                      .then(() => true)
-                                      .catch(() => false)
-                                    toast.success(
-                                      copiada
-                                        ? "Contraseña nueva copiada"
-                                        : "Contraseña nueva (cópiala a mano)",
-                                      {
-                                        description: `${profile.full_name} → ${r.clave}. No se vuelve a mostrar.`,
-                                        duration: 20000,
-                                      },
-                                    )
-                                  })
-                                }
-                              >
-                                <KeyRound className="size-4" />
-                                Restablecer contraseña
-                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               {profile.status === "inactivo" ? (
                                 <DropdownMenuItem
@@ -357,7 +315,6 @@ export function UsuariosClient({
         </div>
       </SectionCard>
 
-      <CambiarCorreoDialog user={aCambiarCorreo} onClose={() => setACambiarCorreo(null)} />
 
       <EditarUsuarioDialog
         user={aEditar}
@@ -726,88 +683,3 @@ function EditarUsuarioDialog({
  * mueve nada más —la cuenta conserva su identificador— así que su histórico,
  * sus empresas y sus metas siguen donde estaban.
  */
-function CambiarCorreoDialog({
-  user,
-  onClose,
-}: {
-  user: UserRow | null
-  onClose: () => void
-}) {
-  const [correo, setCorreo] = useState("")
-  const [pendiente, startTransition] = useTransition()
-
-  const provisional = user?.email.endsWith(".invalid") ?? false
-  const valido = /.+@.+\..+/.test(correo.trim())
-
-  return (
-    <Dialog
-      open={!!user}
-      onOpenChange={(o) => {
-        if (!o) {
-          setCorreo("")
-          onClose()
-        }
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Cambiar el correo de {user?.full_name}</DialogTitle>
-          <DialogDescription>
-            {provisional
-              ? "Esta cuenta entró con un usuario provisional. Al poner el correo real podrá recuperar su contraseña sola."
-              : "Con el correo nuevo entrará a partir de ahora."}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Correo actual</Label>
-            <p className="font-mono text-sm">{user?.email}</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="correo-nuevo">Correo nuevo</Label>
-            <Input
-              id="correo-nuevo"
-              type="email"
-              value={correo}
-              onChange={(e) => setCorreo(e.target.value)}
-              placeholder="nombre@gmail.com"
-              autoFocus
-            />
-          </div>
-          <Alert>
-            <Info />
-            <AlertDescription>
-              La contraseña no cambia y el histórico tampoco: la cuenta es la misma, solo cambia
-              con qué correo entra.
-            </AlertDescription>
-          </Alert>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            disabled={!valido || pendiente}
-            onClick={() =>
-              startTransition(async () => {
-                if (!user) return
-                const r = await changeUserEmail(user.id, correo)
-                if (!r.ok) {
-                  toast.error(r.error)
-                  return
-                }
-                toast.success(`${user.full_name} ahora entra con ${correo.trim().toLowerCase()}`)
-                setCorreo("")
-                onClose()
-              })
-            }
-          >
-            {pendiente ? "Guardando…" : "Cambiar correo"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}

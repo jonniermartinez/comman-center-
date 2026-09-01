@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   MoreHorizontal,
   Plus,
+  RefreshCw,
   Settings,
   Trash2,
 } from "lucide-react"
@@ -37,10 +38,11 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { formatCOPShort, formatNumber, formatPercent, todayISO } from "@/lib/format"
-import { monthLabel, monthOf } from "@/lib/kpi"
+import { monthLabel } from "@/lib/kpi"
 import { useCompanyMonthly } from "@/lib/data/client-queries"
 import { archiveCompany } from "@/lib/data/companies-actions"
 import { useDb, useIsSuperAdmin, useVisibleCompanies } from "@/lib/store/hooks"
+import { usePeriodo } from "@/lib/store/periodo"
 import type { Company } from "@/lib/store/types"
 
 /**
@@ -55,7 +57,8 @@ export default function EmpresasPage() {
   const companies = useVisibleCompanies(showArchived)
 
   const today = todayISO()
-  const month = monthOf(today)
+  // El mes lo manda el filtro de la barra superior, común a toda la aplicación.
+  const { mes: month } = usePeriodo()
   // Los totales del mes los calcula Postgres: son 16.000 ventas y 19.000 pagos.
   const { datos: mensual } = useCompanyMonthly(month)
 
@@ -65,11 +68,12 @@ export default function EmpresasPage() {
     .reduce(
       (acc, m) => ({
         ventas: acc.ventas + Number(m.ventas_mes),
+        renovaciones: acc.renovaciones + Number(m.renovaciones_mes),
         licencias: acc.licencias + Number(m.licencias_mes),
         facturacion: acc.facturacion + Number(m.facturacion_mes),
         recaudo: acc.recaudo + Number(m.recaudo_mes),
       }),
-      { ventas: 0, licencias: 0, facturacion: 0, recaudo: 0 },
+      { ventas: 0, renovaciones: 0, licencias: 0, facturacion: 0, recaudo: 0 },
     )
 
   // Un usuario sin empresas y sin ser super admin no ve nada: ni el grid vacío,
@@ -119,6 +123,12 @@ export default function EmpresasPage() {
             hint: "Todas las empresas",
           },
           {
+            label: "Renovaciones del mes",
+            value: consolidado.renovaciones,
+            icon: RefreshCw,
+            hint: "Todas las empresas",
+          },
+          {
             label: "Licencias del mes",
             value: consolidado.licencias,
             icon: Receipt,
@@ -160,7 +170,7 @@ export default function EmpresasPage() {
             <Plus className="size-6" />
             <span className="text-sm font-medium">Crear empresa</span>
             <span className="max-w-48 text-center text-xs">
-              Datos, sedes, módulos, financiaciones y equipo en 5 pasos
+              Datos, sedes, módulos y financiaciones en 4 pasos
             </span>
           </Link>
         )}
@@ -186,6 +196,7 @@ function CompanyCard({
   const fila = mensual.find((m) => m.company_id === company.id)
   const totals = {
     ventas: Number(fila?.ventas_mes ?? 0),
+    renovaciones: Number(fila?.renovaciones_mes ?? 0),
     licencias: Number(fila?.licencias_mes ?? 0),
     facturacion: Number(fila?.facturacion_mes ?? 0),
     recaudo: Number(fila?.recaudo_mes ?? 0),
@@ -308,7 +319,11 @@ function CompanyCard({
           </span>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-4 border-t pt-4">
+        <div className="mt-4 grid grid-cols-3 gap-3 border-t pt-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Renovaciones</p>
+            <p className="font-medium tabular-nums">{formatNumber(totals.renovaciones)}</p>
+          </div>
           <div>
             <p className="text-xs text-muted-foreground">Facturación</p>
             <p className="font-medium tabular-nums">{formatCOPShort(totals.facturacion)}</p>

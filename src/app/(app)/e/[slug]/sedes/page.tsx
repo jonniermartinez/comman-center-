@@ -41,7 +41,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { formatCOPShort, formatNumber, formatPercent } from "@/lib/format"
-import { monthLabel, monthOf } from "@/lib/kpi"
 import { useBranchMonthly } from "@/lib/data/client-queries"
 import {
   archiveBranch,
@@ -54,18 +53,17 @@ import {
   useCompanyBranches,
   useCompanyMembers,
   useDb,
-  useEffectiveToday,
 } from "@/lib/store/hooks"
+import { usePeriodo } from "@/lib/store/periodo"
 
 export default function SedesPage() {
   const company = useActiveCompany()
   const db = useDb()
-  const today = useEffectiveToday()
   const canManage = useCanManage(company.id)
   const [verArchivadas, setVerArchivadas] = useState(false)
   const branches = useCompanyBranches(company.id, verArchivadas)
 
-  const month = monthOf(today)
+  const { mes: month } = usePeriodo()
   const { datos: porSede } = useBranchMonthly(company.id, month)
 
   if (!canManage) {
