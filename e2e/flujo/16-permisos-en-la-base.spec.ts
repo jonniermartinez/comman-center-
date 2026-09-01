@@ -291,30 +291,6 @@ test.describe("Escalada de privilegios", () => {
   )
 
   test(
-    "un asesor no cambia la contraseña de un super admin",
-    anotar({
-      modulo: "Usuarios",
-      rol: "asesor",
-      tipo: "seguridad",
-      porque: "Sería tomar el control del sistema entero con una sola llamada.",
-    }),
-    async ({ apiAsesorA, apiSuperAdmin, mundo }) => {
-      const { data: victima } = await apiSuperAdmin
-        .from("profiles")
-        .select("id")
-        .eq("role", "super_admin")
-        .limit(1)
-        .single()
-
-      const { error } = await apiAsesorA.rpc("admin_set_password", {
-        target_user: victima!.id,
-        p_password: "meloquedoyo123",
-      })
-      expect(error, "un asesor cambió la contraseña de un super admin").toBeTruthy()
-    },
-  )
-
-  test(
     "un asesor no se asciende a super admin",
     anotar({
       modulo: "Usuarios",

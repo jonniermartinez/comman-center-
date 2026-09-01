@@ -245,13 +245,19 @@ export async function vincularStaff(admin: Cliente, email: string, slug: string)
   const empresa = await empresaPorSlug(admin, slug)
   if (!perfil || !empresa) throw new Error(`vincularStaff: falta perfil ${email} o ${slug}`)
 
-  const { data: existente } = await admin
+  // La persona puede existir ya: el catálogo es global y estas cuentas se
+  // reutilizan entre corridas. Se busca con `limit(1)` y no con `maybeSingle`
+  // porque una historia vieja puede haber dejado dos filas apuntando al mismo
+  // perfil, y ahí `maybeSingle` falla en vez de devolver una.
+  const { data: porPerfil } = await admin
     .from("staff")
     .select("id")
     .eq("profile_id", perfil.id)
+    .limit(1)
     .maybeSingle()
 
-  let staffId = existente?.id
+  let staffId = porPerfil?.id
+
   if (!staffId) {
     const slug = perfil.full_name
       .normalize("NFD")
@@ -261,18 +267,30 @@ export async function vincularStaff(admin: Cliente, email: string, slug: string)
       .replace(/[^a-z0-9]+/g, "_")
       .replace(/^_+|_+$/g, "")
 
-    const { data, error } = await admin
+    // El slug es único en el catálogo: si ya está tomado, es esta misma persona
+    // de una corrida anterior que se quedó sin su enlace. Se reengancha en vez
+    // de insertar, que es lo que reventaba con "staff_slug_key".
+    const { data: porSlug } = await admin
       .from("staff")
-      .insert({
-        full_name: perfil.full_name,
-        slug,
-        profile_id: perfil.id,
-        active: true,
-      })
       .select("id")
-      .single()
-    if (error) throw new Error(`vincularStaff(${email}): ${error.message}`)
-    staffId = data.id
+      .eq("slug", slug)
+      .maybeSingle()
+
+    if (porSlug) {
+      await admin
+        .from("staff")
+        .update({ profile_id: perfil.id, active: true })
+        .eq("id", porSlug.id)
+      staffId = porSlug.id
+    } else {
+      const { data, error } = await admin
+        .from("staff")
+        .insert({ full_name: perfil.full_name, slug, profile_id: perfil.id, active: true })
+        .select("id")
+        .single()
+      if (error) throw new Error(`vincularStaff(${email}): ${error.message}`)
+      staffId = data.id
+    }
   }
 
   const { data: sede } = await admin

@@ -2195,10 +2195,6 @@ export type Database = {
         Args: { bloquear: boolean; target_user: string }
         Returns: undefined
       }
-      admin_change_email: {
-        Args: { p_email: string; target_user: string }
-        Returns: undefined
-      }
       admin_create_user: {
         Args: {
           p_confirmado?: boolean
@@ -2209,10 +2205,6 @@ export type Database = {
           p_role?: Database["public"]["Enums"]["user_role"]
         }
         Returns: string
-      }
-      admin_set_password: {
-        Args: { p_password: string; target_user: string }
-        Returns: undefined
       }
       can_manage_company: { Args: { target_company: string }; Returns: boolean }
       company_data_counts: { Args: { target_company: string }; Returns: Json }

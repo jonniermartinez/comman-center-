@@ -32,9 +32,9 @@ import { irA } from "./reintento"
 // ------------------------------------------------------------
 
 /**
- * Da de alta una empresa recorriendo el asistente de cinco pasos.
+ * Da de alta una empresa recorriendo el asistente de cuatro pasos.
  *
- * Es el camino que hace una persona de verdad, con sus cinco pantallas, y por
+ * Es el camino que hace una persona de verdad, con sus cuatro pantallas, y por
  * eso lo usan las pruebas que comprueban el alta. Estaba copiado en las cuatro
  * pruebas de empresas: cuatro sitios donde tocar si el asistente cambia de un
  * paso o el botón cambia de texto.
@@ -43,7 +43,7 @@ export async function altaDeEmpresaPorLaInterfaz(pagina: Page, nombre: string) {
   await irA(pagina, "/empresas/nueva")
   await pagina.locator("#name").fill(nombre)
 
-  for (let paso = 1; paso < 5; paso++) {
+  for (let paso = 1; paso < 4; paso++) {
     await pagina.getByRole("button", { name: "Siguiente" }).click()
   }
 

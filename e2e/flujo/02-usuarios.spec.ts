@@ -1,7 +1,8 @@
 import { crearUsuario } from "../soporte/acciones"
+import { venta } from "../soporte/datos"
 import { abrirDialogo, elegir } from "../soporte/formulario"
 import { anotar } from "../soporte/anotaciones"
-import { clienteAnonimo, perfilPorEmail } from "../soporte/api"
+import { asignarAEmpresa, clienteAnonimo, perfilPorEmail, vincularStaff } from "../soporte/api"
 import { expect, test } from "../soporte/fixtures"
 import { irA } from "../soporte/reintento"
 
@@ -219,116 +220,6 @@ test.describe("Usuarios", () => {
  */
 test.describe("Acciones sobre un usuario", () => {
   test(
-    "un super admin puede crear otro super admin y luego eliminarlo",
-    anotar({
-      modulo: "Usuarios",
-      rol: "super admin",
-      tipo: "feature",
-      porque:
-        "Es el ciclo completo del rol con más poder del sistema, y el único que no puede " +
-        "crear nadie de fuera. Si crear al segundo falla, no hay relevo posible; si " +
-        "eliminarlo falla, queda una cuenta con acceso total que nadie quería.",
-    }),
-    // Este va por la base a propósito: lo que se comprueba es el ciclo del rol
-    // —crear el segundo super admin y luego quitarlo— y purgar de verdad una
-    // cuenta no es algo que la pantalla ofrezca, porque para una persona real
-    // la baja es lógica y conserva el histórico.
-    async ({ apiSuperAdmin }) => {
-      const email = correoDePrueba("relevo")
-
-      const { data: id, error } = await apiSuperAdmin.rpc("admin_create_user", {
-        p_email: email,
-        p_full_name: "E2E Segundo Super Admin",
-        p_role: "super_admin",
-      })
-      expect(error, `no se pudo crear el segundo super admin: ${error?.message}`).toBeNull()
-
-      const creado = await perfilPorEmail(apiSuperAdmin, email)
-      expect(creado!.role, "el segundo no nació super admin").toBe("super_admin")
-
-      // Y se va, sin dejar rastro en la lista de usuarios del cliente.
-      const { error: alBorrar } = await apiSuperAdmin.rpc("purge_test_user", {
-        target_user: id as string,
-      })
-      expect(
-        alBorrar,
-        `no se pudo eliminar el segundo super admin: ${alBorrar?.message}`,
-      ).toBeNull()
-
-      const despues = await perfilPorEmail(apiSuperAdmin, email)
-      expect(despues, "el segundo super admin sigue existiendo").toBeNull()
-    },
-  )
-
-  test(
-    "el botón Cambiar correo cambia el correo sin romper el histórico",
-    anotar({
-      modulo: "Usuarios",
-      rol: "super admin",
-      tipo: "feature",
-      porque:
-        "Es lo que se hace cuando llega el correo real de alguien que entró con uno " +
-        "provisional. No puede cambiar el identificador de la cuenta: si lo cambiara, esa " +
-        "persona perdería de golpe todo lo que tiene registrado a su nombre.",
-    }),
-    async ({ superAdmin, apiSuperAdmin, rastro }) => {
-      const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
-
-      const nuevo = correoDePrueba("correo_nuevo")
-
-      await abrirMenuDe(superAdmin, cuenta.email)
-      await superAdmin.getByRole("menuitem", { name: /Cambiar correo/ }).click()
-      await superAdmin.locator("#correo-nuevo").fill(nuevo)
-      await superAdmin
-        .getByRole("dialog")
-        .getByRole("button", { name: /Cambiar correo/ })
-        .click()
-
-      await expect
-        .poll(async () => (await perfilPorEmail(apiSuperAdmin, nuevo))?.id, { timeout: 30_000 })
-        .toBe(cuenta.id)
-    },
-  )
-
-  test(
-    "el botón Restablecer contraseña entrega una clave nueva que sirve",
-    anotar({
-      modulo: "Usuarios",
-      rol: "super admin",
-      tipo: "feature",
-      porque:
-        "Hace falta mientras haya cuentas con correo provisional: no pueden recuperar la " +
-        "clave por email porque ese buzón no existe. Si la clave que muestra no sirve, la " +
-        "persona se queda fuera y nadie se entera hasta que lo intenta.",
-    }),
-    async ({ superAdmin, apiSuperAdmin, rastro }) => {
-      const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
-
-      await abrirMenuDe(superAdmin, cuenta.email)
-      await superAdmin.getByRole("menuitem", { name: /Restablecer contraseña/ }).click()
-
-      // No abre diálogo: copia al portapapeles y enseña la clave en un aviso.
-      // Es la única vez que se ve, así que de ahí hay que leerla.
-      const aviso = superAdmin.getByText(/No se vuelve a mostrar/)
-      await expect(aviso, "no apareció el aviso con la clave nueva").toBeVisible({
-        timeout: 30_000,
-      })
-
-      const texto = await aviso.innerText()
-      const nueva = texto.match(/→\s*(\S+?)\./)?.[1]
-      expect(nueva, `no se pudo leer la clave del aviso: "${texto}"`).toBeTruthy()
-      expect(nueva, "la clave nueva es la misma de antes").not.toBe(cuenta.password)
-
-      // Lo que de verdad importa: que con esa clave se pueda entrar.
-      const { error } = await clienteAnonimo().auth.signInWithPassword({
-        email: cuenta.email,
-        password: nueva!,
-      })
-      expect(error, `la clave que entregó la pantalla no sirve: ${error?.message}`).toBeNull()
-    },
-  )
-
-  test(
     "el botón Suspender corta el acceso, y Activar lo devuelve",
     anotar({
       modulo: "Usuarios",
@@ -370,16 +261,30 @@ test.describe("Acciones sobre un usuario", () => {
       rol: "super admin",
       tipo: "integridad",
       porque:
-        "Eliminar a una persona no puede borrar lo que registró: los informes del año " +
-        "pasado tienen que seguir cuadrando y diciendo su nombre. Por eso es baja lógica y " +
-        "no un borrado.",
+        "Eliminar a una persona no puede borrar lo que registró: los informes del año pasado " +
+        "tienen que seguir cuadrando y seguir diciendo su nombre. Por eso es baja lógica y no " +
+        "un borrado, y por eso la prueba registra algo a su nombre antes de eliminarla: sin " +
+        "histórico que perder, comprobar que se conserva no demuestra nada.",
     }),
-    async ({ superAdmin, apiSuperAdmin, rastro }) => {
+    async ({ superAdmin, apiSuperAdmin, rastro, mundo }) => {
       const cuenta = await crearUsuario(apiSuperAdmin, rastro, "asesor", { conAcceso: true })
+      await asignarAEmpresa(apiSuperAdmin, cuenta.email, mundo.empresaA.slug, "asesor")
+      const staffId = await vincularStaff(apiSuperAdmin, cuenta.email, mundo.empresaA.slug)
+      rastro.anotar("staff", staffId)
+
+      // Una venta a su nombre: esto es el histórico que no se puede perder.
+      const { data: suVenta } = await rastro.crear(
+        apiSuperAdmin,
+        "sales",
+        venta(
+          { companyId: mundo.empresaA.companyId, branchId: mundo.empresaA.branchId, staffId },
+          { licencia_nombre: `cliente de ${cuenta.nombre}`, responsable_nombre: cuenta.nombre },
+        ),
+      )
+      expect(suVenta?.id, "el montaje no pudo dejar histórico a su nombre").toBeTruthy()
 
       await abrirMenuDe(superAdmin, cuenta.email)
       await superAdmin.getByRole("menuitem", { name: /Eliminar usuario/ }).click()
-      // Pide confirmación: es lo que evita llevarse a alguien de un clic.
       await superAdmin
         .getByRole("alertdialog")
         .getByRole("button", { name: /Eliminar usuario/ })
@@ -392,14 +297,35 @@ test.describe("Acciones sobre un usuario", () => {
         })
         .toBe("eliminado")
 
+      // La cuenta queda marcada, no desaparece: el histórico la referencia.
       const perfil = await perfilPorEmail(apiSuperAdmin, cuenta.email)
-      expect(perfil, "la fila desapareció; tenía que quedarse marcada").toBeTruthy()
+      expect(perfil, "la fila del usuario desapareció; tenía que quedarse marcada").toBeTruthy()
       expect(perfil!.deleted_at, "no quedó constancia de cuándo se eliminó").toBeTruthy()
+
+      // Y lo que registró sigue ahí, a su nombre.
+      const { data: sigue } = await apiSuperAdmin
+        .from("sales")
+        .select("id, staff_id, responsable_nombre")
+        .eq("id", suVenta!.id)
+        .maybeSingle()
+
+      expect(sigue, "eliminar al usuario se llevó por delante su venta").toBeTruthy()
+      expect(sigue!.staff_id, "la venta perdió a su responsable").toBe(staffId)
+      expect(sigue!.responsable_nombre, "la venta dejó de decir quién la hizo").toBe(
+        cuenta.nombre,
+      )
+
+      // Y deja de tener acceso, que es la otra mitad de eliminar.
+      const { error } = await clienteAnonimo().auth.signInWithPassword({
+        email: cuenta.email,
+        password: cuenta.password!,
+      })
+      expect(error, "una cuenta eliminada siguió pudiendo entrar").toBeTruthy()
     },
   )
 
   test(
-    "las cinco acciones están disponibles en el menú",
+    "las tres acciones están disponibles en el menú",
     anotar({
       modulo: "Usuarios",
       rol: "super admin",
@@ -414,8 +340,6 @@ test.describe("Acciones sobre un usuario", () => {
 
       for (const opcion of [
         /Editar y asignar empresas/,
-        /Cambiar correo/,
-        /Restablecer contraseña/,
         /Suspender acceso|Activar/,
         /Eliminar usuario/,
       ]) {

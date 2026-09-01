@@ -40,11 +40,11 @@ export interface NewCompanyInput {
   financing_codes: string[]
   payment_codes: string[]
   branches: { name: string; city?: string; department?: string }[]
-  assignments: { user_id: string; role: "coordinador" | "asesor"; branch_index: number }[]
 }
 
 /**
- * Alta completa de una empresa: datos, sedes, módulos, catálogos y equipo.
+ * Alta de una empresa: datos, sedes, módulos y catálogos. El equipo se asigna
+ * después desde la empresa, no aquí.
  *
  * No es transaccional —son varios INSERT contra PostgREST— así que si algo
  * falla a mitad se devuelve el error y la empresa queda creada pero incompleta.
@@ -84,7 +84,7 @@ export async function createCompany(
     ? input.branches
     : [{ name: "Sede principal", city: input.city, department: input.department }]
 
-  const { data: creadas, error: errorSedes } = await supabase
+  const { error: errorSedes } = await supabase
     .from("branches")
     .insert(
       sedes.map((s, i) => ({
@@ -96,13 +96,10 @@ export async function createCompany(
         created_by: session.profile.id,
       })),
     )
-    .select("id, name")
 
   if (errorSedes) return { ok: false, error: errorSedes.message, slug: company.slug }
 
-  const idsSedes = (creadas ?? []).map((b) => b.id)
-
-  const [modulos, financiaciones, medios, equipo] = await Promise.all([
+  const [modulos, financiaciones, medios] = await Promise.all([
     supabase.from("company_modules").insert(
       input.modules.map((module_code) => ({
         company_id: company.id,
@@ -126,20 +123,9 @@ export async function createCompany(
         sort_order: i,
       })),
     ),
-    input.assignments.length
-      ? supabase.from("company_users").insert(
-          input.assignments.map((a) => ({
-            company_id: company.id,
-            user_id: a.user_id,
-            role: a.role,
-            branch_id: idsSedes[a.branch_index] ?? idsSedes[0],
-            assigned_by: session.profile.id,
-          })),
-        )
-      : Promise.resolve({ error: null }),
   ])
 
-  const fallo = [modulos, financiaciones, medios, equipo].find((r) => r.error)
+  const fallo = [modulos, financiaciones, medios].find((r) => r.error)
   if (fallo?.error) return { ok: false, error: fallo.error.message, slug: company.slug }
 
   await logAudit({

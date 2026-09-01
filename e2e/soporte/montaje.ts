@@ -98,7 +98,7 @@ export default async function montaje() {
   if (perfil?.role !== "super_admin") {
     throw new Error(
       `${CUENTAS.superAdmin.email} no es super admin activo. Sin esa cuenta no se monta ` +
-        `nada: revísala en la base o vuelve a darle clave con admin_set_password.`,
+        `nada: revísala en la base, o vuelve a crearla con admin_create_user.`,
     )
   }
 
