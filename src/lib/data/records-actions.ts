@@ -138,8 +138,11 @@ export interface VentaInput {
   adicion: number
   descuento: number
   valor_final: number
-  recaudo: number
-  saldo: number
+  /**
+   * Ni `recaudo` ni `saldo` se envían desde el formulario: el recaudo es la
+   * suma de los pagos de la venta y el saldo se calcula solo (029). Mandarlos
+   * acá los pisaría con lo que se digitó en la venta.
+   */
   cantidad_final: number
   observacion?: string | null
 }
