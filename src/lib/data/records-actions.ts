@@ -176,6 +176,8 @@ export interface PagoInput {
   amount: number
   method_code?: string | null
   recibo?: string | null
+  /** Ruta del comprobante en el bucket comprobantes-pago. */
+  voucher?: string | null
   observacion?: string | null
 }
 
@@ -367,6 +369,8 @@ export interface VentaBuscada {
   id: string
   branch_id: string
   ref_credito: string | null
+  /** "contado" o el crédito con el que se financió; null si no se registró. */
+  financing_code: string | null
   cliente: string
   documento: string
   report_date: string
@@ -392,7 +396,7 @@ export async function buscarVentas(companyId: string, texto: string): Promise<Ve
   const { data } = await supabase
     .from("sales")
     .select(
-      "id, branch_id, ref_credito, licencia_nombre, credito_nombre, licencia_id, credito_id, report_date, valor_final, saldo",
+      "id, branch_id, ref_credito, financing_code, licencia_nombre, credito_nombre, licencia_id, credito_id, report_date, valor_final, saldo",
     )
     .eq("company_id", companyId)
     .or(
@@ -410,12 +414,65 @@ export async function buscarVentas(companyId: string, texto: string): Promise<Ve
     id: v.id,
     branch_id: v.branch_id,
     ref_credito: v.ref_credito,
+    financing_code: v.financing_code,
     cliente: v.licencia_nombre ?? v.credito_nombre ?? "—",
     documento: v.licencia_id ?? v.credito_id ?? "",
     report_date: v.report_date,
     valor_final: Number(v.valor_final),
     saldo: Number(v.saldo),
   }))
+}
+
+const BUCKET_COMPROBANTES = "comprobantes-pago"
+const MAX_COMPROBANTE = 5 * 1024 * 1024
+
+/**
+ * Sube la foto o el PDF del recibo y devuelve la ruta para guardarla en
+ * `payments.voucher`. Se sube antes de guardar el pago: si el pago falla
+ * queda un archivo suelto, que es un costo menor que un pago sin respaldo.
+ */
+export async function uploadPaymentReceipt(
+  companyId: string,
+  formData: FormData,
+): Promise<Result & { path?: string }> {
+  await requireSession()
+  const archivo = formData.get("file")
+
+  if (!(archivo instanceof File) || archivo.size === 0) {
+    return { ok: false, error: "No se recibió ningún archivo." }
+  }
+  if (archivo.size > MAX_COMPROBANTE) {
+    return { ok: false, error: "El comprobante pesa más de 5 MB." }
+  }
+
+  const supabase = await createClient()
+  const extension = archivo.name.split(".").pop()?.toLowerCase() || "jpg"
+  const path = `${companyId}/pagos/${crypto.randomUUID()}.${extension}`
+
+  const { error } = await supabase.storage
+    .from(BUCKET_COMPROBANTES)
+    .upload(path, archivo, { contentType: archivo.type, upsert: false })
+
+  if (error) return { ok: false, error: `No se pudo subir el comprobante: ${error.message}` }
+  return { ok: true, path }
+}
+
+/**
+ * URLs firmadas (una hora) para ver los comprobantes de una página del
+ * listado. El bucket es privado; sin firma no se abren.
+ */
+export async function urlsComprobantes(paths: string[]): Promise<Record<string, string>> {
+  const unicas = [...new Set(paths.filter(Boolean))]
+  if (unicas.length === 0) return {}
+
+  const supabase = await createClient()
+  const { data } = await supabase.storage.from(BUCKET_COMPROBANTES).createSignedUrls(unicas, 3600)
+
+  const urls: Record<string, string> = {}
+  for (const item of data ?? []) {
+    if (item.path && item.signedUrl) urls[item.path] = item.signedUrl
+  }
+  return urls
 }
 
 /** Los cinco tipos de registro que el equipo captura a diario. */

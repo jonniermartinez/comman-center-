@@ -2198,6 +2198,7 @@ export type Database = {
       admin_create_user: {
         Args: {
           p_confirmado?: boolean
+          p_invitado?: boolean
           p_email: string
           p_full_name: string
           p_password?: string

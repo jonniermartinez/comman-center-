@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Combobox } from "@/components/combobox"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -33,13 +34,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -155,35 +149,30 @@ export default function EquipoPage() {
                     </TableCell>
 
                     <TableCell>
-                      <Select
+                      <Combobox
+                        size="sm"
                         value={m.branchId ?? "empresa"}
-                        onValueChange={(v) =>
+                        onChange={(v) =>
                           correr(
                             () =>
                               setStaffBranch(company.id, m.id, v === "empresa" ? null : v),
                             `${m.full_name} movido de sede`,
                           )
                         }
-                      >
-                        <SelectTrigger size="sm" className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {branches.map((b) => (
-                            <SelectItem key={b.id} value={b.id}>
-                              {b.name}
-                            </SelectItem>
-                          ))}
-                          <SelectItem value="empresa">Toda la empresa</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        buscar="Buscar sede…"
+                        options={[
+                          ...branches.map((b) => ({ value: b.id, label: b.name })),
+                          { value: "empresa", label: "Toda la empresa" },
+                        ]}
+                      />
                     </TableCell>
 
                     <TableCell>
                       {isSuperAdmin ? (
-                        <Select
+                        <Combobox
+                          size="sm"
                           value={m.profile_id ?? "ninguna"}
-                          onValueChange={(v) =>
+                          onChange={(v) =>
                             correr(
                               () => linkStaffToProfile(m.id, v === "ninguna" ? null : v),
                               v === "ninguna"
@@ -191,21 +180,14 @@ export default function EquipoPage() {
                                 : `${m.full_name} enlazado con su cuenta`,
                             )
                           }
-                        >
-                          <SelectTrigger size="sm" className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ninguna">Sin cuenta</SelectItem>
-                            {db.profiles
+                          buscar="Buscar por nombre o correo…"
+                          options={[
+                            { value: "ninguna", label: "Sin cuenta" },
+                            ...db.profiles
                               .filter((p) => !p.deleted_at)
-                              .map((p) => (
-                                <SelectItem key={p.id} value={p.id}>
-                                  {p.full_name} · {p.email}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
+                              .map((p) => ({ value: p.id, label: `${p.full_name} · ${p.email}` })),
+                          ]}
+                        />
                       ) : cuenta ? (
                         <Badge variant="secondary" className="gap-1 text-[10px]">
                           <Link2 className="size-3" />
@@ -316,19 +298,15 @@ function NuevoComercialDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Persona</Label>
-            <Select value={existente} onValueChange={setExistente}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="nuevo">Alguien nuevo</SelectItem>
-                {disponibles.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              value={existente}
+              onChange={setExistente}
+              buscar="Buscar persona…"
+              options={[
+                { value: "nuevo", label: "Alguien nuevo" },
+                ...disponibles.map((s) => ({ value: s.id, label: s.full_name })),
+              ]}
+            />
           </div>
 
           {existente === "nuevo" && (
@@ -351,18 +329,13 @@ function NuevoComercialDialog({
               <MapPin className="size-3.5" />
               Sede
             </Label>
-            <Select value={sede} onValueChange={setSede}>
-              <SelectTrigger id="sede" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              id="sede"
+              value={sede}
+              onChange={setSede}
+              buscar="Buscar sede…"
+              options={branches.map((b) => ({ value: b.id, label: b.name }))}
+            />
           </div>
         </div>
 

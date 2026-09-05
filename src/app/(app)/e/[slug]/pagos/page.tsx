@@ -1,3 +1,4 @@
+import { Paperclip } from "lucide-react"
 import { notFound } from "next/navigation"
 
 import { NuevoPago, type PagoExistente } from "@/components/captura/nuevo-pago"
@@ -17,7 +18,9 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { construirHref, getCompanyContext, nombreDe } from "@/lib/data/company"
 import { leerFiltros, listPayments } from "@/lib/data/records"
+import { urlsComprobantes } from "@/lib/data/records-actions"
 import { formatCOP, formatDate } from "@/lib/format"
+import { createClient } from "@/lib/supabase/server"
 
 /** Abonos recibidos contra cada crédito, como la hoja "Pagos" del Excel. */
 export default async function PagosPage({ params, searchParams }: PageProps<"/e/[slug]/pagos">) {
@@ -31,6 +34,18 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
 
   const filtros = leerFiltros(sp)
   const pagina = await listPayments(company.id, filtros)
+
+  // La financiación de cada venta decide si el comprobante es obligatorio al
+  // editar; las URLs firmadas abren los comprobantes del bucket privado.
+  const saleIds = [...new Set(pagina.rows.map((p) => p.sale_id).filter((id): id is string => !!id))]
+  const supabase = await createClient()
+  const [{ data: ventas }, urls] = await Promise.all([
+    saleIds.length
+      ? supabase.from("sales").select("id, financing_code").in("id", saleIds)
+      : Promise.resolve({ data: [] as { id: string; financing_code: string | null }[] }),
+    urlsComprobantes(pagina.rows.map((p) => p.voucher).filter((v): v is string => !!v)),
+  ])
+  const financiacion = new Map((ventas ?? []).map((v) => [v.id, v.financing_code]))
   const totalPagina = pagina.rows.reduce((a, p) => a + Number(p.amount), 0)
   const sede = (id: string) => company.branches.find((b) => b.id === id)?.name ?? "—"
   const filtrando = Object.values(sp).some((v) => typeof v === "string" && v)
@@ -75,7 +90,7 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
             <TableHead>Titular</TableHead>
             <TableHead>Referencia</TableHead>
             <TableHead className="w-32">Medio de pago</TableHead>
-            <TableHead className="w-24">Recibo</TableHead>
+            <TableHead className="w-32">Comprobante</TableHead>
             <TableHead className="text-right">Valor</TableHead>
             <TableHead className="w-10" />
           </TableRow>
@@ -117,7 +132,21 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
               <TableCell className="text-sm">
                 {nombreDe(company.mediosPago, p.method_code)}
               </TableCell>
-              <TableCell className="text-xs text-muted-foreground">{p.recibo ?? "—"}</TableCell>
+              <TableCell className="text-xs text-muted-foreground">
+                {p.voucher && urls[p.voucher] ? (
+                  <a
+                    href={urls[p.voucher]}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-foreground underline underline-offset-4"
+                  >
+                    <Paperclip className="size-3" />
+                    {p.recibo ?? "Ver"}
+                  </a>
+                ) : (
+                  (p.recibo ?? "—")
+                )}
+              </TableCell>
               <TableCell className="text-right font-medium tabular-nums">
                 {formatCOP(Number(p.amount))}
               </TableCell>
@@ -126,7 +155,13 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
                   companyId={company.id}
                   branches={company.branches}
                   mediosPago={company.mediosPago}
-                  registro={p as unknown as PagoExistente}
+                  registro={
+                    {
+                      ...p,
+                      financing_code: p.sale_id ? (financiacion.get(p.sale_id) ?? null) : null,
+                    } as unknown as PagoExistente
+                  }
+                  voucherUrl={p.voucher ? urls[p.voucher] : undefined}
                 />
               </TableCell>
             </TableRow>

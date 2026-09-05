@@ -1,14 +1,8 @@
 "use client"
 
+import { Combobox } from "@/components/combobox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
 /** Contador entero. Es el campo más repetido de los formularios de captura. */
 export function CampoNumero({
@@ -66,6 +60,7 @@ export function CampoTexto({
   )
 }
 
+/** Lista con buscador. Todas las listas de los formularios pasan por acá. */
 export function CampoSelect({
   id,
   label,
@@ -85,19 +80,15 @@ export function CampoSelect({
   return (
     <div className="min-w-0 space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger id={id} className="w-full">
-          <SelectValue placeholder={vacio ?? "Elegir…"} />
-        </SelectTrigger>
-        <SelectContent>
-          {vacio && <SelectItem value="__vacio">{vacio}</SelectItem>}
-          {options.map((o) => (
-            <SelectItem key={o.value} value={o.value}>
-              {o.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Combobox
+        id={id}
+        value={value}
+        onChange={onChange}
+        options={options}
+        vacio={vacio}
+        placeholder={vacio ?? "Elegir…"}
+        buscar={`Buscar ${label.toLowerCase()}…`}
+      />
     </div>
   )
 }

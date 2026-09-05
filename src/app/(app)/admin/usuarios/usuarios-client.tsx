@@ -1,6 +1,6 @@
 "use client"
 
-import { Info, MoreHorizontal, Pencil, RotateCcw, Trash2, UserPlus } from "lucide-react"
+import { Info, MoreHorizontal, Pencil, RotateCcw, Send, Trash2, UserPlus } from "lucide-react"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
@@ -59,6 +59,7 @@ import { formatDate, initials } from "@/lib/format"
 import {
   deleteUser,
   inviteUser,
+  resendInvite,
   restoreUser,
   setUserActive,
   setUserCompanies,
@@ -258,6 +259,19 @@ export function UsuariosClient({
                                 <Pencil className="size-4" />
                                 Editar y asignar empresas
                               </DropdownMenuItem>
+                              {profile.status === "invitado" && (
+                                <DropdownMenuItem
+                                  onSelect={() =>
+                                    correr(
+                                      () => resendInvite(profile.id),
+                                      `Invitación reenviada a ${profile.email}`,
+                                    )
+                                  }
+                                >
+                                  <Send className="size-4" />
+                                  Reenviar invitación
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuSeparator />
                               {profile.status === "inactivo" ? (
                                 <DropdownMenuItem

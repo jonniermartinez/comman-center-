@@ -82,12 +82,18 @@ export async function inviteUser(input: {
   // La cuenta nace en la base, invitada y sin contraseña utilizable. La crea
   // la función `admin_create_user` de Postgres, que vuelve a verificar que
   // quien llama es super admin: no hay clave de servicio de por medio.
+  //
+  // `p_invitado`: el correo queda confirmado desde el inicio. Sin eso, Auth
+  // trata la cuenta como un registro a medias y se niega a mandarle el enlace
+  // ("Signups not allowed"). Entrar sigue siendo imposible sin el enlace: la
+  // contraseña es aleatoria y nadie la conoce.
   const supabase = await createClient()
   const { data: userId, error } = await supabase.rpc("admin_create_user", {
     p_email: email,
     p_full_name: full_name,
     p_role: input.role,
     p_phone: input.phone?.trim() || undefined,
+    p_invitado: true,
   })
 
   if (error || !userId) {
@@ -97,24 +103,9 @@ export async function inviteUser(input: {
   const asignacion = await asignarEmpresas(userId, input.company_ids, input.role)
   if (!asignacion.ok) return asignacion
 
-  // El enlace para entrar y definir la contraseña: el mismo enlace de un solo
-  // uso de "olvidé mi clave", solo que lo dispara el super admin. Al canjearlo,
-  // Auth confirma el correo y el perfil pasa de invitado a activo.
-  const { error: envio } = await createMailClient().auth.signInWithOtp({
-    email,
-    options: {
-      shouldCreateUser: false,
-      emailRedirectTo: `${siteUrl()}/auth/confirm?next=/definir-clave`,
-    },
-  })
-
-  if (envio) {
-    return {
-      ok: false,
-      error: envio.message.includes("rate limit")
-        ? "La cuenta quedó creada, pero Supabase limitó el envío de correos. Configura un SMTP propio o reintenta en unos minutos."
-        : `La cuenta quedó creada, pero el correo no salió: ${envio.message}`,
-    }
+  const envio = await enviarEnlace(email)
+  if (!envio.ok) {
+    return { ok: false, error: `La cuenta quedó creada, pero ${envio.error}` }
   }
 
   await logAudit({
@@ -125,6 +116,75 @@ export async function inviteUser(input: {
   })
 
   refrescar()
+  return { ok: true }
+}
+
+/**
+ * Manda el enlace de un solo uso para entrar y definir la contraseña: el
+ * mismo de "olvidé mi clave", solo que lo dispara el super admin. Al
+ * canjearlo, Auth registra el primer inicio de sesión y el perfil pasa de
+ * invitado a activo.
+ */
+async function enviarEnlace(email: string): Promise<Result> {
+  const { error } = await createMailClient().auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: `${siteUrl()}/auth/confirm?next=/definir-clave`,
+    },
+  })
+  if (!error) return { ok: true }
+
+  const msg = error.message.toLowerCase()
+  if (msg.includes("rate limit")) {
+    return {
+      ok: false,
+      error:
+        "Supabase limitó el envío de correos. Configura un SMTP propio o reintenta en unos minutos.",
+    }
+  }
+  if (msg.includes("signups not allowed")) {
+    return {
+      ok: false,
+      error:
+        "Auth no reconoce la cuenta como invitada (correo sin confirmar). Aplica la migración 031 y reintenta.",
+    }
+  }
+  return { ok: false, error: `el correo no salió: ${error.message}` }
+}
+
+/**
+ * Vuelve a mandar la invitación a quien todavía no ha entrado. El enlace
+ * anterior queda inservible: Auth solo honra el último.
+ */
+export async function resendInvite(userId: string): Promise<Result> {
+  await requireSuperAdmin()
+  const supabase = await createClient()
+
+  const { data: perfil } = await supabase
+    .from("profiles")
+    .select("email, status, full_name")
+    .eq("id", userId)
+    .single()
+
+  if (!perfil) return { ok: false, error: "El usuario no existe." }
+  if (perfil.status !== "invitado") {
+    return { ok: false, error: "Esta cuenta ya está activa: no necesita invitación." }
+  }
+  if (perfil.email.endsWith(`.${DOMINIO_PROVISIONAL}`)) {
+    return { ok: false, error: "Es una cuenta provisional: ese correo no existe." }
+  }
+
+  const envio = await enviarEnlace(perfil.email)
+  if (!envio.ok) return { ok: false, error: `No se pudo reenviar: ${envio.error}` }
+
+  await logAudit({
+    action: "update",
+    entity: "profiles",
+    entity_id: userId,
+    after: { invitacion_reenviada: perfil.email },
+  })
+
   return { ok: true }
 }
 

@@ -1,7 +1,7 @@
 "use client"
 
-import { Pencil, Plus, Save, Search } from "lucide-react"
-import { useState, useTransition } from "react"
+import { ExternalLink, Paperclip, Pencil, Plus, Save, Search, X } from "lucide-react"
+import { useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
 
 import { CampoSelect, valorOpcional } from "@/components/captura/campos"
@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { buscarVentas, type VentaBuscada } from "@/lib/data/records-actions"
 import { formatCOP, formatDate, todayISO } from "@/lib/format"
+import { esVentaDeContado } from "@/lib/ventas"
 
 /**
  * Registro de un abono.
@@ -41,6 +42,10 @@ export interface PagoExistente {
   amount: number
   method_code: string | null
   recibo: string | null
+  /** Ruta del comprobante en el bucket, si se adjuntó. */
+  voucher: string | null
+  /** Financiación de la venta a la que pertenece; decide si el comprobante es obligatorio. */
+  financing_code?: string | null
 }
 
 export function NuevoPago({
@@ -48,12 +53,15 @@ export function NuevoPago({
   branches,
   mediosPago,
   registro,
+  voucherUrl,
 }: {
   companyId: string
   branches: { id: string; name: string; is_primary: boolean }[]
   mediosPago: { code: string; name: string }[]
   /** Si viene, el formulario corrige ese abono en vez de crear uno. */
   registro?: PagoExistente
+  /** URL firmada del comprobante ya guardado, para verlo al editar. */
+  voucherUrl?: string
 }) {
   const hoy = todayISO()
   const editando = !!registro
@@ -68,6 +76,7 @@ export function NuevoPago({
           id: registro.sale_id ?? "",
           branch_id: registro.branch_id,
           ref_credito: registro.ref_credito,
+          financing_code: registro.financing_code ?? null,
           cliente: registro.titular_nombre ?? "—",
           documento: registro.titular_id ?? "",
           report_date: registro.report_date,
@@ -80,10 +89,17 @@ export function NuevoPago({
   const [monto, setMonto] = useState(Number(registro?.amount ?? 0))
   const [medio, setMedio] = useState(registro?.method_code ?? "")
   const [recibo, setRecibo] = useState(registro?.recibo ?? "")
+  const [archivo, setArchivo] = useState<File | null>(null)
+  const inputArchivo = useRef<HTMLInputElement>(null)
   const [buscando, startBusqueda] = useTransition()
   const [pendiente, startTransition] = useTransition()
 
-  const valido = !!venta && monto > 0 && fecha <= hoy
+  // Con crédito el comprobante es obligatorio: es lo que respalda el abono
+  // frente al cliente y la financiera. De contado es opcional.
+  const comprobanteObligatorio = !!venta && !esVentaDeContado(venta.financing_code)
+  const tieneComprobante = !!archivo || !!registro?.voucher
+  const valido =
+    !!venta && monto > 0 && fecha <= hoy && (!comprobanteObligatorio || tieneComprobante)
 
   function limpiar() {
     setBusqueda("")
@@ -91,6 +107,7 @@ export function NuevoPago({
     setVenta(null)
     setMonto(0)
     setRecibo("")
+    setArchivo(null)
   }
 
   return (
@@ -176,9 +193,77 @@ export function NuevoPago({
                 options={mediosPago.map((m) => ({ value: m.code, label: m.name }))}
               />
               <div className="min-w-0 space-y-2">
-                <Label htmlFor="recibo">Recibo o voucher</Label>
+                <Label htmlFor="recibo">Número de recibo o voucher</Label>
                 <Input id="recibo" value={recibo} onChange={(e) => setRecibo(e.target.value)} />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="comprobante">
+                Comprobante (foto o PDF)
+                <span className="font-normal text-muted-foreground">
+                  {comprobanteObligatorio ? " · obligatorio en crédito" : " · opcional de contado"}
+                </span>
+              </Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  id="comprobante"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => inputArchivo.current?.click()}
+                >
+                  <Paperclip className="size-4" />
+                  {archivo || registro?.voucher ? "Cambiar archivo" : "Adjuntar archivo"}
+                </Button>
+                {archivo ? (
+                  <span className="flex min-w-0 items-center gap-1 text-sm">
+                    <span className="truncate">{archivo.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-6"
+                      onClick={() => setArchivo(null)}
+                    >
+                      <X className="size-3.5" />
+                      <span className="sr-only">Quitar archivo</span>
+                    </Button>
+                  </span>
+                ) : registro?.voucher ? (
+                  voucherUrl ? (
+                    <a
+                      href={voucherUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 text-sm underline underline-offset-4"
+                    >
+                      Ver comprobante actual
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Ya tiene comprobante</span>
+                  )
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    {comprobanteObligatorio ? "Falta el comprobante." : "Sin archivo."}
+                  </span>
+                )}
+              </div>
+              <input
+                ref={inputArchivo}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/heic,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) setArchivo(f)
+                  e.target.value = ""
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Imagen o PDF, hasta 5 MB. Desde el celular puedes tomar la foto al momento.
+              </p>
             </div>
 
             {monto > venta.saldo && venta.saldo > 0 && (
@@ -267,7 +352,22 @@ export function NuevoPago({
             onClick={() =>
               startTransition(async () => {
                 if (!venta) return
-                const { savePayment } = await import("@/lib/data/records-actions")
+                const { savePayment, uploadPaymentReceipt } = await import(
+                  "@/lib/data/records-actions"
+                )
+
+                let voucher = registro?.voucher ?? null
+                if (archivo) {
+                  const datos = new FormData()
+                  datos.set("file", archivo)
+                  const subida = await uploadPaymentReceipt(companyId, datos)
+                  if (!subida.ok || !subida.path) {
+                    toast.error(subida.error ?? "No se pudo subir el comprobante.")
+                    return
+                  }
+                  voucher = subida.path
+                }
+
                 const r = await savePayment({
                   id: registro?.id,
                   company_id: companyId,
@@ -280,6 +380,7 @@ export function NuevoPago({
                   amount: monto,
                   method_code: valorOpcional(medio),
                   recibo: recibo.trim() || null,
+                  voucher,
                 })
                 if (!r.ok) {
                   toast.error(r.error ?? "No se pudo guardar el pago.")

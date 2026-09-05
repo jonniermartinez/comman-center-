@@ -65,11 +65,27 @@ Tres cosas que no se pueden hacer por SQL y hay que dejar listas:
    token no llega a la ruta `/auth/confirm` y la invitación muere en
    "enlace inválido".
 
+Desde la migración 031 la cuenta invitada nace con el correo **confirmado**
+y una contraseña aleatoria. Antes nacía sin confirmar y GoTrue la trataba
+como un registro a medias: al pedir el enlace mágico respondía
+"Signups not allowed for this instance" y la invitación nunca salía. El
+perfil sigue en `invitado` (lo marca `raw_user_meta_data.invitado`) hasta el
+primer inicio de sesión, que es cuando canjea el enlace. En Admin → Usuarios
+hay "Reenviar invitación" para quien todavía no ha entrado.
+
 Desde la migración 022, crear usuarios desde el panel de Supabase (Add user)
 solo funciona para el primero: el trigger `handle_new_auth_user` rechaza
 cualquier alta que no venga de `admin_create_user`, que es la función que usa
 la app. Es la misma regla de "solo por invitación", pero verificada por la
 base y no por un ajuste del panel.
+
+## 3b. Comprobantes de pago
+
+La migración 032 crea el bucket privado `comprobantes-pago` (imágenes o PDF,
+hasta 5 MB). Cada archivo va en `<company_id>/pagos/<uuid>.<ext>` y su ruta
+se guarda en `payments.voucher`; la aplicación firma una URL de una hora para
+abrirlo. Con una venta a crédito el comprobante es obligatorio al registrar el
+abono; de contado es opcional.
 
 ## 4. Variables de entorno
 
