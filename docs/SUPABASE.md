@@ -42,50 +42,34 @@ Para crearlo:
 2. Correo y contraseña, con *Auto Confirm User* marcado.
 3. Entrar en `/login` con esos datos. Ya se es super admin.
 
-## 3. Ajustes pendientes en el panel de Supabase
+## 3. Ajustes en el panel de Supabase
 
-Tres cosas que no se pueden hacer por SQL y hay que dejar listas:
+Nada depende del correo: no hay invitaciones, ni códigos, ni recuperación de
+contraseña. No hace falta SMTP.
 
-1. **Registro público con código.** Authentication → Sign In / Providers →
-   Email: *Allow new users to sign up* en **on** y *Confirm email* en **on**.
-   Cualquiera se crea la cuenta en `/registro`; nace como asesor sin empresas
-   (el trigger ignora el rol que venga en la metadata de un alta pública) y
-   ve la aplicación vacía hasta que el super admin lo asigne. La plantilla
-   *Confirm signup* (Authentication → Emails → Templates) debe mostrar el
-   código y no el enlace: `{{ .Token }}` en el cuerpo, en vez de
-   `{{ .ConfirmationURL }}`. La expiración del código se ajusta en *Email OTP
-   Expiration* (por defecto una hora).
-2. **SMTP propio.** El remitente por defecto de Supabase está limitado a unos
-   pocos correos por hora y no sirve en producción: las invitaciones no llegan.
-   Configurar Resend, SES o similar en Authentication → Emails → SMTP Settings.
-   **Hasta que esté, las invitaciones no llegan** y el usuario nuevo no puede
-   entrar.
-3. **URLs de redirección.** Authentication → URL Configuration: agregar
-   `http://localhost:3000/**` y el dominio de producción, o los enlaces del
-   correo no vuelven a la app.
-4. **Plantilla de Reset Password.** Es el correo que llega tanto por
-   "olvidé mi contraseña" como cuando el super admin crea una cuenta o le da
-   "Enviar recuperación de contraseña" en Admin → Usuarios. Debe traer el
-   código, `{{ .Token }}`, que se escribe en `/recuperar/codigo`. Puede traer
-   además el enlace, apuntando a
-   `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/definir-clave`
-   y no a `{{ .ConfirmationURL }}`: con el enlace por defecto el token muere
-   si el cliente de correo lo previsualiza. Con el código eso no pasa.
+1. **Registro público apagado.** Authentication → Sign In / Providers → Email
+   → *Allow new users to sign up* en **off**. La base lo bloquea igual (el
+   trigger `handle_new_auth_user` rechaza cualquier alta que no venga de
+   `admin_create_user`), pero así ni se intenta.
+2. **URLs de redirección.** Authentication → URL Configuration con el dominio
+   de producción, por si en el futuro vuelve algún enlace por correo.
 
-La cuenta que crea el super admin nace con el correo **confirmado** y una
-contraseña aleatoria (migración 031), que es lo que Auth exige para mandar
-la recuperación. El perfil queda en `invitado` hasta el primer inicio de
-sesión, cuando canjea el código. Desde la migración 034 el super admin
-también puede cambiarle el correo a una cuenta (`admin_change_email`): es
-como se les da acceso a las cuentas del equipo que nacieron con un correo
-provisional `.invalid`.
+## 4. Cuentas y contraseñas
 
-Desde la migración 033 el trigger `handle_new_auth_user` acepta cualquier
-alta. Lo que sigue controlando es el rol: solo lo respeta cuando la alta viene
-de `admin_create_user` (que pone la marca `app.alta_autorizada`); un registro
-público siempre nace como asesor, sin importar lo que traiga la metadata.
-El perfil queda en `invitado` hasta que Auth confirma el correo con el código,
-y ahí `handle_auth_user_confirmed` lo pasa a `activo`.
+Las cuentas las crea el super admin en Admin → Usuarios con nombre, correo,
+teléfono, contraseña y rol, y se la dicta a la persona. Desde el menú de cada
+usuario, "Definir contraseña" le pone una nueva: es la única recuperación que
+hay (`admin_set_password`, migración 035). La persona la cambia después desde
+su propio menú.
+
+Las cuentas del equipo que nacieron con un correo provisional `.invalid` se
+arreglan desde Editar: se les pone el correo real (`admin_change_email`,
+migración 034) y una contraseña. La cuenta conserva su identificador, así que
+su histórico, sus empresas y sus metas siguen donde estaban.
+
+Si "Nuevo usuario" recibe un correo que ya tiene cuenta, no crea otra: la
+saca de eliminados si hacía falta, actualiza nombre y teléfono y le pone la
+contraseña.
 
 ## 3b. Comprobantes de pago
 

@@ -10,13 +10,10 @@ export interface ActionState {
   ok?: string
 }
 
-function siteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
-}
-
 /**
- * Entrada con correo y contraseña. La cuenta se la crea cada quien en
- * /registro; el super admin también puede crearla desde /admin/usuarios.
+ * Entrada con correo y contraseña. No hay registro público ni recuperación por
+ * correo: las cuentas y las contraseñas las define el super admin desde
+ * /admin/usuarios.
  */
 export async function signIn(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase()
@@ -31,10 +28,6 @@ export async function signIn(_prev: ActionState, formData: FormData): Promise<Ac
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    // Cuenta creada pero sin confirmar: le falta el código, no la contraseña.
-    if (error.message.toLowerCase().includes("not confirmed")) {
-      redirect(`/verificar?email=${encodeURIComponent(email)}`)
-    }
     // No se distingue "correo inexistente" de "contraseña incorrecta": decirlo
     // permitiría averiguar qué correos tienen cuenta en la plataforma.
     return { error: "Correo o contraseña incorrectos." }
@@ -42,106 +35,6 @@ export async function signIn(_prev: ActionState, formData: FormData): Promise<Ac
 
   revalidatePath("/", "layout")
   redirect(next)
-}
-
-function correoValido(email: string) {
-  return /.+@.+\..+/.test(email)
-}
-
-/**
- * Crea la cuenta con correo y contraseña. Auth manda un código de seis
- * dígitos al correo; hasta que no lo confirme en /verificar la cuenta no
- * tiene sesión. Nace como asesor sin empresas: el trigger de la base ignora
- * cualquier rol que venga en la metadata de un alta pública.
- */
-export async function signUp(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const fullName = String(formData.get("full_name") ?? "").trim()
-  const email = String(formData.get("email") ?? "").trim().toLowerCase()
-  const password = String(formData.get("password") ?? "")
-  const confirm = String(formData.get("confirm") ?? "")
-
-  if (!fullName) return { error: "Escribe tu nombre." }
-  if (!correoValido(email)) return { error: "El correo no es válido." }
-  if (password.length < 8) return { error: "La contraseña debe tener al menos 8 caracteres." }
-  if (password !== confirm) return { error: "Las dos contraseñas no coinciden." }
-
-  const supabase = await createClient()
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: fullName } },
-  })
-
-  if (error) {
-    if (error.message.toLowerCase().includes("rate limit")) {
-      return { error: "Se enviaron demasiados correos seguidos. Espera unos minutos y reintenta." }
-    }
-    if (error.message.toLowerCase().includes("signups not allowed")) {
-      return { error: "El registro está cerrado. Pídele la cuenta al administrador." }
-    }
-    return { error: "No se pudo crear la cuenta. Reintenta en un momento." }
-  }
-
-  // Con la confirmación de correo encendida, Auth no abre sesión acá: la
-  // abre /verificar al canjear el código. Si el correo ya tenía cuenta, Auth
-  // devuelve un usuario sin identidades y no manda nada; se sigue igual para
-  // no revelar qué correos existen.
-  if (data.session) {
-    revalidatePath("/", "layout")
-    redirect("/empresas")
-  }
-
-  redirect(`/verificar?email=${encodeURIComponent(email)}`)
-}
-
-/**
- * Canjea el código de seis dígitos que llegó al correo y abre sesión.
- *
- * `signup` confirma una cuenta recién creada y entra. `recovery` es el de
- * "olvidé mi contraseña" (también el que manda el super admin al crear una
- * cuenta): entra y va a definir la contraseña nueva.
- */
-export async function verifyEmailCode(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase()
-  const token = String(formData.get("token") ?? "").replace(/\D/g, "")
-  const tipo = String(formData.get("tipo") ?? "signup") === "recovery" ? "recovery" : "signup"
-
-  if (!correoValido(email)) return { error: "El correo no es válido." }
-  if (token.length !== 6) return { error: "El código tiene seis dígitos." }
-
-  const supabase = await createClient()
-  const { error } = await supabase.auth.verifyOtp({ email, token, type: tipo })
-
-  if (error) {
-    return { error: "El código no es válido o ya caducó. Pide uno nuevo." }
-  }
-
-  revalidatePath("/", "layout")
-  redirect(tipo === "recovery" ? "/definir-clave" : "/empresas")
-}
-
-/** Vuelve a mandar el código, de confirmación o de recuperación según el caso. */
-export async function resendCode(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase()
-  const tipo = String(formData.get("tipo") ?? "signup") === "recovery" ? "recovery" : "signup"
-  if (!correoValido(email)) return { error: "El correo no es válido." }
-
-  const supabase = await createClient()
-  const { error } =
-    tipo === "recovery"
-      ? await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${siteUrl()}/auth/confirm?next=/definir-clave`,
-        })
-      : await supabase.auth.resend({ type: "signup", email })
-
-  if (error?.message.toLowerCase().includes("rate limit")) {
-    return { error: "Se enviaron demasiados correos seguidos. Espera unos minutos y reintenta." }
-  }
-  // Misma respuesta exista o no la cuenta, por la misma razón que en recuperar.
-  return { ok: "Si ese correo tiene cuenta, le llega un código nuevo." }
 }
 
 export async function signOut() {
@@ -166,33 +59,11 @@ export async function updatePassword(
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: "La sesión expiró. Pide un código nuevo." }
+  if (!user) return { error: "La sesión expiró. Vuelve a entrar." }
 
   const { error } = await supabase.auth.updateUser({ password })
   if (error) return { error: error.message }
 
   revalidatePath("/", "layout")
   redirect("/empresas")
-}
-
-/**
- * Envía el correo para restablecer la contraseña. Trae un código de seis
- * dígitos y un enlace; el código se canjea en /recuperar/codigo y el enlace
- * cae en /auth/confirm. Los dos terminan en /definir-clave.
- */
-export async function requestPasswordReset(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase()
-  if (!email) return { error: "Escribe tu correo." }
-
-  const supabase = await createClient()
-  await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl()}/auth/confirm?next=/definir-clave`,
-  })
-
-  // Se sigue a la pantalla del código exista o no la cuenta: si no, este
-  // formulario serviría para averiguar quién tiene usuario.
-  redirect(`/recuperar/codigo?email=${encodeURIComponent(email)}`)
 }

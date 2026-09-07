@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache"
 
 import { logAudit } from "@/lib/data/audit"
 import { requireSuperAdmin } from "@/lib/auth/session"
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/lib/supabase/database.types"
@@ -16,25 +15,6 @@ export interface Result {
   error?: string
   /** Aviso para el toast cuando salió bien pero no como se esperaba. */
   mensaje?: string
-}
-
-function siteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
-}
-
-/**
- * Cliente de Auth sin cookies, con la clave publicable.
- *
- * Sirve para pedirle a Auth un correo en nombre de otra persona (el enlace de
- * la invitación) sin que esa llamada pise la sesión del super admin que vive en
- * las cookies de la petición. No salta nada: es la misma clave del navegador.
- */
-function createMailClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  )
 }
 
 /**
@@ -61,18 +41,22 @@ function refrescar() {
 }
 
 /**
- * Crea la cuenta y le manda el correo de recuperación de contraseña de Auth
- * para que la persona ponga la suya y entre.
+ * Crea la cuenta con nombre, correo, contraseña y rol. Sin correo de por
+ * medio: la contraseña la escribe el super admin y se la dicta a la persona.
  *
  * El perfil no se inserta acá: lo crea el trigger `on_auth_user_created` a
- * partir de la metadata, así una cuenta creada desde el panel de Supabase
- * también nace con perfil y no queda a medias.
+ * partir de la metadata. La cuenta la crea `admin_create_user` en Postgres,
+ * que vuelve a verificar que quien llama es super admin.
+ *
+ * Si el correo ya tiene cuenta no se crea otra: se saca de eliminados si
+ * hacía falta, se actualizan sus datos y se le pone la contraseña.
  */
-export async function inviteUser(input: {
+export async function createUser(input: {
   full_name: string
   email: string
   phone?: string
   role: UserRole
+  password: string
 }): Promise<Result> {
   await requireSuperAdmin()
 
@@ -80,18 +64,12 @@ export async function inviteUser(input: {
   const full_name = input.full_name.trim()
   if (full_name.length < 3) return { ok: false, error: "El nombre es demasiado corto." }
   if (!/.+@.+\..+/.test(email)) return { ok: false, error: "El correo no es válido." }
+  if (input.password.length < 8) {
+    return { ok: false, error: "La contraseña debe tener al menos 8 caracteres." }
+  }
 
-  // La cuenta nace en la base, invitada y sin contraseña utilizable. La crea
-  // la función `admin_create_user` de Postgres, que vuelve a verificar que
-  // quien llama es super admin: no hay clave de servicio de por medio.
-  //
-  // `p_invitado`: el correo queda confirmado desde el inicio, que es lo que
-  // Auth exige para mandar la recuperación. Entrar sigue siendo imposible sin
-  // ese correo: la contraseña es aleatoria y nadie la conoce.
   const supabase = await createClient()
 
-  // Si el correo ya tiene cuenta no se crea otra: se saca de eliminados si
-  // hacía falta, se actualizan sus datos y se le manda la recuperación.
   const { data: existente } = await supabase
     .from("profiles")
     .select("id, deleted_at")
@@ -105,23 +83,15 @@ export async function inviteUser(input: {
     }
     const datos = await updateUserProfile(existente.id, { full_name, phone: input.phone })
     if (!datos.ok) return datos
-
-    const envio = await enviarRecuperacion(email)
-    if (!envio.ok) return { ok: false, error: `La cuenta ya existía, pero ${envio.error}` }
-
-    await logAudit({
-      action: "update",
-      entity: "profiles",
-      entity_id: existente.id,
-      after: { recuperacion_enviada: email, restaurado: !!existente.deleted_at },
-    })
+    const clave = await setUserPassword(existente.id, input.password)
+    if (!clave.ok) return clave
 
     refrescar()
     return {
       ok: true,
       mensaje: existente.deleted_at
-        ? "Ya existía y estaba eliminada: se restauró y se le envió el correo."
-        : "Ya existía: se le envió el correo para definir su contraseña.",
+        ? "Ya existía y estaba eliminada: se restauró con la contraseña nueva."
+        : "Ya existía: se le puso la contraseña nueva.",
     }
   }
 
@@ -130,16 +100,12 @@ export async function inviteUser(input: {
     p_full_name: full_name,
     p_role: input.role,
     p_phone: input.phone?.trim() || undefined,
-    p_invitado: true,
+    p_password: input.password,
+    p_confirmado: true,
   })
 
   if (error || !userId) {
     return { ok: false, error: error?.message ?? "No se pudo crear el usuario." }
-  }
-
-  const envio = await enviarRecuperacion(email)
-  if (!envio.ok) {
-    return { ok: false, error: `La cuenta quedó creada, pero ${envio.error}` }
   }
 
   await logAudit({
@@ -154,65 +120,38 @@ export async function inviteUser(input: {
 }
 
 /**
- * Manda el correo de recuperación de contraseña de Auth: el mismo de "olvidé
- * mi clave", solo que lo dispara el super admin. Trae un código de seis
- * dígitos (y un enlace); con cualquiera de los dos la persona entra a
- * /definir-clave, pone su contraseña y el perfil pasa de invitado a activo.
+ * Le pone una contraseña nueva a una cuenta. Es la única forma de recuperar
+ * el acceso cuando alguien la olvida: no hay correo. Lo hace
+ * `admin_set_password` en Postgres, solo para el super admin.
  */
-async function enviarRecuperacion(email: string): Promise<Result> {
-  const { error } = await createMailClient().auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl()}/auth/confirm?next=/definir-clave`,
-  })
-  if (!error) return { ok: true }
-
-  if (error.message.toLowerCase().includes("rate limit")) {
-    return {
-      ok: false,
-      error:
-        "Supabase limitó el envío de correos. Configura un SMTP propio o reintenta en unos minutos.",
-    }
-  }
-  return { ok: false, error: `el correo no salió: ${error.message}` }
-}
-
-/**
- * Manda la recuperación de contraseña a cualquier cuenta con correo real.
- * Sirve tanto para quien nunca entró como para quien la olvidó. El código o
- * enlace anterior queda inservible: Auth solo honra el último.
- */
-export async function sendPasswordRecovery(userId: string): Promise<Result> {
+export async function setUserPassword(userId: string, password: string): Promise<Result> {
   await requireSuperAdmin()
-  const supabase = await createClient()
-
-  const { data: perfil } = await supabase
-    .from("profiles")
-    .select("email, deleted_at")
-    .eq("id", userId)
-    .single()
-
-  if (!perfil) return { ok: false, error: "El usuario no existe." }
-  if (perfil.deleted_at) return { ok: false, error: "La cuenta está eliminada." }
-  if (esProvisional(perfil.email)) {
-    return { ok: false, error: "Es un correo provisional: ponle primero el correo real." }
+  if (password.length < 8) {
+    return { ok: false, error: "La contraseña debe tener al menos 8 caracteres." }
   }
 
-  const envio = await enviarRecuperacion(perfil.email)
-  if (!envio.ok) return { ok: false, error: `No se pudo enviar: ${envio.error}` }
+  const supabase = await createClient()
+  const { error } = await supabase.rpc("admin_set_password", {
+    target_user: userId,
+    p_password: password,
+  })
+  if (error) return { ok: false, error: error.message }
 
   await logAudit({
     action: "update",
     entity: "profiles",
     entity_id: userId,
-    after: { recuperacion_enviada: perfil.email },
+    after: { contrasena_definida: true },
   })
 
+  refrescar()
   return { ok: true }
 }
 
 /**
  * Cambia el correo de una cuenta.
  *
- * Es lo que cierra el flujo de las cuentas provisionales: alguien entró con un
+ * Es lo que cierra el flujo de las cuentas provisionales: alguien nació con un
  * usuario terminado en `.invalid` y ahora sí mandó su correo. Cambiarlo no
  * mueve nada más —la cuenta conserva su identificador— así que su histórico,
  * sus empresas y sus metas siguen donde estaban. Lo hace `admin_change_email`

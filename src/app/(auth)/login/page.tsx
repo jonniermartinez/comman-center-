@@ -1,5 +1,3 @@
-import Link from "next/link"
-
 import { LoginForm } from "./login-form"
 import { SessionBounce } from "./session-bounce"
 import { signOut } from "@/lib/auth/actions"
@@ -15,14 +13,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
  * cualquiera —incluido quien esté probando correos ajenos— que esa dirección
  * tiene cuenta. El detalle no le sirve a la persona, que no puede arreglarlo
  * ella misma, y sí a quien esté buscando quién trabaja aquí.
- *
- * Los de enlace sí concretan: no revelan si la cuenta existe, y saber si el
- * enlace caducó o ya se usó es justo lo que necesita para saber que tiene que
- * pedir otro.
+
  */
 const ERRORES: Record<string, string> = {
-  "enlace-invalido": "El enlace no es válido. Pide una invitación nueva.",
-  "enlace-expirado": "El enlace ya se usó o caducó. Pide uno nuevo.",
   "sin-perfil": "No se pudo entrar. Si el problema sigue, pídele acceso al administrador.",
 }
 
@@ -34,7 +27,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
     <Card>
       <CardHeader>
         <CardTitle>Entrar</CardTitle>
-        <CardDescription>Con tu correo y tu contraseña.</CardDescription>
+        <CardDescription>
+          Con tu correo y tu contraseña. Si no tienes cuenta o la olvidaste, pídesela al
+          administrador.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {error !== "sin-perfil" && <SessionBounce next={typeof next === "string" ? next : undefined} />}
@@ -53,14 +49,6 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           </Alert>
         )}
         <LoginForm next={typeof next === "string" ? next : undefined} />
-        <p className="flex justify-between text-xs text-muted-foreground">
-          <Link href="/registro" className="underline underline-offset-4 hover:text-foreground">
-            Crear cuenta
-          </Link>
-          <Link href="/recuperar" className="underline underline-offset-4 hover:text-foreground">
-            Olvidé mi contraseña
-          </Link>
-        </p>
       </CardContent>
     </Card>
   )

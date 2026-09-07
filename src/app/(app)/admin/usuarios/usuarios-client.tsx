@@ -57,11 +57,11 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDate, initials } from "@/lib/format"
 import {
   changeUserEmail,
+  createUser,
   deleteUser,
-  inviteUser,
   restoreUser,
-  sendPasswordRecovery,
   setUserActive,
+  setUserPassword,
   setUserRole,
   updateUserProfile,
 } from "@/lib/data/users-actions"
@@ -74,6 +74,7 @@ export function UsuariosClient({ users, meId }: { users: UserRow[]; meId: string
   const [vista, setVista] = useState<Vista>("activos")
   const [aEliminar, setAEliminar] = useState<UserRow | null>(null)
   const [aEditar, setAEditar] = useState<UserRow | null>(null)
+  const [aClave, setAClave] = useState<UserRow | null>(null)
   const [pendiente, startTransition] = useTransition()
 
   const visibles = users.filter((u) => (vista === "activos" ? !u.deleted_at : !!u.deleted_at))
@@ -95,7 +96,7 @@ export function UsuariosClient({ users, meId }: { users: UserRow[]; meId: string
     <>
       <PageHeader
         title="Usuarios"
-        description="Alta, habilitación y baja de cuentas. Las empresas se asignan desde el equipo de cada una."
+        description="Alta, contraseñas y baja de cuentas. Las empresas se asignan desde el equipo de cada una."
         actions={
           <>
             <Tabs value={vista} onValueChange={(v) => setVista(v as Vista)}>
@@ -249,16 +250,9 @@ export function UsuariosClient({ users, meId }: { users: UserRow[]; meId: string
                                 <Pencil className="size-4" />
                                 Editar
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={() =>
-                                  correr(
-                                    () => sendPasswordRecovery(profile.id),
-                                    `Correo de recuperación enviado a ${profile.email}`,
-                                  )
-                                }
-                              >
+                              <DropdownMenuItem onSelect={() => setAClave(profile)}>
                                 <KeyRound className="size-4" />
-                                Enviar recuperación de contraseña
+                                Definir contraseña
                               </DropdownMenuItem>
                               {profile.status === "inactivo" && (
                                 <>
@@ -314,6 +308,8 @@ export function UsuariosClient({ users, meId }: { users: UserRow[]; meId: string
         onClose={() => setAEditar(null)}
       />
 
+      <ClaveDialog user={aClave} onClose={() => setAClave(null)} />
+
       <AlertDialog open={!!aEliminar} onOpenChange={(open) => !open && setAEliminar(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -353,9 +349,9 @@ export function UsuariosClient({ users, meId }: { users: UserRow[]; meId: string
 }
 
 /**
- * Alta de una cuenta: nombre, correo, teléfono y rol. Auth le manda el
- * correo de recuperación de contraseña; con él la persona pone la suya y
- * entra. Las empresas se le asignan después, desde el equipo de cada una.
+ * Alta de una cuenta: nombre, correo, teléfono, contraseña y rol. No hay
+ * correo de por medio: el super admin le dicta la contraseña. Las empresas
+ * se le asignan después, desde el equipo de cada una.
  */
 function NuevoUsuarioDialog() {
   const [open, setOpen] = useState(false)
@@ -363,15 +359,17 @@ function NuevoUsuarioDialog() {
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
   const [role, setRole] = useState<UserRole>("asesor")
+  const [password, setPassword] = useState("")
   const [pendiente, startTransition] = useTransition()
 
-  const valido = fullName.trim().length > 2 && /.+@.+\..+/.test(email)
+  const valido = fullName.trim().length > 2 && /.+@.+\..+/.test(email) && password.length >= 8
 
   function limpiar() {
     setFullName("")
     setEmail("")
     setPhone("")
     setRole("asesor")
+    setPassword("")
   }
 
   return (
@@ -392,7 +390,7 @@ function NuevoUsuarioDialog() {
         <DialogHeader>
           <DialogTitle>Nuevo usuario</DialogTitle>
           <DialogDescription>
-            Le llega un correo para definir su contraseña. Con ella entra.
+            Entra con el correo y la contraseña que pongas acá. Dictásela.
           </DialogDescription>
         </DialogHeader>
 
@@ -426,6 +424,20 @@ function NuevoUsuarioDialog() {
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="clave">Contraseña</Label>
+            <Input
+              id="clave"
+              type="text"
+              autoComplete="off"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mínimo 8 caracteres"
+            />
+            <p className="text-xs text-muted-foreground">
+              Se ve en claro para que la puedas dictar. La persona la cambia después desde su menú.
+            </p>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="rol">Rol global</Label>
             <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
               <SelectTrigger id="rol">
@@ -448,20 +460,20 @@ function NuevoUsuarioDialog() {
             disabled={!valido || pendiente}
             onClick={() =>
               startTransition(async () => {
-                const r = await inviteUser({ full_name: fullName, email, phone, role })
+                const r = await createUser({ full_name: fullName, email, phone, role, password })
                 if (!r.ok) {
                   toast.error(r.error ?? "No se pudo crear el usuario.")
                   return
                 }
                 toast.success(`${fullName} ${r.mensaje ? "listo" : "creado"}`, {
-                  description: r.mensaje ?? "Se le envió el correo para definir su contraseña.",
+                  description: r.mensaje ?? "Ya puede entrar con esa contraseña.",
                 })
                 limpiar()
                 setOpen(false)
               })
             }
           >
-            {pendiente ? "Creando…" : "Crear y enviar correo"}
+            {pendiente ? "Creando…" : "Crear usuario"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -535,7 +547,7 @@ function EditarUsuarioDialog({
               onChange={(e) => setEmail(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Es con el que entra y al que le llega la recuperación de contraseña.
+              Es con el que entra.
             </p>
           </div>
           <div className="space-y-2">
@@ -599,6 +611,73 @@ function EditarUsuarioDialog({
             }
           >
             {pendiente ? "Guardando…" : "Guardar cambios"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/**
+ * Contraseña nueva para una cuenta. Es la única recuperación que hay: no se
+ * manda correo. Se muestra en claro para dictarla.
+ */
+function ClaveDialog({ user, onClose }: { user: UserRow | null; onClose: () => void }) {
+  const [password, setPassword] = useState("")
+  const [pendiente, startTransition] = useTransition()
+
+  return (
+    <Dialog
+      open={!!user}
+      onOpenChange={(o) => {
+        if (!o) {
+          setPassword("")
+          onClose()
+        }
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Contraseña de {user?.full_name}</DialogTitle>
+          <DialogDescription>
+            Reemplaza la que tenía. Dictásela: la puede cambiar después desde su menú.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-2">
+          <Label htmlFor="clave-nueva">Contraseña nueva</Label>
+          <Input
+            id="clave-nueva"
+            type="text"
+            autoComplete="off"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Mínimo 8 caracteres"
+            autoFocus
+          />
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            disabled={pendiente || password.length < 8}
+            onClick={() =>
+              startTransition(async () => {
+                if (!user) return
+                const r = await setUserPassword(user.id, password)
+                if (!r.ok) {
+                  toast.error(r.error)
+                  return
+                }
+                toast.success(`Contraseña de ${user.full_name} definida`)
+                setPassword("")
+                onClose()
+              })
+            }
+          >
+            {pendiente ? "Guardando…" : "Guardar contraseña"}
           </Button>
         </DialogFooter>
       </DialogContent>

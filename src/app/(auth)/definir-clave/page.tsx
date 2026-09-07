@@ -5,8 +5,8 @@ import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 /**
- * Define la contraseña tras aceptar la invitación. Se llega acá con una sesión
- * ya creada por /auth/confirm: sin sesión no hay nada que definir.
+ * Cambia la contraseña de quien ya tiene sesión (desde el menú de usuario).
+ * Sin sesión no hay nada que definir.
  */
 export default async function DefinirClavePage() {
   const supabase = await createClient()

@@ -46,9 +46,8 @@ export function NoAccess() {
       <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
         {invitado ? (
           <>
-            Revisa el correo de invitación que se envió a{" "}
-            <span className="font-medium text-foreground">{me.email}</span> y define tu
-            contraseña. Hasta entonces no puedes ver información del sistema.
+            Pídele al administrador que te defina una contraseña. Hasta entonces no puedes ver
+            información del sistema.
           </>
         ) : inactivo ? (
           <>
