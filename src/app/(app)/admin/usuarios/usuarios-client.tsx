@@ -453,8 +453,8 @@ function NuevoUsuarioDialog() {
                   toast.error(r.error ?? "No se pudo crear el usuario.")
                   return
                 }
-                toast.success(`${fullName} creado`, {
-                  description: "Se le envió el correo para definir su contraseña.",
+                toast.success(`${fullName} ${r.mensaje ? "listo" : "creado"}`, {
+                  description: r.mensaje ?? "Se le envió el correo para definir su contraseña.",
                 })
                 limpiar()
                 setOpen(false)

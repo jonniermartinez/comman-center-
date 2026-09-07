@@ -14,6 +14,8 @@ type UserRole = Database["public"]["Enums"]["user_role"]
 export interface Result {
   ok: boolean
   error?: string
+  /** Aviso para el toast cuando salió bien pero no como se esperaba. */
+  mensaje?: string
 }
 
 function siteUrl() {
@@ -87,6 +89,42 @@ export async function inviteUser(input: {
   // Auth exige para mandar la recuperación. Entrar sigue siendo imposible sin
   // ese correo: la contraseña es aleatoria y nadie la conoce.
   const supabase = await createClient()
+
+  // Si el correo ya tiene cuenta no se crea otra: se saca de eliminados si
+  // hacía falta, se actualizan sus datos y se le manda la recuperación.
+  const { data: existente } = await supabase
+    .from("profiles")
+    .select("id, deleted_at")
+    .eq("email", email)
+    .maybeSingle()
+
+  if (existente) {
+    if (existente.deleted_at) {
+      const restauro = await restoreUser(existente.id)
+      if (!restauro.ok) return restauro
+    }
+    const datos = await updateUserProfile(existente.id, { full_name, phone: input.phone })
+    if (!datos.ok) return datos
+
+    const envio = await enviarRecuperacion(email)
+    if (!envio.ok) return { ok: false, error: `La cuenta ya existía, pero ${envio.error}` }
+
+    await logAudit({
+      action: "update",
+      entity: "profiles",
+      entity_id: existente.id,
+      after: { recuperacion_enviada: email, restaurado: !!existente.deleted_at },
+    })
+
+    refrescar()
+    return {
+      ok: true,
+      mensaje: existente.deleted_at
+        ? "Ya existía y estaba eliminada: se restauró y se le envió el correo."
+        : "Ya existía: se le envió el correo para definir su contraseña.",
+    }
+  }
+
   const { data: userId, error } = await supabase.rpc("admin_create_user", {
     p_email: email,
     p_full_name: full_name,
