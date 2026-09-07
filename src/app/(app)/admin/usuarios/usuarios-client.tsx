@@ -233,17 +233,23 @@ export function UsuariosClient({ users, meId }: { users: UserRow[]; meId: string
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           {eliminado ? (
-                            <DropdownMenuItem
-                              onSelect={() =>
-                                correr(
-                                  () => restoreUser(profile.id),
-                                  `${profile.full_name} restaurado`,
-                                )
-                              }
-                            >
-                              <RotateCcw className="size-4" />
-                              Restaurar acceso
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuItem onSelect={() => setAClave(profile)}>
+                                <KeyRound className="size-4" />
+                                Restaurar con contraseña nueva
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={() =>
+                                  correr(
+                                    () => restoreUser(profile.id),
+                                    `${profile.full_name} restaurado`,
+                                  )
+                                }
+                              >
+                                <RotateCcw className="size-4" />
+                                Restaurar con la que tenía
+                              </DropdownMenuItem>
+                            </>
                           ) : (
                             <>
                               <DropdownMenuItem onSelect={() => setAEditar(profile)}>
@@ -640,7 +646,9 @@ function ClaveDialog({ user, onClose }: { user: UserRow | null; onClose: () => v
         <DialogHeader>
           <DialogTitle>Contraseña de {user?.full_name}</DialogTitle>
           <DialogDescription>
-            Reemplaza la que tenía. Dictásela: la puede cambiar después desde su menú.
+            {user?.deleted_at
+              ? "La cuenta vuelve a tener acceso con esta contraseña. Dictásela: la puede cambiar después desde su menú."
+              : "Reemplaza la que tenía. Dictásela: la puede cambiar después desde su menú."}
           </DialogDescription>
         </DialogHeader>
 
@@ -671,7 +679,11 @@ function ClaveDialog({ user, onClose }: { user: UserRow | null; onClose: () => v
                   toast.error(r.error)
                   return
                 }
-                toast.success(`Contraseña de ${user.full_name} definida`)
+                toast.success(
+                  user.deleted_at
+                    ? `${user.full_name} restaurado con contraseña nueva`
+                    : `Contraseña de ${user.full_name} definida`,
+                )
                 setPassword("")
                 onClose()
               })

@@ -120,9 +120,10 @@ export async function createUser(input: {
 }
 
 /**
- * Le pone una contraseña nueva a una cuenta. Es la única forma de recuperar
- * el acceso cuando alguien la olvida: no hay correo. Lo hace
- * `admin_set_password` en Postgres, solo para el super admin.
+ * Le pone una contraseña nueva a una cuenta, restaurándola si estaba
+ * eliminada. Es la única forma de recuperar el acceso cuando alguien la
+ * olvida: no hay correo. Lo hace `admin_set_password` en Postgres, solo para
+ * el super admin.
  */
 export async function setUserPassword(userId: string, password: string): Promise<Result> {
   await requireSuperAdmin()
@@ -131,6 +132,19 @@ export async function setUserPassword(userId: string, password: string): Promise
   }
 
   const supabase = await createClient()
+
+  // Una cuenta eliminada vuelve con la contraseña nueva: es el camino para
+  // quien regresa.
+  const { data: perfil } = await supabase
+    .from("profiles")
+    .select("deleted_at")
+    .eq("id", userId)
+    .single()
+  if (perfil?.deleted_at) {
+    const restauro = await restoreUser(userId)
+    if (!restauro.ok) return restauro
+  }
+
   const { error } = await supabase.rpc("admin_set_password", {
     target_user: userId,
     p_password: password,
