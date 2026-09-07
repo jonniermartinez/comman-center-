@@ -59,3 +59,7 @@ skills-lock.json
 /playwright-report/
 /blob-report/
 /.auth/
+
+# Video demo: lo grabado pesa y se regenera
+tools/demo/salida/
+tools/demo/demo.env
