@@ -46,10 +46,15 @@ Para crearlo:
 
 Tres cosas que no se pueden hacer por SQL y hay que dejar listas:
 
-1. **Apagar el registro público.** Authentication → Sign In / Providers → Email →
-   *Allow new users to sign up* en **off**. Si queda encendido, cualquiera con la
-   clave publicable (que va en el navegador) puede crearse una cuenta. No vería
-   datos —RLS se lo niega— pero ensuciaría la tabla de usuarios.
+1. **Registro público con código.** Authentication → Sign In / Providers →
+   Email: *Allow new users to sign up* en **on** y *Confirm email* en **on**.
+   Cualquiera se crea la cuenta en `/registro`; nace como asesor sin empresas
+   (el trigger ignora el rol que venga en la metadata de un alta pública) y
+   ve la aplicación vacía hasta que el super admin lo asigne. La plantilla
+   *Confirm signup* (Authentication → Emails → Templates) debe mostrar el
+   código y no el enlace: `{{ .Token }}` en el cuerpo, en vez de
+   `{{ .ConfirmationURL }}`. La expiración del código se ajusta en *Email OTP
+   Expiration* (por defecto una hora).
 2. **SMTP propio.** El remitente por defecto de Supabase está limitado a unos
    pocos correos por hora y no sirve en producción: las invitaciones no llegan.
    Configurar Resend, SES o similar en Authentication → Emails → SMTP Settings.
@@ -73,11 +78,12 @@ perfil sigue en `invitado` (lo marca `raw_user_meta_data.invitado`) hasta el
 primer inicio de sesión, que es cuando canjea el enlace. En Admin → Usuarios
 hay "Reenviar invitación" para quien todavía no ha entrado.
 
-Desde la migración 022, crear usuarios desde el panel de Supabase (Add user)
-solo funciona para el primero: el trigger `handle_new_auth_user` rechaza
-cualquier alta que no venga de `admin_create_user`, que es la función que usa
-la app. Es la misma regla de "solo por invitación", pero verificada por la
-base y no por un ajuste del panel.
+Desde la migración 033 el trigger `handle_new_auth_user` acepta cualquier
+alta. Lo que sigue controlando es el rol: solo lo respeta cuando la alta viene
+de `admin_create_user` (que pone la marca `app.alta_autorizada`); un registro
+público siempre nace como asesor, sin importar lo que traiga la metadata.
+El perfil queda en `invitado` hasta que Auth confirma el correo con el código,
+y ahí `handle_auth_user_confirmed` lo pasa a `activo`.
 
 ## 3b. Comprobantes de pago
 

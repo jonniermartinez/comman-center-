@@ -34,9 +34,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
     <Card>
       <CardHeader>
         <CardTitle>Entrar</CardTitle>
-        <CardDescription>
-          Las cuentas las crea el administrador. Si no tienes una, pídesela.
-        </CardDescription>
+        <CardDescription>Con tu correo y tu contraseña.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {error !== "sin-perfil" && <SessionBounce next={typeof next === "string" ? next : undefined} />}
@@ -55,7 +53,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           </Alert>
         )}
         <LoginForm next={typeof next === "string" ? next : undefined} />
-        <p className="text-center text-xs text-muted-foreground">
+        <p className="flex justify-between text-xs text-muted-foreground">
+          <Link href="/registro" className="underline underline-offset-4 hover:text-foreground">
+            Crear cuenta
+          </Link>
           <Link href="/recuperar" className="underline underline-offset-4 hover:text-foreground">
             Olvidé mi contraseña
           </Link>
