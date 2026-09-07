@@ -1,6 +1,6 @@
 "use client"
 
-import { Info, KeyRound, MoreHorizontal, Pencil, RotateCcw, Trash2, UserPlus } from "lucide-react"
+import { Info, KeyRound, MoreHorizontal, Pencil, RotateCcw, Sparkles, Trash2, UserPlus } from "lucide-react"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
@@ -54,6 +54,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { generarClave } from "@/lib/clave"
 import { formatDate, initials } from "@/lib/format"
 import {
   changeUserEmail,
@@ -431,14 +432,20 @@ function NuevoUsuarioDialog() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="clave">Contraseña</Label>
-            <Input
-              id="clave"
-              type="text"
-              autoComplete="off"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mínimo 8 caracteres"
-            />
+            <div className="flex gap-2">
+              <Input
+                id="clave"
+                type="text"
+                autoComplete="off"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 8 caracteres"
+              />
+              <Button type="button" variant="outline" onClick={() => setPassword(generarClave())}>
+                <Sparkles className="size-4" />
+                Generar
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
               Se ve en claro para que la puedas dictar. La persona la cambia después desde su menú.
             </p>
@@ -654,15 +661,21 @@ function ClaveDialog({ user, onClose }: { user: UserRow | null; onClose: () => v
 
         <div className="space-y-2">
           <Label htmlFor="clave-nueva">Contraseña nueva</Label>
-          <Input
-            id="clave-nueva"
-            type="text"
-            autoComplete="off"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Mínimo 8 caracteres"
-            autoFocus
-          />
+          <div className="flex gap-2">
+            <Input
+              id="clave-nueva"
+              type="text"
+              autoComplete="off"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mínimo 8 caracteres"
+              autoFocus
+            />
+            <Button type="button" variant="outline" onClick={() => setPassword(generarClave())}>
+              <Sparkles className="size-4" />
+              Generar
+            </Button>
+          </div>
         </div>
 
         <DialogFooter>

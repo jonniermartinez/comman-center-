@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { generarClave } from "@/lib/clave"
 import { logAudit } from "@/lib/data/audit"
 import { requireSuperAdmin } from "@/lib/auth/session"
 
@@ -342,17 +343,6 @@ function usuarioDesde(nombre: string) {
     .replace(/^\.+|\.+$/g, "")
 }
 
-/** Contraseña temporal legible: se dicta por teléfono sin equivocarse. */
-function claveTemporal() {
-  const silabas = ["ta", "re", "mi", "sol", "lu", "pa", "ce", "no", "vi", "ka"]
-  const palabra = Array.from(
-    { length: 3 },
-    () => silabas[Math.floor(Math.random() * silabas.length)],
-  ).join("")
-  const numero = Math.floor(1000 + Math.random() * 9000)
-  return `${palabra.charAt(0).toUpperCase()}${palabra.slice(1)}${numero}*`
-}
-
 export interface CuentaCreada {
   staff_id: string
   full_name: string
@@ -411,7 +401,7 @@ export async function createStaffAccounts(
     usados.add(usuario)
 
     const correo = `${usuario}@${empresa.slug}.${DOMINIO_PROVISIONAL}`
-    const clave = claveTemporal()
+    const clave = generarClave()
 
     // `p_confirmado`: sin esto la cuenta nace "invitada" y no puede entrar
     // hasta confirmar un correo que nunca va a llegar.
