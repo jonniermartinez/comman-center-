@@ -59,7 +59,8 @@ function refrescar() {
 }
 
 /**
- * Crea la cuenta y manda la invitación por correo.
+ * Crea la cuenta y le manda el correo de recuperación de contraseña de Auth
+ * para que la persona ponga la suya y entre.
  *
  * El perfil no se inserta acá: lo crea el trigger `on_auth_user_created` a
  * partir de la metadata, así una cuenta creada desde el panel de Supabase
@@ -70,7 +71,6 @@ export async function inviteUser(input: {
   email: string
   phone?: string
   role: UserRole
-  company_ids: string[]
 }): Promise<Result> {
   await requireSuperAdmin()
 
@@ -83,10 +83,9 @@ export async function inviteUser(input: {
   // la función `admin_create_user` de Postgres, que vuelve a verificar que
   // quien llama es super admin: no hay clave de servicio de por medio.
   //
-  // `p_invitado`: el correo queda confirmado desde el inicio. Sin eso, Auth
-  // trata la cuenta como un registro a medias y se niega a mandarle el enlace
-  // ("Signups not allowed"). Entrar sigue siendo imposible sin el enlace: la
-  // contraseña es aleatoria y nadie la conoce.
+  // `p_invitado`: el correo queda confirmado desde el inicio, que es lo que
+  // Auth exige para mandar la recuperación. Entrar sigue siendo imposible sin
+  // ese correo: la contraseña es aleatoria y nadie la conoce.
   const supabase = await createClient()
   const { data: userId, error } = await supabase.rpc("admin_create_user", {
     p_email: email,
@@ -100,10 +99,7 @@ export async function inviteUser(input: {
     return { ok: false, error: error?.message ?? "No se pudo crear el usuario." }
   }
 
-  const asignacion = await asignarEmpresas(userId, input.company_ids, input.role)
-  if (!asignacion.ok) return asignacion
-
-  const envio = await enviarEnlace(email)
+  const envio = await enviarRecuperacion(email)
   if (!envio.ok) {
     return { ok: false, error: `La cuenta quedó creada, pero ${envio.error}` }
   }
@@ -112,7 +108,7 @@ export async function inviteUser(input: {
     action: "create",
     entity: "profiles",
     entity_id: userId,
-    after: { full_name, email, role: input.role, empresas: input.company_ids.length },
+    after: { full_name, email, role: input.role },
   })
 
   refrescar()
@@ -120,119 +116,100 @@ export async function inviteUser(input: {
 }
 
 /**
- * Manda el enlace de un solo uso para entrar y definir la contraseña: el
- * mismo de "olvidé mi clave", solo que lo dispara el super admin. Al
- * canjearlo, Auth registra el primer inicio de sesión y el perfil pasa de
- * invitado a activo.
+ * Manda el correo de recuperación de contraseña de Auth: el mismo de "olvidé
+ * mi clave", solo que lo dispara el super admin. Trae un código de seis
+ * dígitos (y un enlace); con cualquiera de los dos la persona entra a
+ * /definir-clave, pone su contraseña y el perfil pasa de invitado a activo.
  */
-async function enviarEnlace(email: string): Promise<Result> {
-  const { error } = await createMailClient().auth.signInWithOtp({
-    email,
-    options: {
-      shouldCreateUser: false,
-      emailRedirectTo: `${siteUrl()}/auth/confirm?next=/definir-clave`,
-    },
+async function enviarRecuperacion(email: string): Promise<Result> {
+  const { error } = await createMailClient().auth.resetPasswordForEmail(email, {
+    redirectTo: `${siteUrl()}/auth/confirm?next=/definir-clave`,
   })
   if (!error) return { ok: true }
 
-  const msg = error.message.toLowerCase()
-  if (msg.includes("rate limit")) {
+  if (error.message.toLowerCase().includes("rate limit")) {
     return {
       ok: false,
       error:
         "Supabase limitó el envío de correos. Configura un SMTP propio o reintenta en unos minutos.",
     }
   }
-  if (msg.includes("signups not allowed")) {
-    return {
-      ok: false,
-      error:
-        "Auth no reconoce la cuenta como invitada (correo sin confirmar). Aplica la migración 031 y reintenta.",
-    }
-  }
   return { ok: false, error: `el correo no salió: ${error.message}` }
 }
 
 /**
- * Vuelve a mandar la invitación a quien todavía no ha entrado. El enlace
- * anterior queda inservible: Auth solo honra el último.
+ * Manda la recuperación de contraseña a cualquier cuenta con correo real.
+ * Sirve tanto para quien nunca entró como para quien la olvidó. El código o
+ * enlace anterior queda inservible: Auth solo honra el último.
  */
-export async function resendInvite(userId: string): Promise<Result> {
+export async function sendPasswordRecovery(userId: string): Promise<Result> {
   await requireSuperAdmin()
   const supabase = await createClient()
 
   const { data: perfil } = await supabase
     .from("profiles")
-    .select("email, status, full_name")
+    .select("email, deleted_at")
     .eq("id", userId)
     .single()
 
   if (!perfil) return { ok: false, error: "El usuario no existe." }
-  if (perfil.status !== "invitado") {
-    return { ok: false, error: "Esta cuenta ya está activa: no necesita invitación." }
-  }
-  if (perfil.email.endsWith(`.${DOMINIO_PROVISIONAL}`)) {
-    return { ok: false, error: "Es una cuenta provisional: ese correo no existe." }
+  if (perfil.deleted_at) return { ok: false, error: "La cuenta está eliminada." }
+  if (esProvisional(perfil.email)) {
+    return { ok: false, error: "Es un correo provisional: ponle primero el correo real." }
   }
 
-  const envio = await enviarEnlace(perfil.email)
-  if (!envio.ok) return { ok: false, error: `No se pudo reenviar: ${envio.error}` }
+  const envio = await enviarRecuperacion(perfil.email)
+  if (!envio.ok) return { ok: false, error: `No se pudo enviar: ${envio.error}` }
 
   await logAudit({
     action: "update",
     entity: "profiles",
     entity_id: userId,
-    after: { invitacion_reenviada: perfil.email },
+    after: { recuperacion_enviada: perfil.email },
   })
 
   return { ok: true }
 }
 
 /**
- * Asigna al usuario a varias empresas con el mismo rol.
+ * Cambia el correo de una cuenta.
  *
- * Un asesor no puede quedar sin sede (lo impide la restricción
- * `company_users_asesor_con_sede`), así que entra en la sede principal y desde
- * el equipo de la empresa se le mueve si hace falta.
+ * Es lo que cierra el flujo de las cuentas provisionales: alguien entró con un
+ * usuario terminado en `.invalid` y ahora sí mandó su correo. Cambiarlo no
+ * mueve nada más —la cuenta conserva su identificador— así que su histórico,
+ * sus empresas y sus metas siguen donde estaban. Lo hace `admin_change_email`
+ * en Postgres, que vuelve a verificar que quien llama es super admin.
  */
-async function asignarEmpresas(
-  userId: string,
-  companyIds: string[],
-  role: UserRole,
-): Promise<Result> {
-  if (role === "super_admin" || companyIds.length === 0) return { ok: true }
+export async function changeUserEmail(userId: string, email: string): Promise<Result> {
+  await requireSuperAdmin()
+
+  const correo = email.trim().toLowerCase()
+  if (!/.+@.+\..+/.test(correo)) return { ok: false, error: "El correo no es válido." }
+  if (esProvisional(correo)) return { ok: false, error: "Ese correo es provisional." }
 
   const supabase = await createClient()
-  const rolEnEmpresa = role === "coordinador" ? "coordinador" : "asesor"
+  const { data: antes } = await supabase.from("profiles").select("email").eq("id", userId).single()
+  if (!antes) return { ok: false, error: "El usuario no existe." }
+  if (antes.email === correo) return { ok: true }
 
-  const { data: sedes } = await supabase
-    .from("branches")
-    .select("id, company_id, is_primary")
-    .in("company_id", companyIds)
-    .eq("status", "activa")
-
-  const filas = companyIds.map((company_id) => {
-    const deLaEmpresa = (sedes ?? []).filter((b) => b.company_id === company_id)
-    const principal = deLaEmpresa.find((b) => b.is_primary) ?? deLaEmpresa[0]
-    return {
-      company_id,
-      user_id: userId,
-      role: rolEnEmpresa as UserRole,
-      branch_id: principal?.id ?? null,
-      removed_at: null,
+  const { error } = await supabase.rpc("admin_change_email", { target_user: userId, p_email: correo })
+  if (error) {
+    if (error.message.includes("Ya existe")) {
+      return { ok: false, error: "Ya hay una cuenta con ese correo." }
     }
-  })
-
-  const sinSede = filas.find((f) => rolEnEmpresa === "asesor" && !f.branch_id)
-  if (sinSede) {
-    return { ok: false, error: "Una de las empresas no tiene sedes activas. Crea una primero." }
+    return { ok: false, error: error.message }
   }
 
-  const { error } = await supabase
-    .from("company_users")
-    .upsert(filas, { onConflict: "company_id,user_id" })
+  await logAudit({
+    action: "update",
+    entity: "profiles",
+    entity_id: userId,
+    before: { email: antes.email },
+    after: { email: correo },
+  })
 
-  return error ? { ok: false, error: error.message } : { ok: true }
+  refrescar()
+  return { ok: true }
 }
 
 /** Cambia el rol global. El super admin no puede degradarse a sí mismo. */
@@ -351,90 +328,6 @@ export async function updateUserProfile(
 }
 
 /**
- * Deja al usuario exactamente en las empresas indicadas.
- *
- * Lo que se quita no se borra: se marca `removed_at`. El usuario deja de ver la
- * empresa, pero sus registros previos siguen atados a ella y los reportes
- * históricos no cambian.
- */
-export async function setUserCompanies(
-  userId: string,
-  asignaciones: { company_id: string; role: "coordinador" | "asesor" }[],
-): Promise<Result> {
-  const session = await requireSuperAdmin()
-  const supabase = await createClient()
-
-  const companyIds = asignaciones.map((a) => a.company_id)
-
-  // Un asesor no puede quedar sin sede: entra en la principal de cada empresa y
-  // desde el equipo de la empresa se le mueve si hace falta.
-  const { data: sedes } = companyIds.length
-    ? await supabase
-        .from("branches")
-        .select("id, company_id, is_primary")
-        .in("company_id", companyIds)
-        .eq("status", "activa")
-    : { data: [] }
-
-  const { data: actuales } = await supabase
-    .from("company_users")
-    .select("company_id, branch_id")
-    .eq("user_id", userId)
-
-  const filas = asignaciones.map((a) => {
-    const deLaEmpresa = (sedes ?? []).filter((b) => b.company_id === a.company_id)
-    const actual = (actuales ?? []).find((c) => c.company_id === a.company_id)
-    const principal = deLaEmpresa.find((b) => b.is_primary) ?? deLaEmpresa[0]
-    return {
-      company_id: a.company_id,
-      user_id: userId,
-      role: a.role,
-      // Se respeta la sede que ya tenía; solo se resuelve una si no hay.
-      branch_id: actual?.branch_id ?? principal?.id ?? null,
-      removed_at: null,
-      assigned_by: session.profile.id,
-    }
-  })
-
-  const sinSede = filas.find((f) => f.role === "asesor" && !f.branch_id)
-  if (sinSede) {
-    return { ok: false, error: "Una de las empresas no tiene sedes activas. Crea una primero." }
-  }
-
-  if (filas.length) {
-    const { error } = await supabase
-      .from("company_users")
-      .upsert(filas, { onConflict: "company_id,user_id" })
-    if (error) return { ok: false, error: error.message }
-  }
-
-  // Las que ya no están seleccionadas salen, sin borrar la fila.
-  const quitar = (actuales ?? [])
-    .map((c) => c.company_id)
-    .filter((id) => !companyIds.includes(id))
-
-  if (quitar.length) {
-    const { error } = await supabase
-      .from("company_users")
-      .update({ removed_at: new Date().toISOString() })
-      .eq("user_id", userId)
-      .in("company_id", quitar)
-      .is("removed_at", null)
-    if (error) return { ok: false, error: error.message }
-  }
-
-  await logAudit({
-    action: "assign",
-    entity: "company_users",
-    entity_id: userId,
-    after: { empresas: filas.length, quitadas: quitar.length },
-  })
-
-  refrescar()
-  return { ok: true }
-}
-
-/**
  * Dominio de los correos provisionales.
  *
  * `.invalid` está reservado por la RFC 2606 justamente para esto: no existe ni
@@ -442,6 +335,10 @@ export async function setUserCompanies(
  * persona real ni va a mandar correo a un desconocido por un dedazo.
  */
 const DOMINIO_PROVISIONAL = "invalid"
+
+function esProvisional(email: string) {
+  return email.toLowerCase().endsWith(`.${DOMINIO_PROVISIONAL}`)
+}
 
 /** Usuario a partir del nombre: "Patiño Erika" → "patino.erika". */
 function usuarioDesde(nombre: string) {

@@ -8,7 +8,7 @@ export default function RecuperarPage() {
     <Card>
       <CardHeader>
         <CardTitle>Restablecer contraseña</CardTitle>
-        <CardDescription>Te llega un enlace para entrar y definir una nueva.</CardDescription>
+        <CardDescription>Te llega un código al correo para entrar y definir una nueva.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <RecoverForm />

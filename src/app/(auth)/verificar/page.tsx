@@ -19,7 +19,7 @@ export default async function VerificarPage({ searchParams }: PageProps<"/verifi
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <VerifyForm email={email} />
+        <VerifyForm email={email} tipo="signup" />
         <p className="text-center text-xs text-muted-foreground">
           <Link href="/registro" className="underline underline-offset-4 hover:text-foreground">
             Usar otro correo

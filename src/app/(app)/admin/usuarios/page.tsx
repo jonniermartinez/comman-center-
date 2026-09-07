@@ -3,7 +3,7 @@ import { Info } from "lucide-react"
 import { UsuariosClient } from "./usuarios-client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { requireSession } from "@/lib/auth/session"
-import { listActiveCompanies, listUsers } from "@/lib/data/users"
+import { listUsers } from "@/lib/data/users"
 
 /**
  * Alta y baja de cuentas. Solo el super admin.
@@ -25,7 +25,7 @@ export default async function AdminUsuariosPage() {
     )
   }
 
-  const [users, companies] = await Promise.all([listUsers(), listActiveCompanies()])
+  const users = await listUsers()
 
-  return <UsuariosClient users={users} companies={companies} meId={session.profile.id} />
+  return <UsuariosClient users={users} meId={session.profile.id} />
 }

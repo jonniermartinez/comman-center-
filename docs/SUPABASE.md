@@ -63,20 +63,22 @@ Tres cosas que no se pueden hacer por SQL y hay que dejar listas:
 3. **URLs de redirección.** Authentication → URL Configuration: agregar
    `http://localhost:3000/**` y el dominio de producción, o los enlaces del
    correo no vuelven a la app.
-4. **Plantilla del enlace mágico.** La invitación llega por el correo de
-   *Magic Link* (Authentication → Emails → Templates): su enlace debe apuntar a
-   `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink&next=/definir-clave`,
-   igual que el resto de plantillas. Con el enlace por defecto de Supabase el
-   token no llega a la ruta `/auth/confirm` y la invitación muere en
-   "enlace inválido".
+4. **Plantilla de Reset Password.** Es el correo que llega tanto por
+   "olvidé mi contraseña" como cuando el super admin crea una cuenta o le da
+   "Enviar recuperación de contraseña" en Admin → Usuarios. Debe traer el
+   código, `{{ .Token }}`, que se escribe en `/recuperar/codigo`. Puede traer
+   además el enlace, apuntando a
+   `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/definir-clave`
+   y no a `{{ .ConfirmationURL }}`: con el enlace por defecto el token muere
+   si el cliente de correo lo previsualiza. Con el código eso no pasa.
 
-Desde la migración 031 la cuenta invitada nace con el correo **confirmado**
-y una contraseña aleatoria. Antes nacía sin confirmar y GoTrue la trataba
-como un registro a medias: al pedir el enlace mágico respondía
-"Signups not allowed for this instance" y la invitación nunca salía. El
-perfil sigue en `invitado` (lo marca `raw_user_meta_data.invitado`) hasta el
-primer inicio de sesión, que es cuando canjea el enlace. En Admin → Usuarios
-hay "Reenviar invitación" para quien todavía no ha entrado.
+La cuenta que crea el super admin nace con el correo **confirmado** y una
+contraseña aleatoria (migración 031), que es lo que Auth exige para mandar
+la recuperación. El perfil queda en `invitado` hasta el primer inicio de
+sesión, cuando canjea el código. Desde la migración 034 el super admin
+también puede cambiarle el correo a una cuenta (`admin_change_email`): es
+como se les da acceso a las cuentas del equipo que nacieron con un correo
+provisional `.invalid`.
 
 Desde la migración 033 el trigger `handle_new_auth_user` acepta cualquier
 alta. Lo que sigue controlando es el rol: solo lo respeta cuando la alta viene

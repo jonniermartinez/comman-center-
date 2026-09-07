@@ -94,44 +94,54 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
   redirect(`/verificar?email=${encodeURIComponent(email)}`)
 }
 
-/** Canjea el código de seis dígitos que llegó al correo y abre sesión. */
+/**
+ * Canjea el código de seis dígitos que llegó al correo y abre sesión.
+ *
+ * `signup` confirma una cuenta recién creada y entra. `recovery` es el de
+ * "olvidé mi contraseña" (también el que manda el super admin al crear una
+ * cuenta): entra y va a definir la contraseña nueva.
+ */
 export async function verifyEmailCode(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase()
   const token = String(formData.get("token") ?? "").replace(/\D/g, "")
+  const tipo = String(formData.get("tipo") ?? "signup") === "recovery" ? "recovery" : "signup"
 
   if (!correoValido(email)) return { error: "El correo no es válido." }
   if (token.length !== 6) return { error: "El código tiene seis dígitos." }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.verifyOtp({ email, token, type: "signup" })
+  const { error } = await supabase.auth.verifyOtp({ email, token, type: tipo })
 
   if (error) {
     return { error: "El código no es válido o ya caducó. Pide uno nuevo." }
   }
 
   revalidatePath("/", "layout")
-  redirect("/empresas")
+  redirect(tipo === "recovery" ? "/definir-clave" : "/empresas")
 }
 
-/** Vuelve a mandar el código de confirmación. */
-export async function resendSignupCode(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+/** Vuelve a mandar el código, de confirmación o de recuperación según el caso. */
+export async function resendCode(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase()
+  const tipo = String(formData.get("tipo") ?? "signup") === "recovery" ? "recovery" : "signup"
   if (!correoValido(email)) return { error: "El correo no es válido." }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.resend({ type: "signup", email })
+  const { error } =
+    tipo === "recovery"
+      ? await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${siteUrl()}/auth/confirm?next=/definir-clave`,
+        })
+      : await supabase.auth.resend({ type: "signup", email })
 
   if (error?.message.toLowerCase().includes("rate limit")) {
     return { error: "Se enviaron demasiados correos seguidos. Espera unos minutos y reintenta." }
   }
   // Misma respuesta exista o no la cuenta, por la misma razón que en recuperar.
-  return { ok: "Si ese correo está pendiente de confirmar, le llega un código nuevo." }
+  return { ok: "Si ese correo tiene cuenta, le llega un código nuevo." }
 }
 
 export async function signOut() {
@@ -156,7 +166,7 @@ export async function updatePassword(
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: "El enlace expiró. Pide una invitación nueva." }
+  if (!user) return { error: "La sesión expiró. Pide un código nuevo." }
 
   const { error } = await supabase.auth.updateUser({ password })
   if (error) return { error: error.message }
@@ -165,7 +175,11 @@ export async function updatePassword(
   redirect("/empresas")
 }
 
-/** Envía el correo para restablecer la contraseña. */
+/**
+ * Envía el correo para restablecer la contraseña. Trae un código de seis
+ * dígitos y un enlace; el código se canjea en /recuperar/codigo y el enlace
+ * cae en /auth/confirm. Los dos terminan en /definir-clave.
+ */
 export async function requestPasswordReset(
   _prev: ActionState,
   formData: FormData,
@@ -178,7 +192,7 @@ export async function requestPasswordReset(
     redirectTo: `${siteUrl()}/auth/confirm?next=/definir-clave`,
   })
 
-  // Siempre la misma respuesta, exista o no la cuenta: si no, este formulario
-  // serviría para averiguar quién tiene usuario.
-  return { ok: "Si ese correo tiene cuenta, le llegará un enlace para entrar." }
+  // Se sigue a la pantalla del código exista o no la cuenta: si no, este
+  // formulario serviría para averiguar quién tiene usuario.
+  redirect(`/recuperar/codigo?email=${encodeURIComponent(email)}`)
 }

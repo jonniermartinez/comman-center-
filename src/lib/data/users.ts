@@ -48,14 +48,3 @@ export async function listUsers(): Promise<UserRow[]> {
       })),
   }))
 }
-
-/** Empresas activas, para el selector de asignaciones. */
-export async function listActiveCompanies() {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from("companies")
-    .select("id, name, slug")
-    .eq("status", "activa")
-    .order("name")
-  return data ?? []
-}

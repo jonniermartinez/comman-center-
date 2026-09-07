@@ -1,6 +1,6 @@
 "use client"
 
-import { Info, MoreHorizontal, Pencil, RotateCcw, Send, Trash2, UserPlus } from "lucide-react"
+import { Info, KeyRound, MoreHorizontal, Pencil, RotateCcw, Trash2, UserPlus } from "lucide-react"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
@@ -20,7 +20,6 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -57,12 +56,12 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDate, initials } from "@/lib/format"
 import {
+  changeUserEmail,
   deleteUser,
   inviteUser,
-  resendInvite,
   restoreUser,
+  sendPasswordRecovery,
   setUserActive,
-  setUserCompanies,
   setUserRole,
   updateUserProfile,
 } from "@/lib/data/users-actions"
@@ -70,17 +69,8 @@ import type { UserRow } from "@/lib/data/users"
 import { ROLE_LABELS, STATUS_LABELS, type UserRole } from "@/lib/store/types"
 
 type Vista = "activos" | "eliminados"
-type Empresa = { id: string; name: string; slug: string }
 
-export function UsuariosClient({
-  users,
-  companies,
-  meId,
-}: {
-  users: UserRow[]
-  companies: Empresa[]
-  meId: string
-}) {
+export function UsuariosClient({ users, meId }: { users: UserRow[]; meId: string }) {
   const [vista, setVista] = useState<Vista>("activos")
   const [aEliminar, setAEliminar] = useState<UserRow | null>(null)
   const [aEditar, setAEditar] = useState<UserRow | null>(null)
@@ -105,7 +95,7 @@ export function UsuariosClient({
     <>
       <PageHeader
         title="Usuarios"
-        description="Alta, habilitación y baja de cuentas. No hay registro público: los usuarios los crea el super admin."
+        description="Alta, habilitación y baja de cuentas. Las empresas se asignan desde el equipo de cada una."
         actions={
           <>
             <Tabs value={vista} onValueChange={(v) => setVista(v as Vista)}>
@@ -116,7 +106,7 @@ export function UsuariosClient({
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            <NuevoUsuarioDialog companies={companies} />
+            <NuevoUsuarioDialog />
           </>
         }
       />
@@ -257,21 +247,19 @@ export function UsuariosClient({
                             <>
                               <DropdownMenuItem onSelect={() => setAEditar(profile)}>
                                 <Pencil className="size-4" />
-                                Editar y asignar empresas
+                                Editar
                               </DropdownMenuItem>
-                              {profile.status === "invitado" && (
-                                <DropdownMenuItem
-                                  onSelect={() =>
-                                    correr(
-                                      () => resendInvite(profile.id),
-                                      `Invitación reenviada a ${profile.email}`,
-                                    )
-                                  }
-                                >
-                                  <Send className="size-4" />
-                                  Reenviar invitación
-                                </DropdownMenuItem>
-                              )}
+                              <DropdownMenuItem
+                                onSelect={() =>
+                                  correr(
+                                    () => sendPasswordRecovery(profile.id),
+                                    `Correo de recuperación enviado a ${profile.email}`,
+                                  )
+                                }
+                              >
+                                <KeyRound className="size-4" />
+                                Enviar recuperación de contraseña
+                              </DropdownMenuItem>
                               {profile.status === "inactivo" && (
                                 <>
                                   <DropdownMenuSeparator />
@@ -322,7 +310,7 @@ export function UsuariosClient({
 
       <EditarUsuarioDialog
         user={aEditar}
-        companies={companies}
+        meId={meId}
         onClose={() => setAEditar(null)}
       />
 
@@ -364,12 +352,17 @@ export function UsuariosClient({
   )
 }
 
-function NuevoUsuarioDialog({ companies }: { companies: Empresa[] }) {
+/**
+ * Alta de una cuenta: nombre, correo, teléfono y rol. Auth le manda el
+ * correo de recuperación de contraseña; con él la persona pone la suya y
+ * entra. Las empresas se le asignan después, desde el equipo de cada una.
+ */
+function NuevoUsuarioDialog() {
   const [open, setOpen] = useState(false)
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
   const [role, setRole] = useState<UserRole>("asesor")
-  const [seleccionadas, setSeleccionadas] = useState<string[]>([])
   const [pendiente, startTransition] = useTransition()
 
   const valido = fullName.trim().length > 2 && /.+@.+\..+/.test(email)
@@ -377,8 +370,8 @@ function NuevoUsuarioDialog({ companies }: { companies: Empresa[] }) {
   function limpiar() {
     setFullName("")
     setEmail("")
+    setPhone("")
     setRole("asesor")
-    setSeleccionadas([])
   }
 
   return (
@@ -399,76 +392,52 @@ function NuevoUsuarioDialog({ companies }: { companies: Empresa[] }) {
         <DialogHeader>
           <DialogTitle>Nuevo usuario</DialogTitle>
           <DialogDescription>
-            Se le envía una invitación por correo. Queda activo cuando define su contraseña.
+            Le llega un correo para definir su contraseña. Con ella entra.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre completo</Label>
-              <Input
-                id="nombre"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Juan Nuñez"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="juan.nunez@tramitesbuga.co"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="rol">Rol global</Label>
-              <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
-                <SelectTrigger id="rol">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="asesor">Asesor</SelectItem>
-                  <SelectItem value="coordinador">Coordinador</SelectItem>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {role !== "super_admin" && (
-              <div className="space-y-2">
-                <Label>Empresas asignadas</Label>
-                {companies.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    Todavía no hay empresas. Puedes crear el usuario ahora y asignarlo después.
-                  </p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {companies.map((c) => (
-                      <label key={c.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                        <Checkbox
-                          checked={seleccionadas.includes(c.id)}
-                          onCheckedChange={() =>
-                            setSeleccionadas((prev) =>
-                              prev.includes(c.id)
-                                ? prev.filter((x) => x !== c.id)
-                                : [...prev, c.id],
-                            )
-                          }
-                        />
-                        {c.name}
-                      </label>
-                    ))}
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Entra en la sede principal de cada empresa. Se ajusta desde el equipo de la
-                  empresa.
-                </p>
-              </div>
-            )}
+          <div className="space-y-2">
+            <Label htmlFor="nombre">Nombre completo</Label>
+            <Input
+              id="nombre"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Juan Nuñez"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Correo</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="juan.nunez@tramitesbuga.co"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="telefono">Teléfono (opcional)</Label>
+            <Input
+              id="telefono"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="300 000 0000"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="rol">Rol global</Label>
+            <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
+              <SelectTrigger id="rol">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="asesor">Asesor</SelectItem>
+                <SelectItem value="coordinador">Coordinador</SelectItem>
+                <SelectItem value="super_admin">Super Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <DialogFooter>
@@ -479,25 +448,20 @@ function NuevoUsuarioDialog({ companies }: { companies: Empresa[] }) {
             disabled={!valido || pendiente}
             onClick={() =>
               startTransition(async () => {
-                const r = await inviteUser({
-                  full_name: fullName,
-                  email,
-                  role,
-                  company_ids: role === "super_admin" ? [] : seleccionadas,
-                })
+                const r = await inviteUser({ full_name: fullName, email, phone, role })
                 if (!r.ok) {
                   toast.error(r.error ?? "No se pudo crear el usuario.")
                   return
                 }
                 toast.success(`${fullName} creado`, {
-                  description: "Se le envió la invitación por correo.",
+                  description: "Se le envió el correo para definir su contraseña.",
                 })
                 limpiar()
                 setOpen(false)
               })
             }
           >
-            {pendiente ? "Creando…" : "Crear e invitar"}
+            {pendiente ? "Creando…" : "Crear y enviar correo"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -506,27 +470,27 @@ function NuevoUsuarioDialog({ companies }: { companies: Empresa[] }) {
 }
 
 /**
- * Edición de un usuario: sus datos y en qué empresas entra.
+ * Edición de un usuario: nombre, correo, teléfono y rol global.
  *
- * El rol dentro de cada empresa se elige acá porque puede no ser el mismo en
- * todas: alguien coordina una y asesora en otra. La sede no se toca desde acá
- * —se hereda la que ya tenía, o la principal— porque quien la conoce es el
- * equipo de esa empresa, y ahí está la pantalla para moverla.
+ * Cambiar el correo es lo que cierra el flujo de las cuentas provisionales:
+ * alguien entró con un usuario terminado en `.invalid` y ahora sí mandó su
+ * correo. La cuenta conserva su identificador, así que su histórico, sus
+ * empresas y sus metas siguen donde estaban. Las empresas no se tocan acá:
+ * quien conoce la sede es el equipo de cada empresa, y ahí está la pantalla.
  */
 function EditarUsuarioDialog({
   user,
-  companies,
+  meId,
   onClose,
 }: {
   user: UserRow | null
-  companies: Empresa[]
+  meId: string
   onClose: () => void
 }) {
   const [fullName, setFullName] = useState("")
+  const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
-  const [asignaciones, setAsignaciones] = useState<
-    Record<string, "coordinador" | "asesor">
-  >({})
+  const [role, setRole] = useState<UserRole>("asesor")
   const [pendiente, startTransition] = useTransition()
 
   // Se resiembra el formulario cada vez que se abre con otro usuario. Se hace
@@ -536,28 +500,21 @@ function EditarUsuarioDialog({
   if (user && cargado !== user.id) {
     setCargado(user.id)
     setFullName(user.full_name)
+    setEmail(user.email)
     setPhone(user.phone ?? "")
-    setAsignaciones(
-      Object.fromEntries(
-        user.companies.map((c) => [
-          c.company_id,
-          c.role === "coordinador" ? "coordinador" : "asesor",
-        ]),
-      ),
-    )
+    setRole(user.role)
   }
   if (!user && cargado !== null) setCargado(null)
 
-  const esSuperAdmin = user?.role === "super_admin"
+  const esYo = user?.id === meId
+  const valido = fullName.trim().length > 2 && /.+@.+\..+/.test(email)
 
   return (
     <Dialog open={!!user} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar {user?.full_name}</DialogTitle>
-          <DialogDescription>
-            Datos de la cuenta y empresas a las que tiene acceso.
-          </DialogDescription>
+          <DialogDescription>Datos de la cuenta y rol global.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -570,6 +527,18 @@ function EditarUsuarioDialog({
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="editar-correo">Correo</Label>
+            <Input
+              id="editar-correo"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Es con el que entra y al que le llega la recuperación de contraseña.
+            </p>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="editar-telefono">Teléfono (opcional)</Label>
             <Input
               id="editar-telefono"
@@ -578,66 +547,21 @@ function EditarUsuarioDialog({
               placeholder="300 000 0000"
             />
           </div>
-
           <div className="space-y-2">
-            <Label>Empresas asignadas</Label>
-            {esSuperAdmin && (
-              <p className="text-xs text-muted-foreground">
-                Un super admin ve todas las empresas sin necesidad de asignación. Asignarlo solo
-                sirve para que aparezca como responsable en los formularios de captura.
-              </p>
+            <Label htmlFor="editar-rol">Rol global</Label>
+            <Select value={role} onValueChange={(v) => setRole(v as UserRole)} disabled={esYo}>
+              <SelectTrigger id="editar-rol">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="asesor">Asesor</SelectItem>
+                <SelectItem value="coordinador">Coordinador</SelectItem>
+                <SelectItem value="super_admin">Super Admin</SelectItem>
+              </SelectContent>
+            </Select>
+            {esYo && (
+              <p className="text-xs text-muted-foreground">Tu propio rol no se cambia desde acá.</p>
             )}
-            {companies.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Todavía no hay empresas creadas.</p>
-            ) : (
-              <div className="divide-y rounded-lg border">
-                {companies.map((c) => {
-                  const activa = c.id in asignaciones
-                  return (
-                    <div key={c.id} className="flex items-center gap-3 px-3 py-2">
-                      <Checkbox
-                        id={`empresa-${c.id}`}
-                        checked={activa}
-                        onCheckedChange={() =>
-                          setAsignaciones((prev) => {
-                            const next = { ...prev }
-                            if (activa) delete next[c.id]
-                            else next[c.id] = "asesor"
-                            return next
-                          })
-                        }
-                      />
-                      <Label htmlFor={`empresa-${c.id}`} className="flex-1 cursor-pointer text-sm font-normal">
-                        {c.name}
-                      </Label>
-                      {activa && (
-                        <Select
-                          value={asignaciones[c.id]}
-                          onValueChange={(v) =>
-                            setAsignaciones((prev) => ({
-                              ...prev,
-                              [c.id]: v as "coordinador" | "asesor",
-                            }))
-                          }
-                        >
-                          <SelectTrigger size="sm" className="w-36">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="asesor">Asesor</SelectItem>
-                            <SelectItem value="coordinador">Coordinador</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Quitar una empresa no borra nada: el usuario deja de verla, pero sus registros
-              siguen contando en los reportes de esa empresa.
-            </p>
           </div>
         </div>
 
@@ -646,7 +570,7 @@ function EditarUsuarioDialog({
             Cancelar
           </Button>
           <Button
-            disabled={pendiente || fullName.trim().length < 3}
+            disabled={pendiente || !valido}
             onClick={() =>
               startTransition(async () => {
                 if (!user) return
@@ -655,16 +579,19 @@ function EditarUsuarioDialog({
                   toast.error(datos.error)
                   return
                 }
-                const empresas = await setUserCompanies(
-                  user.id,
-                  Object.entries(asignaciones).map(([company_id, role]) => ({
-                    company_id,
-                    role,
-                  })),
-                )
-                if (!empresas.ok) {
-                  toast.error(empresas.error)
-                  return
+                if (email.trim().toLowerCase() !== user.email) {
+                  const correo = await changeUserEmail(user.id, email)
+                  if (!correo.ok) {
+                    toast.error(correo.error)
+                    return
+                  }
+                }
+                if (role !== user.role && !esYo) {
+                  const rol = await setUserRole(user.id, role)
+                  if (!rol.ok) {
+                    toast.error(rol.error)
+                    return
+                  }
                 }
                 toast.success(`${fullName} actualizado`)
                 onClose()
@@ -678,12 +605,3 @@ function EditarUsuarioDialog({
     </Dialog>
   )
 }
-
-/**
- * Cambia el correo de una cuenta.
- *
- * Es lo que cierra el flujo de las cuentas provisionales: alguien entró con un
- * usuario terminado en `.invalid` y ahora sí mandó su correo. Cambiarlo no
- * mueve nada más —la cuenta conserva su identificador— así que su histórico,
- * sus empresas y sus metas siguen donde estaban.
- */

@@ -2195,6 +2195,10 @@ export type Database = {
         Args: { bloquear: boolean; target_user: string }
         Returns: undefined
       }
+      admin_change_email: {
+        Args: { p_email: string; target_user: string }
+        Returns: undefined
+      }
       admin_create_user: {
         Args: {
           p_confirmado?: boolean

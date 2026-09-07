@@ -41,7 +41,7 @@ function SubmitButton() {
   return (
     <Button type="submit" className="w-full" disabled={pending}>
       <Mail className="size-4" />
-      {pending ? "Enviando…" : "Enviar enlace"}
+      {pending ? "Enviando…" : "Enviar código"}
     </Button>
   )
 }

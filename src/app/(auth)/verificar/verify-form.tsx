@@ -4,20 +4,21 @@ import { ShieldCheck } from "lucide-react"
 import { useActionState } from "react"
 import { useFormStatus } from "react-dom"
 
-import { resendSignupCode, verifyEmailCode, type ActionState } from "@/lib/auth/actions"
+import { resendCode, verifyEmailCode, type ActionState } from "@/lib/auth/actions"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export function VerifyForm({ email }: { email: string }) {
+export function VerifyForm({ email, tipo }: { email: string; tipo: "signup" | "recovery" }) {
   const [state, action] = useActionState<ActionState, FormData>(verifyEmailCode, {})
-  const [reenvio, reenviar] = useActionState<ActionState, FormData>(resendSignupCode, {})
+  const [reenvio, reenviar] = useActionState<ActionState, FormData>(resendCode, {})
 
   return (
     <div className="space-y-4">
       <form action={action} className="space-y-4">
         <input type="hidden" name="email" value={email} />
+        <input type="hidden" name="tipo" value={tipo} />
 
         <div className="space-y-2">
           <Label htmlFor="token">Código</Label>
@@ -46,6 +47,7 @@ export function VerifyForm({ email }: { email: string }) {
 
       <form action={reenviar} className="space-y-2 text-center">
         <input type="hidden" name="email" value={email} />
+        <input type="hidden" name="tipo" value={tipo} />
         {reenvio.error && (
           <Alert variant="destructive">
             <AlertDescription>{reenvio.error}</AlertDescription>
