@@ -272,30 +272,20 @@ export function UsuariosClient({
                                   Reenviar invitación
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuSeparator />
-                              {profile.status === "inactivo" ? (
-                                <DropdownMenuItem
-                                  onSelect={() =>
-                                    correr(
-                                      () => setUserActive(profile.id, true),
-                                      `${profile.full_name} activado`,
-                                    )
-                                  }
-                                >
-                                  Activar
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem
-                                  disabled={esYo}
-                                  onSelect={() =>
-                                    correr(
-                                      () => setUserActive(profile.id, false),
-                                      `${profile.full_name} suspendido`,
-                                    )
-                                  }
-                                >
-                                  Suspender acceso
-                                </DropdownMenuItem>
+                              {profile.status === "inactivo" && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onSelect={() =>
+                                      correr(
+                                        () => setUserActive(profile.id, true),
+                                        `${profile.full_name} activado`,
+                                      )
+                                    }
+                                  >
+                                    Activar
+                                  </DropdownMenuItem>
+                                </>
                               )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
