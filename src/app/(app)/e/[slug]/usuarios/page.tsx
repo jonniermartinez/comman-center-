@@ -108,7 +108,11 @@ export default function EquipoPage() {
                 pendientes={members.filter((m) => !m.profile_id).length}
               />
             )}
-            <NuevoComercialDialog companyId={company.id} branches={branches} />
+            <NuevoComercialDialog
+              companyId={company.id}
+              branches={branches}
+              conCuentas={isSuperAdmin}
+            />
           </>
         }
       />
@@ -256,12 +260,18 @@ export default function EquipoPage() {
   )
 }
 
+/** Prefijo con el que se distingue una cuenta de acceso de una ficha de comercial. */
+const CUENTA = "cuenta:"
+
 function NuevoComercialDialog({
   companyId,
   branches,
+  conCuentas,
 }: {
   companyId: string
   branches: { id: string; name: string }[]
+  /** Si además de las fichas se ofrecen las cuentas de acceso sin ficha. */
+  conCuentas: boolean
 }) {
   const db = useDb()
   const [open, setOpen] = useState(false)
@@ -276,6 +286,16 @@ function NuevoComercialDialog({
     db.company_staff.filter((cs) => cs.company_id === companyId).map((cs) => cs.staff_id),
   )
   const disponibles = db.staff.filter((s) => s.active && !yaEnEmpresa.has(s.id))
+
+  // Cuentas creadas desde Admin que todavía no tienen ficha de comercial: si
+  // no se ofrecen acá, un usuario recién creado no aparece en ningún lado y
+  // parece que el buscador "no encuentra a todos".
+  const conFicha = new Set(db.staff.map((s) => s.profile_id).filter(Boolean))
+  const cuentas = conCuentas
+    ? db.profiles
+        .filter((p) => !p.deleted_at && p.status !== "eliminado" && !conFicha.has(p.id))
+        .sort((a, b) => a.full_name.localeCompare(b.full_name, "es"))
+    : []
 
   const valido = existente !== "nuevo" || nombre.trim().length > 2
 
@@ -305,6 +325,10 @@ function NuevoComercialDialog({
               options={[
                 { value: "nuevo", label: "Alguien nuevo" },
                 ...disponibles.map((s) => ({ value: s.id, label: s.full_name })),
+                ...cuentas.map((p) => ({
+                  value: `${CUENTA}${p.id}`,
+                  label: `${p.full_name} · ${p.email}`,
+                })),
               ]}
             />
           </div>
@@ -350,7 +374,11 @@ function NuevoComercialDialog({
                 const r = await addStaffToCompany({
                   company_id: companyId,
                   branch_id: sede || null,
-                  staff_id: existente === "nuevo" ? undefined : existente,
+                  staff_id:
+                    existente === "nuevo" || existente.startsWith(CUENTA) ? undefined : existente,
+                  profile_id: existente.startsWith(CUENTA)
+                    ? existente.slice(CUENTA.length)
+                    : undefined,
                   full_name: existente === "nuevo" ? nombre : undefined,
                 })
                 if (!r.ok) {

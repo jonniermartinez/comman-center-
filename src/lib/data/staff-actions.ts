@@ -37,13 +37,61 @@ export async function addStaffToCompany(input: {
   branch_id: string | null
   /** Persona existente… */
   staff_id?: string
+  /** …o una cuenta de acceso que todavía no tiene ficha de comercial… */
+  profile_id?: string
   /** …o una nueva, por nombre. */
   full_name?: string
 }): Promise<Result> {
-  await requireSession()
+  const session = await requireSession()
   const supabase = await createClient()
 
   let staffId = input.staff_id
+
+  if (!staffId && input.profile_id) {
+    // Enlazar una cuenta con una ficha es cosa del super admin, igual que en
+    // linkStaffToProfile: decide quién ve qué registros.
+    if (!session.isSuperAdmin) {
+      return { ok: false, error: "Solo el super admin puede agregar una cuenta como comercial." }
+    }
+
+    const { data: yaEnlazada } = await supabase
+      .from("staff")
+      .select("id")
+      .eq("profile_id", input.profile_id)
+      .maybeSingle()
+
+    if (yaEnlazada) {
+      staffId = yaEnlazada.id
+    } else {
+      const { data: perfil } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", input.profile_id)
+        .is("deleted_at", null)
+        .maybeSingle()
+      if (!perfil) return { ok: false, error: "Esa cuenta no existe o fue eliminada." }
+
+      const base = slugNombre(perfil.full_name) || "cuenta"
+      // El slug es único y varias cuentas de prueba comparten nombre: si ya
+      // hay una ficha con ese nombre y no es de esta cuenta, se distingue con
+      // un sufijo en vez de robársela a otra persona.
+      const { data: ocupados } = await supabase
+        .from("staff")
+        .select("slug")
+        .like("slug", `${base}%`)
+      const usados = new Set((ocupados ?? []).map((o) => o.slug))
+      let slug = base
+      for (let n = 2; usados.has(slug); n++) slug = `${base}_${n}`
+
+      const { data, error } = await supabase
+        .from("staff")
+        .insert({ full_name: perfil.full_name, slug, profile_id: input.profile_id })
+        .select("id")
+        .single()
+      if (error) return { ok: false, error: error.message }
+      staffId = data.id
+    }
+  }
 
   if (!staffId) {
     const nombre = (input.full_name ?? "").trim()
