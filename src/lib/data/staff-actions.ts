@@ -26,6 +26,54 @@ function slugNombre(nombre: string) {
 }
 
 /**
+ * Una ficha con cuenta que entra al equipo también entra a la empresa.
+ *
+ * El acceso vive en `company_users`, no en `company_staff`: sin esta fila la
+ * persona figura en el equipo pero al entrar ve "no tienes acceso a ninguna
+ * empresa". Si ya tenía acceso se respeta su rol; si no, entra como asesor en
+ * la sede del equipo (o en la principal, porque un asesor siempre necesita una).
+ */
+async function darAccesoAEmpresa(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  companyId: string,
+  profileId: string,
+  branchId: string | null,
+  assignedBy: string,
+): Promise<string | null> {
+  const { data: actual } = await supabase
+    .from("company_users")
+    .select("removed_at")
+    .eq("company_id", companyId)
+    .eq("user_id", profileId)
+    .maybeSingle()
+  if (actual && !actual.removed_at) return null
+
+  let sede = branchId
+  if (!sede) {
+    const { data: sedes } = await supabase
+      .from("branches")
+      .select("id, is_primary")
+      .eq("company_id", companyId)
+      .eq("status", "activa")
+    sede = (sedes ?? []).find((b) => b.is_primary)?.id ?? sedes?.[0]?.id ?? null
+    if (!sede) return "La empresa no tiene sedes activas para darle acceso a la cuenta."
+  }
+
+  const { error } = await supabase.from("company_users").upsert(
+    {
+      company_id: companyId,
+      user_id: profileId,
+      role: "asesor" as const,
+      branch_id: sede,
+      removed_at: null,
+      assigned_by: assignedBy,
+    },
+    { onConflict: "company_id,user_id" },
+  )
+  return error ? error.message : null
+}
+
+/**
  * Suma una persona al equipo de una empresa.
  *
  * Si ya existe en el sistema —porque trabaja en otra empresa— se reutiliza: en
@@ -125,6 +173,22 @@ export async function addStaffToCompany(input: {
     )
   if (error) return { ok: false, error: error.message }
 
+  const { data: ficha } = await supabase
+    .from("staff")
+    .select("profile_id")
+    .eq("id", staffId!)
+    .maybeSingle()
+  if (ficha?.profile_id) {
+    const e = await darAccesoAEmpresa(
+      supabase,
+      input.company_id,
+      ficha.profile_id,
+      input.branch_id,
+      session.profile.id,
+    )
+    if (e) return { ok: false, error: e }
+  }
+
   await logAudit({
     action: "assign",
     entity: "company_staff",
@@ -210,6 +274,23 @@ export async function linkStaffToProfile(
     .eq("id", staffId)
 
   if (error) return { ok: false, error: error.message }
+
+  if (profileId) {
+    const { data: equipos } = await supabase
+      .from("company_staff")
+      .select("company_id, branch_id")
+      .eq("staff_id", staffId)
+    for (const cs of equipos ?? []) {
+      const e = await darAccesoAEmpresa(
+        supabase,
+        cs.company_id,
+        profileId,
+        cs.branch_id,
+        session.profile.id,
+      )
+      if (e) return { ok: false, error: e }
+    }
+  }
 
   await logAudit({
     action: "update",
