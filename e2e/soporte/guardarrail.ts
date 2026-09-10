@@ -33,7 +33,7 @@ export function esDePrueba(nombreOSlug: string | null | undefined): boolean {
  * Comprueba dos cosas por separado a propósito: que lleve el prefijo, y que no
  * sea una de las empresas reales. Lo segundo es redundante mientras el prefijo
  * funcione, y justo por eso vale: si alguien un día relaja el prefijo, las
- * cinco empresas del cliente siguen protegidas.
+ * empresas del cliente siguen protegidas.
  */
 export function exigirDePrueba(que: string, nombreOSlug: string | null | undefined): string {
   const valor = (nombreOSlug ?? "").trim()

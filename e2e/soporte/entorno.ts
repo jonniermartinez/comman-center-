@@ -146,5 +146,28 @@ export const CUENTAS: Record<Rol, Cuenta> = {
 export const EMPRESA_A = `${PREFIJO}sandbox-a`
 export const EMPRESA_B = `${PREFIJO}sandbox-b`
 
-/** Empresas reales que las pruebas jamás deben tocar. Se comprueba en runtime. */
-export const EMPRESAS_REALES = ["tramites", "ruta-segura", "lv", "ttc", "cea"]
+/**
+ * Empresas reales que las pruebas jamás deben tocar. Se comprueba en runtime.
+ *
+ * Son las trece oficinas del cliente, una por ciudad. Se dejan también `lv`,
+ * `cea` y `tramites`, que la migración 036 archivó: siguen en la base y siguen
+ * sin ser nuestras.
+ */
+export const EMPRESAS_REALES = [
+  "cea-la-28",
+  "ttc",
+  "eduvial",
+  "autogo",
+  "ruta-maestra",
+  "ruta-segura",
+  "atenas",
+  "san-jose",
+  "tramites-buenaventura",
+  "cevial",
+  "tramites-candelaria",
+  "tramites-florida",
+  "carss",
+  "lv",
+  "cea",
+  "tramites",
+]

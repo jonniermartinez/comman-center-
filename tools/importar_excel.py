@@ -13,7 +13,7 @@ dejado antes (`source_file`), así que volver a correrlo corrige en vez de
 duplicar. Nunca toca lo capturado desde la aplicación (`source = 'app'`).
 
 Se conecta con la clave de servicio porque salta RLS: importar 46.000 filas
-como un usuario concreto obligaría a que ese usuario tuviera acceso a las 16
+como un usuario concreto obligaría a que ese usuario tuviera acceso a las trece
 empresas, que es justo lo que las políticas impiden.
 """
 
@@ -35,38 +35,87 @@ except ImportError:
 EPOCA_EXCEL = datetime.date(1899, 12, 30)
 
 # ------------------------------------------------------------------
-# A qué empresa y sede pertenece cada archivo.
+# Una empresa por oficina.
+#
+# Cada archivo es una oficina y cada oficina es una empresa. Las agrupaciones
+# que se usaban antes —LV, CEA, Trámites— salían del prefijo del nombre del
+# archivo y no existen: nadie factura como "LV".
 #
 # El nombre del archivo manda, no la columna "Empresa": está mal digitada en
 # varios (el archivo "Trámites Tuluá" dice "LV Tuluá" en todas sus filas, y los
 # tres de Cars dicen "CEA Carss").
+#
+# La columna "Escuela" tampoco dice de quién es la venta: dice dónde va a
+# estudiar el alumno. Trámites Florida vende cursos de CEA la 28 y de TTC sin
+# ser ninguna de las dos, y Yumbo y Palmira venden TTC entero.
 # ------------------------------------------------------------------
-MAPA = {
-    "Ventas LV - Unión":          ("LV", "Sede La Unión", "La Unión"),
-    "Ventas LV - Palmira":        ("LV", "Sede Palmira", "Palmira"),
-    "Ventas LV - Yumbo":          ("LV", "Sede Yumbo", "Yumbo"),
-    "Ventas LV - Buenaventura":   ("LV", "Sede Buenaventura", "Buenaventura"),
-    "Ventas - Trámites Tuluá":    ("LV", "Sede Tuluá", "Tuluá"),
-    "Ventas Internas - Tuluá":    ("LV", "Sede Tuluá", "Tuluá"),
-    "Ventas - Trámites Candelaria": ("Trámites", "Sede Candelaria", "Candelaria"),
-    "Ventas - Trámites Cartago":  ("Trámites", "Sede Cartago", "Cartago"),
-    "Ventas - Trámites Florida":  ("Trámites", "Sede Florida", "Florida"),
-    "Ventas - CEA Cevial":        ("CEA", "Sede Cevial", None),
-    "Ventas - CEA Eduvial":       ("CEA", "Sede Eduvial", None),
-    "Ventas Cars - Legendarios":  ("CEA", "Carss Legendarios", None),
-    "Ventas Cars - Monarcas":     ("CEA", "Carss Monarcas", None),
-    "Ventas Cars - Sultanes":     ("CEA", "Carss Sultanes", None),
-    "Ventas - Ruta Segura":       ("Ruta Segura", "Sede principal", "Buga"),
-    "Ventas TTC":                 ("TTC", "Sede principal", "Tuluá"),
+EMPRESAS = {
+    #  nombre                     ciudad          departamento       color
+    "CEA la 28":             ("Tuluá",        "Valle del Cauca", "#b45309"),
+    "TTC":                   ("Jamundí",      "Valle del Cauca", "#7c3aed"),
+    "Eduvial":               ("Pereira",      "Risaralda",       "#0891b2"),
+    "Autogo":                ("La Unión",     "Valle del Cauca", "#1d4ed8"),
+    "Ruta Maestra":          ("Cartago",      "Valle del Cauca", "#0f766e"),
+    "Ruta Segura":           ("Buga",         "Valle del Cauca", "#be123c"),
+    "Atenas":                ("Yumbo",        "Valle del Cauca", "#ca8a04"),
+    "San José":              ("Palmira",      "Valle del Cauca", "#4d7c0f"),
+    "Trámites Buenaventura": ("Buenaventura", "Valle del Cauca", "#0369a1"),
+    "Cevial":                ("El Cerrito",   "Valle del Cauca", "#9333ea"),
+    "Trámites Candelaria":   ("Candelaria",   "Valle del Cauca", "#c2410c"),
+    "Trámites Florida":      ("Florida",      "Valle del Cauca", "#059669"),
+    "Carss":                 ("Cali",         "Valle del Cauca", "#db2777"),
 }
 
-COLORES = {
-    "LV": "#1d4ed8",
-    "Trámites": "#0f766e",
-    "CEA": "#b45309",
-    "Ruta Segura": "#be123c",
-    "TTC": "#7c3aed",
+MAPA = {
+    "Ventas - Trámites Tuluá":      "CEA la 28",
+    "Ventas Internas - Tuluá":      "CEA la 28",
+    "Ventas TTC":                   "TTC",
+    "Ventas - CEA Eduvial":         "Eduvial",
+    "Ventas LV - Unión":            "Autogo",
+    "Ventas - Trámites Cartago":    "Ruta Maestra",
+    "Ventas - Ruta Segura":         "Ruta Segura",
+    "Ventas LV - Yumbo":            "Atenas",
+    "Ventas LV - Palmira":          "San José",
+    "Ventas LV - Buenaventura":     "Trámites Buenaventura",
+    "Ventas - CEA Cevial":          "Cevial",
+    "Ventas - Trámites Candelaria": "Trámites Candelaria",
+    "Ventas - Trámites Florida":    "Trámites Florida",
+    "Ventas Cars - Legendarios":    "Carss",
+    "Ventas Cars - Monarcas":       "Carss",
+    "Ventas Cars - Sultanes":       "Carss",
 }
+
+# ------------------------------------------------------------------
+# Carss es la única excepción y por eso tiene tres sedes en vez de una.
+#
+# Legendarios, Monarcas y Sultanes no son oficinas: son equipos comerciales, y
+# la misma gente aparece en varios —Arias Ingrid y Acevedo Nataly venden en
+# dos, Prado Mariana en los tres—. La empresa es una y sus sedes son las dos
+# escuelas de Cali. Ahí sí la columna Escuela decide, porque la venta se hace
+# para una o para la otra.
+#
+# Hasta junio de 2026 esa columna decía "Cars" a secas, y ninguna otra
+# —contrato, voucher, examen, centro médico, financiación— las distingue. Esas
+# 482 no se reparten a ojo: van a "Sin definir", que no es ninguna de las dos.
+# El equipo del que salió cada fila queda en source_file.
+# ------------------------------------------------------------------
+SEDE_UNICA = "Sede principal"
+SIN_DEFINIR = "Sin definir"
+SEDES_CARSS = {"conducars": "Conducars", "champions": "Champions Car"}
+
+
+def sedes_de(empresa):
+    """Sedes de una empresa, la principal primero."""
+    if empresa == "Carss":
+        return ["Conducars", "Champions Car", SIN_DEFINIR]
+    return [SEDE_UNICA]
+
+
+def sede_de(empresa, escuela):
+    """A qué sede va una venta. Solo Carss reparte; el resto tiene una sola."""
+    if empresa != "Carss":
+        return SEDE_UNICA
+    return SEDES_CARSS.get(slug(escuela), SIN_DEFINIR)
 
 # "Todo" no es una persona: en el Excel marca lo que no se atribuye a nadie.
 NO_ES_PERSONA = {"todo", "todos", "n/a", "na", "-", ""}
@@ -291,57 +340,56 @@ class Catalogos:
 # ------------------------------------------------------------------
 def asegurar_estructura(sb, archivos):
     """Crea las empresas y sedes que hagan falta y devuelve sus ids."""
+    nombres = {MAPA[a] for a in archivos if a in MAPA}
+
     if sb.dry_run:
         # En seco no se consulta ni se escribe: solo hacen falta claves para que
         # el resto del proceso pueda armar las filas y contarlas.
-        empresas = {MAPA[a][0]: f"dry-{slug(MAPA[a][0])}" for a in archivos if a in MAPA}
-        sedes = {(MAPA[a][0], MAPA[a][1]): f"dry-{slug(MAPA[a][1])}"
-                 for a in archivos if a in MAPA}
+        empresas = {n: f"dry-{slug(n)}" for n in nombres}
+        sedes = {(n, s): f"dry-{slug(n)}-{slug(s)}"
+                 for n in nombres for s in sedes_de(n)}
         return empresas, sedes
 
-    empresas = {}
-    for nombre in {MAPA[a][0] for a in archivos if a in MAPA}:
-        existente = sb.select("companies", {"slug": f"eq.{slug(nombre).replace('_','-')}",
-                                            "select": "id,name,slug"})
-        if existente:
-            empresas[nombre] = existente[0]["id"]
-            continue
-        creada = sb.insert("companies", [{
+    empresas, sedes = {}, {}
+    for nombre in sorted(nombres):
+        ciudad, departamento, color = EMPRESAS[nombre]
+        datos = {
             "name": nombre,
             "slug": slug(nombre).replace("_", "-"),
-            "accent_color": COLORES.get(nombre, "#1e293b"),
+            "city": ciudad,
+            "department": departamento,
+            "accent_color": color,
             "crm_label": nombre,
-            "department": "Valle del Cauca",
-        }], devolver=True)
-        empresas[nombre] = creada[0]["id"] if creada else None
-        print(f"  empresa creada: {nombre}")
+        }
+        existente = sb.select("companies", {"slug": f"eq.{datos['slug']}",
+                                            "select": "id"})
+        if existente:
+            empresas[nombre] = existente[0]["id"]
+        else:
+            creada = sb.insert("companies", [datos], devolver=True)
+            empresas[nombre] = creada[0]["id"] if creada else None
+            print(f"  empresa creada: {nombre}")
 
-    sedes = {}
-    for archivo in archivos:
-        if archivo not in MAPA:
-            continue
-        empresa, sede, ciudad = MAPA[archivo]
-        cid = empresas.get(empresa)
+        cid = empresas[nombre]
         if not cid:
             continue
-        clave = (empresa, sede)
-        if clave in sedes:
-            continue
-        existente = sb.select("branches", {"company_id": f"eq.{cid}",
-                                           "name": f"eq.{sede}", "select": "id"})
-        if existente:
-            sedes[clave] = existente[0]["id"]
-            continue
-        hay = sb.select("branches", {"company_id": f"eq.{cid}", "select": "id"})
-        creada = sb.insert("branches", [{
-            "company_id": cid,
-            "name": sede,
-            "city": ciudad,
-            "department": "Valle del Cauca",
-            "is_primary": len(hay) == 0,
-        }], devolver=True)
-        sedes[clave] = creada[0]["id"] if creada else None
-        print(f"  sede creada: {empresa} · {sede}")
+
+        # La primera de la lista es la principal.
+        for i, sede in enumerate(sedes_de(nombre)):
+            existente = sb.select("branches", {"company_id": f"eq.{cid}",
+                                               "name": f"eq.{sede}", "select": "id"})
+            if existente:
+                sedes[(nombre, sede)] = existente[0]["id"]
+                continue
+            creada = sb.insert("branches", [{
+                "company_id": cid,
+                "name": sede,
+                "city": ciudad,
+                "department": departamento,
+                "is_primary": i == 0,
+            }], devolver=True)
+            sedes[(nombre, sede)] = creada[0]["id"] if creada else None
+            print(f"  sede creada: {nombre} · {sede}")
 
     # Todos los módulos habilitados para todas las empresas importadas.
     modulos = [m["code"] for m in sb.select("modules", {"select": "code"})]
@@ -376,6 +424,11 @@ def asegurar_personas(sb, nombres):
 # ------------------------------------------------------------------
 # Transformación de cada hoja
 # ------------------------------------------------------------------
+def sede_id(ctx, escuela=None):
+    """Id de la sede donde va una fila. Sin escuela, la sede por defecto."""
+    return ctx["sedes"][sede_de(ctx["empresa"], escuela)]
+
+
 def leer_ventas(ruta, cat, ctx):
     cab, filas = leer_hoja(ruta, ["Base"])
     if not cab:
@@ -401,8 +454,10 @@ def leer_ventas(ruta, cat, ctx):
         fc, fl, fd = (fecha(f("Fecha Certificado")), fecha(f("Fecha Legalización")),
                       fecha(f("Fecha Devolución")))
 
+        escuela = f("Escuela")
+
         salida.append({
-            "company_id": ctx["company_id"], "branch_id": ctx["branch_id"],
+            "company_id": ctx["company_id"], "branch_id": sede_id(ctx, escuela),
             "ref_credito": ref[:200],
             "report_date": d.isoformat(), "period_month": mes(d).isoformat(),
             "responsable_nombre": resp,
@@ -412,7 +467,7 @@ def leer_ventas(ruta, cat, ctx):
             "financing_code": cat.add("financing_types", f("Línea Negocio")),
             "sale_type_code": cat.add("sale_types", f("Tipo Venta")),
             "product_code": cat.add("products", f("Producto")),
-            "school_code": cat.add("schools", f("Escuela")),
+            "school_code": cat.add("schools", escuela),
             "medical_center_code": cat.add("medical_centers", f("Examen Médico")),
             "state_code": cat.add("sale_states", f("Estado Trámite")),
             "licencia_tipo_id": cat.add("id_types", f("Tipo ID TL")),
@@ -463,7 +518,7 @@ def leer_ventas(ruta, cat, ctx):
     return salida, personas
 
 
-def leer_pagos(ruta, cat, ctx, fecha_por_ref=None):
+def leer_pagos(ruta, cat, ctx, fecha_por_ref=None, sede_por_ref=None):
     """
     Lee la hoja de pagos.
 
@@ -471,6 +526,10 @@ def leer_pagos(ruta, cat, ctx, fecha_por_ref=None):
     usa para los pagos que vienen sin fecha: en vez de dejarlos fuera —lo que
     descuadraría el recaudo contra el Excel— entran con la fecha de su venta y
     marcados como estimados.
+
+    `sede_por_ref` hace lo mismo con la sede: el abono va donde quedó su venta.
+    Solo cambia algo en Carss, la única empresa con más de una; el pago que no
+    encuentre su venta cae en la sede por defecto.
     """
     cab, filas = leer_hoja(ruta, ["Pagos"])
     if not cab:
@@ -491,7 +550,8 @@ def leer_pagos(ruta, cat, ctx, fecha_por_ref=None):
             sin_fecha.append({"fila": nfila, "ref": ref, "valor": valor})
             continue
         salida.append({
-            "company_id": ctx["company_id"], "branch_id": ctx["branch_id"],
+            "company_id": ctx["company_id"],
+            "branch_id": (sede_por_ref or {}).get(ref) or sede_id(ctx),
             "ref_credito": ref,
             "report_date": d.isoformat(), "period_month": mes(d).isoformat(),
             "date_estimated": estimada,
@@ -538,7 +598,7 @@ def leer_actividad(ruta, ctx):
         personas.add(resp)
 
         salida.append({
-            "company_id": ctx["company_id"], "branch_id": ctx["branch_id"],
+            "company_id": ctx["company_id"], "branch_id": sede_id(ctx),
             "report_date": d.isoformat(), "period_month": mes(d).isoformat(),
             "responsable_nombre": resp, "_staff": slug(resp),
             "hora_llegada": hora(f("Hora Llegada")),
@@ -579,6 +639,68 @@ def leer_actividad(ruta, ctx):
     return salida, personas
 
 
+JORNADA_FOTO = ("chats_inicial", "chats_medio", "chats_final",
+                "tareas_inicial", "tareas_medio", "tareas_final",
+                "caducadas_inicial", "caducadas_medio", "caducadas_final")
+
+JORNADA_HECHO = ("agenda_confirmada", "agenda_posible", "agenda_reprograma",
+                 "agenda_no_contesta", "agenda_cancela",
+                 "llamada_no_contestada", "llamada_efectiva", "llamada_seguimiento",
+                 "llamada_agenda", "llamada_no_interesado", "llamada_contestada",
+                 "llamada_postventa",
+                 "atencion_venta", "atencion_seguimiento", "atencion_declinado",
+                 "atencion_asociado", "atencion_enrolamiento", "atencion_certificados",
+                 "atencion_agenda", "atencion_renovacion")
+
+
+def fusionar_jornadas(lote):
+    """
+    Junta las jornadas que caen en la misma sede, el mismo día y en la misma
+    persona.
+
+    `leer_actividad` ya quita las repetidas dentro de un archivo, pero en Carss
+    los tres archivos son equipos y acaban en la misma sede: hay gente que
+    reportó el mismo día en dos. La tabla admite una fila por empresa, sede,
+    fecha y persona, así que sin juntarlas la carga revienta.
+
+    Llamadas, agendas y atenciones son cosas que se hicieron y se suman. Las
+    colas del CRM —chats, tareas, caducadas— son una foto de ese momento y no
+    un acumulado, así que se queda la mayor. Sobrevive la fila de mayor
+    movimiento, para que `source_file` apunte al equipo donde la persona sí
+    estuvo ese día. Mismo criterio que la migración 036, que juntó estas
+    veintisiete filas en la base.
+    """
+    grupos = defaultdict(list)
+    for archivo, datos in lote.items():
+        for fila in datos["daily_activity"]:
+            grupos[(fila["company_id"], fila["branch_id"],
+                    fila["report_date"], fila["_staff"])].append((archivo, fila))
+
+    juntadas = 0
+    sobreviven = defaultdict(list)
+    for filas in grupos.values():
+        if len(filas) > 1:
+            filas.sort(key=lambda af: -sum(af[1][c]
+                                           for c in JORNADA_FOTO + JORNADA_HECHO))
+            juntadas += len(filas) - 1
+        archivo, queda = filas[0]
+        for _, otra in filas[1:]:
+            for c in JORNADA_FOTO:
+                queda[c] = max(queda[c], otra[c])
+            for c in JORNADA_HECHO:
+                queda[c] += otra[c]
+            horas = [h for h in (queda["hora_llegada"], otra["hora_llegada"]) if h]
+            queda["hora_llegada"] = min(horas) if horas else None
+            horas = [h for h in (queda["hora_salida"], otra["hora_salida"]) if h]
+            queda["hora_salida"] = max(horas) if horas else None
+        sobreviven[archivo].append(queda)
+
+    for archivo, datos in lote.items():
+        datos["daily_activity"] = sobreviven.get(archivo, [])
+    if juntadas:
+        print(f"  · {juntadas} jornada(s) repetidas entre equipos, juntadas en una")
+
+
 def leer_caja(ruta, cat, ctx):
     cab, filas = leer_hoja(ruta, ["Control Ingreso - Gasto"])
     if not cab:
@@ -597,7 +719,7 @@ def leer_caja(ruta, cat, ctx):
             personas.add(resp)
         tipo = (texto(f("Tipo")) or "").lower()
         salida.append({
-            "company_id": ctx["company_id"], "branch_id": ctx["branch_id"],
+            "company_id": ctx["company_id"], "branch_id": sede_id(ctx),
             "report_date": d.isoformat(), "period_month": mes(d).isoformat(),
             "kind": "entrada" if tipo.startswith("entrada") else "salida",
             "concept_code": cat.add("cash_concepts", f("Concepto")),
@@ -629,7 +751,7 @@ def leer_agendas(ruta, ctx):
         if resp:
             personas.add(resp)
         salida.append({
-            "company_id": ctx["company_id"], "branch_id": ctx["branch_id"],
+            "company_id": ctx["company_id"], "branch_id": sede_id(ctx),
             "nombre": texto(f("Nombre"), 200),
             "celular": texto(f("Número de celular"), 40),
             "scheduled_at": d.isoformat(),
@@ -686,6 +808,14 @@ def main():
     if desconocidos:
         sys.exit("Estos archivos no están en el mapa de empresas: " + ", ".join(desconocidos))
 
+    # Los tres de Carss comparten empresa y sede y sus jornadas se juntan entre
+    # sí, así que van juntos o no van: cargar uno solo dejaría la jornada de una
+    # persona partida en dos filas del mismo día, y eso la base no lo admite.
+    carss = {a for a, e in MAPA.items() if e == "Carss"}
+    faltan = carss - set(archivos)
+    if carss & set(archivos) and faltan:
+        sys.exit("Los archivos de Carss se importan juntos. Faltan: " + ", ".join(sorted(faltan)))
+
     print("→ Empresas y sedes")
     empresas, sedes = asegurar_estructura(sb, archivos)
 
@@ -698,19 +828,21 @@ def main():
     perdidos = []
     for archivo, nombre in zip(archivos, rutas):
         ruta = os.path.join(args.carpeta, nombre)
-        empresa, sede, _ = MAPA[archivo]
+        empresa = MAPA[archivo]
         ctx = {"archivo": archivo,
+               "empresa": empresa,
                "company_id": empresas[empresa],
-               "branch_id": sedes[(empresa, sede)]}
+               "sedes": {s: sedes[(empresa, s)] for s in sedes_de(empresa)}}
         print(f"  {archivo}")
 
         ventas, p1 = leer_ventas(ruta, cat, ctx)
-        # La fecha de cada venta, por si algún pago viene sin la suya.
-        fecha_por_ref = {}
+        # La fecha y la sede de cada venta, por si algún pago viene sin las suyas.
+        fecha_por_ref, sede_por_ref = {}, {}
         for v in ventas:
             fecha_por_ref.setdefault(v["ref_credito"],
                                      datetime.date.fromisoformat(v["report_date"]))
-        pagos, pagos_sin_fecha = leer_pagos(ruta, cat, ctx, fecha_por_ref)
+            sede_por_ref.setdefault(v["ref_credito"], v["branch_id"])
+        pagos, pagos_sin_fecha = leer_pagos(ruta, cat, ctx, fecha_por_ref, sede_por_ref)
         if pagos_sin_fecha:
             perdidos.extend((archivo, x) for x in pagos_sin_fecha)
         actividad, p2 = leer_actividad(ruta, ctx)
@@ -723,6 +855,8 @@ def main():
                          "appointments": agendas}
         print(f"    ventas={len(ventas)} pagos={len(pagos)} gestión={len(actividad)} "
               f"caja={len(caja)} agendas={len(agendas)}")
+
+    fusionar_jornadas(lote)
 
     print("\n→ Catálogos")
     cat.escribir(sb)
@@ -738,7 +872,7 @@ def main():
             for fila in datos[tabla]:
                 sid = staff.get(fila.get("_staff"))
                 if sid:
-                    vinculos[(ctx["company_id"], sid)] = ctx["branch_id"]
+                    vinculos[(ctx["company_id"], sid)] = fila["branch_id"]
     sb.insert("company_staff",
               [{"company_id": c, "staff_id": s, "branch_id": b}
                for (c, s), b in vinculos.items()],
