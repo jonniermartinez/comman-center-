@@ -27,7 +27,7 @@ import { OPERATOR_NAME } from "@/lib/branding"
 import { StatStrip } from "@/components/stat-strip"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardAction, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -222,93 +222,105 @@ function CompanyCard({
       }
     >
       {/* Franja de identidad: el color de la empresa da el primer golpe de vista. */}
-      <div className="h-1 rounded-t-xl" style={{ backgroundColor: company.accent_color }} />
+      <div className="h-1.5 rounded-t-xl" style={{ backgroundColor: company.accent_color }} />
 
-      <CardHeader className="pt-5">
-        <div className="flex items-start gap-3">
-          <CompanyAvatar company={company} size={44} className="rounded-lg" />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h2 className="truncate text-base font-semibold">{company.name}</h2>
-              {archivada && (
-                <Badge variant="secondary" className="text-[10px]">
-                  Archivada
-                </Badge>
-              )}
-            </div>
-            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <MapPin className="size-3 shrink-0" />
-              <span className="truncate">
-                {sedes} sede{sedes === 1 ? "" : "s"} · {members} comercial
-                {members === 1 ? "" : "es"}
-              </span>
-            </p>
+      {/*
+        Cabecera de marca. El logo va grande y sobre un lavado del color de la
+        empresa: en una rejilla de catorce tarjetas iguales, lo que hace que el
+        ojo encuentre la suya es el logo, no leer el nombre una por una.
+      */}
+      <div
+        className="flex items-center gap-3.5 border-b px-4 py-4"
+        style={{
+          backgroundImage: `linear-gradient(100deg, ${company.accent_color}24, ${company.accent_color}0a 55%, transparent)`,
+        }}
+      >
+        <CompanyAvatar
+          company={company}
+          size={62}
+          width={104}
+          className="rounded-lg p-1.5 shadow-sm"
+        />
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h2 className="truncate text-lg font-semibold">{company.name}</h2>
+            {archivada && (
+              <Badge variant="secondary" className="text-[10px]">
+                Archivada
+              </Badge>
+            )}
           </div>
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <MapPin className="size-3 shrink-0" />
+            <span className="truncate">
+              {sedes} sede{sedes === 1 ? "" : "s"} · {members} comercial
+              {members === 1 ? "" : "es"}
+            </span>
+          </p>
         </div>
 
         {isSuperAdmin && (
-          <CardAction>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-8">
-                  <MoreHorizontal className="size-4" />
-                  <span className="sr-only">Acciones de {company.name}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href={`/e/${company.slug}/configuracion`}>
-                    <Settings className="size-4" />
-                    Configuración
-                  </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-8 self-start">
+                <MoreHorizontal className="size-4" />
+                <span className="sr-only">Acciones de {company.name}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/e/${company.slug}/configuracion`}>
+                  <Settings className="size-4" />
+                  Configuración
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {archivada ? (
+                <DropdownMenuItem
+                  onSelect={async () => {
+                    const r = await archiveCompany(company.id, false)
+                    if (r.ok) toast.success(`${company.name} reactivada`)
+                    else toast.error(r.error)
+                  }}
+                >
+                  <ArchiveRestore className="size-4" />
+                  Reactivar
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {archivada ? (
-                  <DropdownMenuItem
-                    onSelect={async () => {
-                      const r = await archiveCompany(company.id, false)
-                      if (r.ok) toast.success(`${company.name} reactivada`)
-                      else toast.error(r.error)
-                    }}
-                  >
-                    <ArchiveRestore className="size-4" />
-                    Reactivar
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onSelect={async () => {
-                      const r = await archiveCompany(company.id, true)
-                      if (r.ok) {
-                        toast.success(`${company.name} archivada`, {
-                          description: "Los registros históricos se conservan.",
-                        })
-                      } else {
-                        toast.error(r.error)
-                      }
-                    }}
-                  >
-                    Archivar empresa
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onSelect={() => setBorrando(true)}>
-                  <Trash2 className="size-4" />
-                  Eliminar definitivamente
+              ) : (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={async () => {
+                    const r = await archiveCompany(company.id, true)
+                    if (r.ok) {
+                      toast.success(`${company.name} archivada`, {
+                        description: "Los registros históricos se conservan.",
+                      })
+                    } else {
+                      toast.error(r.error)
+                    }
+                  }}
+                >
+                  Archivar empresa
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </CardAction>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={() => setBorrando(true)}>
+                <Trash2 className="size-4" />
+                Eliminar definitivamente
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
+      </div>
 
-        <DeleteCompanyDialog
-          companyId={company.id}
-          companyName={company.name}
-          open={borrando}
-          onOpenChange={setBorrando}
-          onDeleted={() => {}}
-        />
-      </CardHeader>
+      <DeleteCompanyDialog
+        companyId={company.id}
+        companyName={company.name}
+        open={borrando}
+        onOpenChange={setBorrando}
+        onDeleted={() => {}}
+      />
 
       <CardContent className="pt-4 pb-5">
         {/* La cifra que se busca primero, en grande. */}

@@ -38,7 +38,9 @@ export function CompanySwitcher({ current }: { current?: Company }) {
           className="flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:bg-accent/40 data-[state=open]:bg-accent/40"
         >
           {current ? (
-            <CompanyAvatar company={current} size={34} className="rounded-lg" />
+            // Placa apaisada, no cuadrada: estos logos llevan el nombre escrito al
+            // lado del dibujo y en un cuadrado de 34 px no se lee ninguno.
+            <CompanyAvatar company={current} size={34} width={52} className="rounded-lg" />
           ) : (
             <span
               aria-hidden
