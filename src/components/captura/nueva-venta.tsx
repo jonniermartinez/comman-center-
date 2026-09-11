@@ -148,10 +148,21 @@ export function NuevaVenta({
   const [productoId, setProductoId] = useState(registro?.company_product_id ?? "")
   const producto = productosEmpresa.find((p) => p.id === productoId)
 
-  // Sin lista de precios el valor se sigue pudiendo digitar: una empresa que
-  // todavía no cargó sus productos tiene que poder registrar la venta de hoy.
-  const [valorManual, setValorManual] = useState(Number(registro?.valor_inicial ?? 0))
-  const valorLista = producto ? producto.price : valorManual
+  /*
+   * El valor de lista de ESTA venta, que no siempre es el precio de hoy.
+   *
+   * Elegir un producto trae su precio, y esa es la gracia. Pero una venta ya
+   * registrada se firmó con el precio que había ese día: abrirla y que el
+   * formulario le pusiera el precio de la lista de hoy cambiaría en silencio
+   * una cifra contra la que ya se liquidaron comisiones y se recibieron pagos.
+   * Por eso el precio arranca en el de la venta y solo se pisa si alguien
+   * cambia de producto, que ahí sí está pidiendo otro precio.
+   *
+   * Sin producto —empresa que no cargó su lista, o venta importada que no
+   * apunta a ninguno— este mismo valor se digita a mano.
+   */
+  const [precioBase, setPrecioBase] = useState(Number(registro?.valor_inicial ?? 0))
+  const valorLista = precioBase
 
   const [bonos, setBonos] = useState<BonoElegido[]>([])
   const [adiciones, setAdiciones] = useState<Adicion[]>([])
@@ -371,6 +382,8 @@ export function NuevaVenta({
                 // Los bonos son de un producto: al cambiarlo, los que estaban
                 // aplicados ya no existen.
                 setBonos([])
+                const elegido = productosEmpresa.find((p) => p.id === v)
+                if (elegido) setPrecioBase(elegido.price)
               }}
               vacio="Sin definir"
               options={productosEmpresa.map((p) => ({
@@ -385,7 +398,7 @@ export function NuevaVenta({
           {!producto && (
             <div className="min-w-0 space-y-2">
               <Label htmlFor="valor">Valor</Label>
-              <MoneyInput id="valor" value={valorManual} onValueChange={setValorManual} />
+              <MoneyInput id="valor" value={precioBase} onValueChange={setPrecioBase} />
             </div>
           )}
           <CampoSelect
@@ -413,6 +426,13 @@ export function NuevaVenta({
             options={estados.map((e) => ({ value: e.code, label: e.name }))}
           />
         </div>
+
+        {producto && producto.price !== precioBase && (
+          <p className="text-xs text-muted-foreground">
+            Esta venta se registró por {formatCOP(precioBase)}. El precio de {producto.name} en la
+            lista de hoy es {formatCOP(producto.price)}; se respeta el de la venta.
+          </p>
+        )}
 
         {/* ---------------- Bonos del producto ---------------- */}
         {producto && producto.bonos.length > 0 && (
