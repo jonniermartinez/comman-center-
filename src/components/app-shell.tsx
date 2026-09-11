@@ -10,6 +10,7 @@ import {
   MapPin,
   Receipt,
   Settings,
+  Tag,
   Target,
   Users,
   Wallet,
@@ -89,6 +90,7 @@ function tituloDe(pathname: string, conAcceso: boolean): string {
     agendas: "Agendas",
     caja: "Ingreso y Gasto",
     objetivos: "Objetivos",
+    productos: "Productos",
     sedes: "Sedes",
     usuarios: "Equipo",
     configuracion: "Configuración",
@@ -208,6 +210,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <GroupLabel>Administrar</GroupLabel>
                       <SidebarGroupContent>
                         <SidebarMenu>
+                          <NavLink
+                            href={`${base}/productos`}
+                            label="Productos"
+                            icon={Tag}
+                            active={isActive(`${base}/productos`)}
+                          />
                           <NavLink
                             href={`${base}/sedes`}
                             label="Sedes"

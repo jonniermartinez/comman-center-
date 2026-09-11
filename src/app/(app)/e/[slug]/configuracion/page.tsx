@@ -51,6 +51,8 @@ export default function ConfiguracionPage() {
   const [city, setCity] = useState(company.city ?? "")
   const [department, setDepartment] = useState(company.department ?? "")
   const [crmLabel, setCrmLabel] = useState(company.crm_label ?? "")
+  const [dominio, setDominio] = useState(company.domain ?? "")
+  const [whatsapp, setWhatsapp] = useState(company.whatsapp ?? "")
   const [accent, setAccent] = useState(company.accent_color)
   const [borrando, setBorrando] = useState(false)
 
@@ -141,6 +143,28 @@ export default function ConfiguracionPage() {
                 }}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="dominio">Dominio</Label>
+              <Input
+                id="dominio"
+                value={dominio}
+                onChange={(e) => setDominio(e.target.value)}
+                placeholder="autogo.com.co"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp">WhatsApp</Label>
+              <Input
+                id="whatsapp"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder="3001234567"
+                inputMode="tel"
+              />
+              <p className="text-xs text-muted-foreground">
+                El número por el que atiende esta oficina.
+              </p>
+            </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="crm">Nombre del CRM</Label>
               <Input id="crm" value={crmLabel} onChange={(e) => setCrmLabel(e.target.value)} />
@@ -179,6 +203,8 @@ export default function ConfiguracionPage() {
                   city: city.trim() || null,
                   department: department.trim() || null,
                   crm_label: crmLabel.trim() || null,
+                  domain: dominio.trim().replace(/^https?:\/\//, "").replace(/\/$/, "") || null,
+                  whatsapp: whatsapp.replace(/\D/g, "") || null,
                   accent_color: accent,
                 })
                 if (r.ok) toast.success("Datos actualizados")

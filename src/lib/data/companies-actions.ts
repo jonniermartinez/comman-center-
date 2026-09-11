@@ -149,6 +149,8 @@ export async function updateCompany(
     department?: string | null
     accent_color?: string
     crm_label?: string | null
+    domain?: string | null
+    whatsapp?: string | null
   },
 ): Promise<Result> {
   await requireSession()

@@ -2,12 +2,29 @@ import "server-only"
 
 import { createClient } from "@/lib/supabase/server"
 
+export interface BonoAutorizado {
+  id: string
+  name: string
+  amount: number
+}
+
+/** Un producto de la lista de precios de la empresa, con lo que se le puede rebajar. */
+export interface ProductoVendible {
+  id: string
+  name: string
+  price: number
+  bonos: BonoAutorizado[]
+}
+
 export interface CompanyContext {
   id: string
   name: string
   slug: string
   crm_label: string | null
   hora_entrada: string
+  /** WhatsApp de atención de la oficina, si lo configuraron. */
+  whatsapp: string | null
+  domain: string | null
   branches: { id: string; name: string; is_primary: boolean }[]
   staff: { id: string; full_name: string }[]
   modules: string[]
@@ -21,8 +38,19 @@ export interface CompanyContext {
    * a su nombre.
    */
   myStaffId: string | null
+  /**
+   * Si quien mira administra la plataforma entera.
+   *
+   * Una venta guardada solo la corrige el super admin (039): el formulario
+   * necesita saberlo para no ofrecer un lápiz que la base va a rechazar.
+   */
+  isSuperAdmin: boolean
   /** Catálogos para los formularios de alta. */
   financiaciones: { code: string; name: string }[]
+  /** La lista de precios de esta empresa. Es de donde sale el valor de una venta. */
+  productosEmpresa: ProductoVendible[]
+  traficos: { code: string; name: string }[]
+  tiposId: { code: string; name: string }[]
   productos: { code: string; name: string }[]
   escuelas: { code: string; name: string }[]
   estados: { code: string; name: string }[]
@@ -42,13 +70,28 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
 
   const { data: company } = await supabase
     .from("companies")
-    .select("id, name, slug, crm_label, hora_entrada")
+    .select("id, name, slug, crm_label, hora_entrada, whatsapp, domain")
     .eq("slug", slug)
     .maybeSingle()
 
   if (!company) return null
 
-  const [branches, staff, modules, sesion, financiaciones, productos, escuelas, estados, medios, conceptos] = await Promise.all([
+  const [
+    branches,
+    staff,
+    modules,
+    sesion,
+    superAdmin,
+    financiaciones,
+    productosEmpresa,
+    traficos,
+    tiposId,
+    productos,
+    escuelas,
+    estados,
+    medios,
+    conceptos,
+  ] = await Promise.all([
     supabase
       .from("branches")
       .select("id, name, is_primary")
@@ -62,7 +105,17 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
       .eq("company_id", company.id),
     supabase.from("company_modules").select("module_code").eq("company_id", company.id),
     supabase.rpc("can_manage_company", { target_company: company.id }),
+    supabase.rpc("is_super_admin"),
     supabase.from("financing_types").select("code, name").order("sort_order"),
+    supabase
+      .from("company_products")
+      .select("id, name, price, company_product_bonuses(id, name, amount, active, sort_order)")
+      .eq("company_id", company.id)
+      .eq("active", true)
+      .order("sort_order")
+      .order("name"),
+    supabase.from("traffic_sources").select("code, name").order("sort_order"),
+    supabase.from("id_types").select("code, name").order("sort_order"),
     supabase.from("products").select("code, name").order("sort_order"),
     supabase.from("schools").select("code, name").order("sort_order"),
     supabase.from("sale_states").select("code, name").order("sort_order"),
@@ -87,8 +140,20 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
       .sort((a, b) => a.full_name.localeCompare(b.full_name)),
     modules: (modules.data ?? []).map((m) => m.module_code),
     canManage: Boolean(sesion.data),
+    isSuperAdmin: Boolean(superAdmin.data),
     myStaffId: yo?.id ?? null,
     financiaciones: financiaciones.data ?? [],
+    productosEmpresa: (productosEmpresa.data ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: Number(p.price),
+      bonos: (p.company_product_bonuses ?? [])
+        .filter((b) => b.active)
+        .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
+        .map((b) => ({ id: b.id, name: b.name, amount: Number(b.amount) })),
+    })),
+    traficos: traficos.data ?? [],
+    tiposId: tiposId.data ?? [],
     productos: productos.data ?? [],
     escuelas: escuelas.data ?? [],
     estados: estados.data ?? [],

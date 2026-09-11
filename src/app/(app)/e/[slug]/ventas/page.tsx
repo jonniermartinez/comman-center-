@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 
 import { NuevaVenta, type VentaExistente } from "@/components/captura/nueva-venta"
+import { AlertaSeguimiento } from "@/components/ventas/alerta-seguimiento"
 import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
@@ -15,8 +16,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { construirHref, getCompanyContext, nombreDe } from "@/lib/data/company"
-import { leerFiltros, listSales, totalesVentas } from "@/lib/data/records"
-import { formatCOP, formatDate } from "@/lib/format"
+import { leerFiltros, listSales, totalesVentas, ventasPorRecontactar } from "@/lib/data/records"
+import { formatCOP, formatDate, todayISO } from "@/lib/format"
 
 /**
  * Ventas: una fila por crédito, como la hoja "Base" del Excel.
@@ -35,12 +36,18 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
   }
 
   const filtros = leerFiltros(sp)
-  const [pagina, totales] = await Promise.all([
+  // Cuántas ventas piden recontacto: se cuenta sobre todo lo que alcanza el
+  // filtro, no sobre la página que se está viendo.
+  const hoy = todayISO()
+  const [pagina, totales, porRecontactar] = await Promise.all([
     listSales(company.id, filtros),
     totalesVentas(company.id, filtros),
+    ventasPorRecontactar(company.id, filtros, hoy),
   ])
 
   const sede = (id: string) => company.branches.find((b) => b.id === id)?.name ?? "—"
+  const nombreDeProducto = (id: string | null) =>
+    id ? (company.productosEmpresa.find((p) => p.id === id)?.name ?? null) : null
   const filtrando = Object.values(sp).some((v) => typeof v === "string" && v)
 
   return (
@@ -53,10 +60,12 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
           branches={company.branches}
           staff={company.staff}
           financiaciones={company.financiaciones}
-          productos={company.productos}
+          productosEmpresa={company.productosEmpresa}
+          traficos={company.traficos}
           escuelas={company.escuelas}
           estados={company.estados}
           canManage={company.canManage}
+          isSuperAdmin={company.isSuperAdmin}
           myStaffId={company.myStaffId}
         />
       }
@@ -76,6 +85,12 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
             { label: "Facturación", value: totales.facturacion, unit: "moneda" },
             { label: "Recaudado", value: totales.recaudo, unit: "moneda" },
             { label: "Saldo", value: totales.saldo, unit: "moneda" },
+            {
+              label: "Por recontactar",
+              value: porRecontactar,
+              unit: "cantidad",
+              hint: "Sin certificar a los 85 días",
+            },
           ]}
         />
       }
@@ -110,7 +125,8 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
                 </p>
               </TableCell>
               <TableCell className="text-sm">
-                {nombreDe(company.productos, v.product_code)}
+                {nombreDeProducto(v.company_product_id) ??
+                  nombreDe(company.productos, v.product_code)}
               </TableCell>
               <TableCell className="text-sm">
                 {nombreDe(company.financiaciones, v.financing_code)}
@@ -119,12 +135,21 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
                 {v.responsable_nombre ?? "—"}
               </TableCell>
               <TableCell>
-                <Badge
-                  variant={v.state_code === "certificado" ? "default" : "outline"}
-                  className="text-[10px] whitespace-nowrap"
-                >
-                  {nombreDe(company.estados, v.state_code)}
-                </Badge>
+                <div className="flex items-center gap-1.5">
+                  <Badge
+                    variant={v.state_code === "certificado" ? "default" : "outline"}
+                    className="text-[10px] whitespace-nowrap"
+                  >
+                    {nombreDe(company.estados, v.state_code)}
+                  </Badge>
+                  <AlertaSeguimiento
+                    fecha={v.report_date}
+                    estado={v.state_code}
+                    estadoNombre={nombreDe(company.estados, v.state_code)}
+                    hoy={hoy}
+                    cliente={v.licencia_nombre ?? "El cliente"}
+                  />
+                </div>
               </TableCell>
               <TableCell className="text-right font-medium tabular-nums">
                 {formatCOP(Number(v.valor_final))}
@@ -142,18 +167,25 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
                 {formatCOP(Number(v.saldo))}
               </TableCell>
               <TableCell>
-                <NuevaVenta
-                  companyId={company.id}
-                  branches={company.branches}
-                  staff={company.staff}
-                  financiaciones={company.financiaciones}
-                  productos={company.productos}
-                  escuelas={company.escuelas}
-                  estados={company.estados}
-                  canManage={company.canManage}
-                  myStaffId={company.myStaffId}
-                  registro={v as unknown as VentaExistente}
-                />
+                {/* Una venta guardada solo la corrige el super admin (039): a
+                    los demás no se les ofrece un lápiz que la base va a
+                    rechazar. */}
+                {company.isSuperAdmin && (
+                  <NuevaVenta
+                    companyId={company.id}
+                    branches={company.branches}
+                    staff={company.staff}
+                    financiaciones={company.financiaciones}
+                    productosEmpresa={company.productosEmpresa}
+                    traficos={company.traficos}
+                    escuelas={company.escuelas}
+                    estados={company.estados}
+                    canManage={company.canManage}
+                    isSuperAdmin={company.isSuperAdmin}
+                    myStaffId={company.myStaffId}
+                    registro={v as unknown as VentaExistente}
+                  />
+                )}
               </TableCell>
             </TableRow>
           ))}

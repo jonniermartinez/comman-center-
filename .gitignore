@@ -63,3 +63,6 @@ skills-lock.json
 # Video demo: lo grabado pesa y se regenera
 tools/demo/salida/
 tools/demo/demo.env
+
+# Rastro del CLI de Supabase: es caché local, no configuración.
+supabase/.temp/

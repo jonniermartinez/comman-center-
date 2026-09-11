@@ -454,6 +454,7 @@ export type Database = {
           created_by: string | null
           crm_label: string | null
           department: string | null
+          domain: string | null
           hora_entrada: string
           id: string
           logo_url: string | null
@@ -462,6 +463,7 @@ export type Database = {
           slug: string
           status: Database["public"]["Enums"]["company_status"]
           updated_at: string
+          whatsapp: string | null
         }
         Insert: {
           accent_color?: string
@@ -471,6 +473,7 @@ export type Database = {
           created_by?: string | null
           crm_label?: string | null
           department?: string | null
+          domain?: string | null
           hora_entrada?: string
           id?: string
           logo_url?: string | null
@@ -479,6 +482,7 @@ export type Database = {
           slug: string
           status?: Database["public"]["Enums"]["company_status"]
           updated_at?: string
+          whatsapp?: string | null
         }
         Update: {
           accent_color?: string
@@ -488,6 +492,7 @@ export type Database = {
           created_by?: string | null
           crm_label?: string | null
           department?: string | null
+          domain?: string | null
           hora_entrada?: string
           id?: string
           logo_url?: string | null
@@ -496,6 +501,7 @@ export type Database = {
           slug?: string
           status?: Database["public"]["Enums"]["company_status"]
           updated_at?: string
+          whatsapp?: string | null
         }
         Relationships: [
           {
@@ -597,6 +603,117 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "modules"
             referencedColumns: ["code"]
+          },
+        ]
+      }
+      company_product_bonuses: {
+        Row: {
+          active: boolean
+          amount: number
+          company_id: string
+          created_at: string
+          id: string
+          name: string
+          product_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          amount: number
+          company_id: string
+          created_at?: string
+          id?: string
+          name: string
+          product_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          product_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_product_bonuses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_product_bonuses_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "company_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_products: {
+        Row: {
+          active: boolean
+          catalog_code: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_renovacion: boolean
+          name: string
+          price: number
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          catalog_code?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_renovacion?: boolean
+          name: string
+          price?: number
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          catalog_code?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_renovacion?: boolean
+          name?: string
+          price?: number
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_products_catalog_code_fkey"
+            columns: ["catalog_code"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "company_products_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1378,6 +1495,186 @@ export type Database = {
           },
         ]
       }
+      sale_additions: {
+        Row: {
+          amount: number
+          company_id: string
+          concepto: string
+          created_at: string
+          created_by: string | null
+          id: string
+          sale_id: string
+        }
+        Insert: {
+          amount: number
+          company_id: string
+          concepto: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          sale_id: string
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          concepto?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          sale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_additions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_additions_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sale_bonuses: {
+        Row: {
+          amount: number
+          bonus_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          sale_id: string
+        }
+        Insert: {
+          amount: number
+          bonus_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          sale_id: string
+        }
+        Update: {
+          amount?: number
+          bonus_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          sale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_bonuses_bonus_id_fkey"
+            columns: ["bonus_id"]
+            isOneToOne: false
+            referencedRelation: "company_product_bonuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_bonuses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_bonuses_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sale_financings: {
+        Row: {
+          abono: number
+          company_id: string
+          created_at: string
+          created_by: string | null
+          cuota: number
+          financing_code: string | null
+          id: string
+          sale_id: string
+          sort_order: number
+          titular_celular: string | null
+          titular_id: string | null
+          titular_nombre: string | null
+          titular_tipo_id: string | null
+          valor: number
+        }
+        Insert: {
+          abono?: number
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          cuota?: number
+          financing_code?: string | null
+          id?: string
+          sale_id: string
+          sort_order?: number
+          titular_celular?: string | null
+          titular_id?: string | null
+          titular_nombre?: string | null
+          titular_tipo_id?: string | null
+          valor?: number
+        }
+        Update: {
+          abono?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          cuota?: number
+          financing_code?: string | null
+          id?: string
+          sale_id?: string
+          sort_order?: number
+          titular_celular?: string | null
+          titular_id?: string | null
+          titular_nombre?: string | null
+          titular_tipo_id?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_financings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_financings_financing_code_fkey"
+            columns: ["financing_code"]
+            isOneToOne: false
+            referencedRelation: "financing_types"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sale_financings_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_financings_titular_tipo_id_fkey"
+            columns: ["titular_tipo_id"]
+            isOneToOne: false
+            referencedRelation: "id_types"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       sale_states: {
         Row: {
           code: string
@@ -1424,6 +1721,7 @@ export type Database = {
           channel_code: string | null
           ciudad: string | null
           company_id: string
+          company_product_id: string | null
           consecutivo_examen: string | null
           contrato: string | null
           costo_carta: number
@@ -1472,6 +1770,7 @@ export type Database = {
           state_code: string | null
           total_comision: number
           total_costo: number
+          traffic_code: string | null
           updated_at: string
           updated_by: string | null
           valor_comision: number
@@ -1489,6 +1788,7 @@ export type Database = {
           channel_code?: string | null
           ciudad?: string | null
           company_id: string
+          company_product_id?: string | null
           consecutivo_examen?: string | null
           contrato?: string | null
           costo_carta?: number
@@ -1537,6 +1837,7 @@ export type Database = {
           state_code?: string | null
           total_comision?: number
           total_costo?: number
+          traffic_code?: string | null
           updated_at?: string
           updated_by?: string | null
           valor_comision?: number
@@ -1554,6 +1855,7 @@ export type Database = {
           channel_code?: string | null
           ciudad?: string | null
           company_id?: string
+          company_product_id?: string | null
           consecutivo_examen?: string | null
           contrato?: string | null
           costo_carta?: number
@@ -1602,6 +1904,7 @@ export type Database = {
           state_code?: string | null
           total_comision?: number
           total_costo?: number
+          traffic_code?: string | null
           updated_at?: string
           updated_by?: string | null
           valor_comision?: number
@@ -1630,6 +1933,20 @@ export type Database = {
             columns: ["channel_code"]
             isOneToOne: false
             referencedRelation: "channels"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sales_company_product_id_fkey"
+            columns: ["company_product_id"]
+            isOneToOne: false
+            referencedRelation: "company_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_traffic_code_fkey"
+            columns: ["traffic_code"]
+            isOneToOne: false
+            referencedRelation: "traffic_sources"
             referencedColumns: ["code"]
           },
           {
@@ -1797,6 +2114,24 @@ export type Database = {
       }
     }
     Views: {
+      traffic_sources: {
+        Row: {
+          code: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       v_branch_monthly: {
         Row: {
           branch_id: string | null

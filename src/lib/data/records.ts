@@ -1,6 +1,7 @@
 import "server-only"
 
 import { createClient } from "@/lib/supabase/server"
+import { DIAS_PARA_ALERTA, ESTADOS_CERRADOS } from "@/lib/seguimiento"
 import type { Database } from "@/lib/supabase/database.types"
 
 /** Cliente sin tipar, solo para el constructor de consultas genérico de abajo. */
@@ -175,4 +176,41 @@ export async function totalesVentas(companyId: string, filtros: Filtros) {
     }),
     { facturacion: 0, recaudo: 0, saldo: 0, licencias: 0 },
   )
+}
+
+/**
+ * Cuántas ventas llevan 85 días o más sin certificarse.
+ *
+ * Se cuenta sobre todo lo que el filtro alcanza y no sobre la página que se
+ * está viendo: el número sirve para decidir a cuántos hay que llamar, y uno
+ * que dependiera de en qué página está parado el comercial no serviría para
+ * eso. Se pide solo el conteo, sin traer las filas.
+ */
+export async function ventasPorRecontactar(
+  companyId: string,
+  filtros: Filtros,
+  hoy: string,
+): Promise<number> {
+  const supabase = await createClient()
+  const limite = new Date(Date.parse(`${hoy}T00:00:00`) - DIAS_PARA_ALERTA * 86_400_000)
+    .toISOString()
+    .slice(0, 10)
+
+  let query = supabase
+    .from("sales")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", companyId)
+    .lte("report_date", limite)
+    // Una venta sin estado también cuenta: que nadie haya dicho en qué va no
+    // la convierte en certificada. Por eso el `or` y no un `not in` a secas,
+    // que en SQL deja fuera los nulos.
+    .or(`state_code.is.null,state_code.not.in.(${[...ESTADOS_CERRADOS].join(",")})`)
+
+  if (filtros.desde) query = query.gte("report_date", filtros.desde)
+  if (filtros.hasta) query = query.lte("report_date", filtros.hasta)
+  if (filtros.branchId) query = query.eq("branch_id", filtros.branchId)
+  if (filtros.staffId) query = query.eq("staff_id", filtros.staffId)
+
+  const { count } = await query
+  return count ?? 0
 }

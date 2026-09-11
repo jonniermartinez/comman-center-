@@ -62,6 +62,10 @@ export interface Company {
   department?: string
   /** Logo subido a Storage. Si no hay, la empresa se muestra con sus iniciales. */
   logo_url?: string | null
+  /** Dominio propio, si tiene. Solo el nombre: autogo.com.co. */
+  domain?: string | null
+  /** WhatsApp de atención de la oficina, en formato internacional. */
+  whatsapp?: string | null
   accent_color: string
   crm_label?: string
   /** Hora esperada de entrada. De acá sale el indicador de llegadas tarde. */

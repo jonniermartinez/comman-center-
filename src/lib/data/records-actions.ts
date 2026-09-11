@@ -114,6 +114,30 @@ export async function saveActivity(input: ActividadInput): Promise<Result> {
   return { ok: true }
 }
 
+/** Un bono aplicado: se guarda copiado, no por referencia (038). */
+export interface BonoAplicado {
+  bonus_id?: string | null
+  name: string
+  amount: number
+}
+
+export interface AdicionInput {
+  concepto: string
+  amount: number
+}
+
+/** Una línea de financiación. Una venta mixta trae dos o tres. */
+export interface FinanciacionInput {
+  financing_code?: string | null
+  valor: number
+  abono: number
+  cuota: number
+  titular_tipo_id?: string | null
+  titular_id?: string | null
+  titular_nombre?: string | null
+  titular_celular?: string | null
+}
+
 export interface VentaInput {
   id?: string
   company_id: string
@@ -124,13 +148,16 @@ export interface VentaInput {
   ref_credito?: string | null
   financing_code?: string | null
   product_code?: string | null
+  company_product_id?: string | null
   school_code?: string | null
   state_code?: string | null
   channel_code?: string | null
+  traffic_code?: string | null
   licencia_tipo_id?: string | null
   licencia_id?: string | null
   licencia_nombre?: string | null
   licencia_celular?: string | null
+  credito_tipo_id?: string | null
   credito_id?: string | null
   credito_nombre?: string | null
   credito_celular?: string | null
@@ -145,23 +172,164 @@ export interface VentaInput {
    */
   cantidad_final: number
   observacion?: string | null
+  /** Bonos autorizados aplicados. Su suma es el descuento. */
+  bonos?: BonoAplicado[]
+  /** Lo que se le agregó al valor de lista. Su suma es la adición. */
+  adiciones?: AdicionInput[]
+  /** Detalle de una financiación mixta. Vacío si se pagó por una sola vía. */
+  financiaciones?: FinanciacionInput[]
 }
 
+/**
+ * Guarda una venta con su detalle.
+ *
+ * La venta y sus tres listas —bonos, adiciones, financiaciones— se escriben en
+ * la misma operación: son la explicación de los valores que quedan en la fila.
+ * Las listas se reemplazan enteras en vez de intentar casar línea por línea;
+ * son tres o cuatro filas y adivinar cuál corresponde a cuál solo abre la
+ * puerta a dejar huérfana la que sobra.
+ *
+ * Corregir una venta ya guardada solo lo puede hacer el super admin, y eso no
+ * lo decide este código: lo niega la política de la tabla (039). Acá se
+ * traduce el error para que la pantalla diga algo útil.
+ */
 export async function saveSale(input: VentaInput): Promise<Result> {
   const session = await requireSession()
   const supabase = await createClient()
 
-  const { error } = await supabase.from("sales").upsert({
-    ...input,
-    period_month: periodo(input.report_date),
-    created_by: session.profile.id,
-    updated_by: session.profile.id,
-  })
+  const { bonos = [], adiciones = [], financiaciones = [], ...venta } = input
 
-  if (error) return { ok: false, error: explicar(error.message) }
+  const { data, error } = await supabase
+    .from("sales")
+    .upsert({
+      ...venta,
+      period_month: periodo(input.report_date),
+      created_by: session.profile.id,
+      updated_by: session.profile.id,
+    })
+    .select("id")
+    .single()
+
+  if (error) {
+    // Editar una venta guardada lo niega la política, no este código. El
+    // mensaje genérico de permisos no ayudaría: lo que hay que decir es por
+    // qué esa venta ya no se toca.
+    if (input.id && /row-level security|permission denied/.test(error.message)) {
+      return {
+        ok: false,
+        error:
+          "Esta venta ya está registrada y solo la puede corregir el super admin. Pídele el cambio con el número de documento del cliente.",
+      }
+    }
+    return { ok: false, error: explicar(error.message) }
+  }
+
+  const saleId = data.id
+
+  if (input.id) {
+    // Reemplazo, no mezcla: primero se limpia lo que había.
+    for (const tabla of ["sale_bonuses", "sale_additions", "sale_financings"] as const) {
+      const { error: limpieza } = await supabase.from(tabla).delete().eq("sale_id", saleId)
+      if (limpieza) return { ok: false, error: explicar(limpieza.message) }
+    }
+  }
+
+  if (bonos.length) {
+    const { error: e } = await supabase.from("sale_bonuses").insert(
+      bonos.map((b) => ({
+        sale_id: saleId,
+        company_id: input.company_id,
+        bonus_id: b.bonus_id ?? null,
+        name: b.name,
+        amount: b.amount,
+        created_by: session.profile.id,
+      })),
+    )
+    if (e) return { ok: false, error: explicar(e.message) }
+  }
+
+  if (adiciones.length) {
+    const { error: e } = await supabase.from("sale_additions").insert(
+      adiciones.map((a) => ({
+        sale_id: saleId,
+        company_id: input.company_id,
+        concepto: a.concepto,
+        amount: a.amount,
+        created_by: session.profile.id,
+      })),
+    )
+    if (e) return { ok: false, error: explicar(e.message) }
+  }
+
+  if (financiaciones.length) {
+    const { error: e } = await supabase.from("sale_financings").insert(
+      financiaciones.map((f, i) => ({
+        sale_id: saleId,
+        company_id: input.company_id,
+        financing_code: f.financing_code ?? null,
+        valor: f.valor,
+        abono: f.abono,
+        cuota: f.cuota,
+        titular_tipo_id: f.titular_tipo_id ?? null,
+        titular_id: f.titular_id ?? null,
+        titular_nombre: f.titular_nombre ?? null,
+        titular_celular: f.titular_celular ?? null,
+        sort_order: i,
+        created_by: session.profile.id,
+      })),
+    )
+    if (e) return { ok: false, error: explicar(e.message) }
+  }
 
   refrescar()
   return { ok: true }
+}
+
+/**
+ * El detalle de una venta ya guardada: bonos, adiciones y financiaciones.
+ *
+ * Lo necesita el formulario cuando se abre para corregir. No viaja con el
+ * listado porque son tres consultas más por fila y en pantalla se ven
+ * veinticinco ventas a la vez; acá se piden solo las de la que se está
+ * abriendo.
+ */
+export async function getSaleDetail(saleId: string): Promise<{
+  bonos: BonoAplicado[]
+  adiciones: AdicionInput[]
+  financiaciones: FinanciacionInput[]
+}> {
+  await requireSession()
+  const supabase = await createClient()
+
+  const [bonos, adiciones, financiaciones] = await Promise.all([
+    supabase.from("sale_bonuses").select("bonus_id, name, amount").eq("sale_id", saleId),
+    supabase.from("sale_additions").select("concepto, amount").eq("sale_id", saleId),
+    supabase
+      .from("sale_financings")
+      .select("financing_code, valor, abono, cuota, titular_nombre, titular_id")
+      .eq("sale_id", saleId)
+      .order("sort_order"),
+  ])
+
+  return {
+    bonos: (bonos.data ?? []).map((b) => ({
+      bonus_id: b.bonus_id,
+      name: b.name,
+      amount: Number(b.amount),
+    })),
+    adiciones: (adiciones.data ?? []).map((a) => ({
+      concepto: a.concepto,
+      amount: Number(a.amount),
+    })),
+    financiaciones: (financiaciones.data ?? []).map((f) => ({
+      financing_code: f.financing_code,
+      valor: Number(f.valor),
+      abono: Number(f.abono),
+      cuota: Number(f.cuota),
+      titular_nombre: f.titular_nombre,
+      titular_id: f.titular_id,
+    })),
+  }
 }
 
 export interface PagoInput {
