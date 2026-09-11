@@ -125,8 +125,15 @@ test.describe("Borrado definitivo", () => {
       await crearEmpresaPorLaInterfaz(superAdmin, nombre)
 
       await irA(superAdmin, "/empresas")
-      const tarjeta = superAdmin.locator("div").filter({ hasText: nombre }).last()
-      await tarjeta.getByRole("button", { name: new RegExp(`Acciones de ${nombre}`) }).click()
+      // El botón se busca por su nombre accesible, que ya incluye el de la
+      // empresa y es único en la rejilla. Antes se llegaba a él bajando por un
+      // `div` que contuviera el nombre, y eso ataba la prueba a la forma del
+      // HTML de la tarjeta: al rediseñarla, el botón dejó de estar dentro de
+      // ese div y la prueba se quedó esperando un elemento que seguía en
+      // pantalla, un poco más allá.
+      await superAdmin
+        .getByRole("button", { name: new RegExp(`Acciones de ${nombre}`) })
+        .click()
       await superAdmin.getByRole("menuitem", { name: /Eliminar definitivamente/ }).click()
 
       // El conteo tiene que llegar. Antes se quedaba en "Contando…" para siempre

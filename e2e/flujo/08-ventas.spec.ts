@@ -76,16 +76,17 @@ test.describe("Edición por la pantalla", () => {
     "editar una venta cambia el dato, no crea otra",
     anotar({
       modulo: "Ventas",
-      rol: "coordinador",
+      rol: "super admin",
       tipo: "regresión",
       porque:
-        "Corregir es tan habitual como registrar: se teclea mal un importe y hay que " +
-        "arreglarlo. Si editar duplicase, el mes saldría inflado.",
+        "Corregir un importe mal tecleado sigue siendo necesario; lo que cambió es quién " +
+        "puede hacerlo. Si al corregir se duplicara la venta, el mes saldría inflado.",
       regresion:
-        "El lápiz de edición se añadió en agosto de 2026 (commits 55317ed y 88acf7b) " +
-        "en los cinco listados; antes solo se podía crear.",
+        "El lápiz de edición se añadió en agosto de 2026 (commits 55317ed y 88acf7b) en los " +
+        "cinco listados. Desde la 039 solo lo ve el super admin: a los demás la base les " +
+        "rechaza el cambio, así que la prueba va con su sesión.",
     }),
-    async ({ coordinador, apiSuperAdmin, mundo }) => {
+    async ({ superAdmin, apiSuperAdmin, mundo }) => {
       const empresa = await Promise.resolve({ id: mundo.empresaA.companyId })
       const { data: sede } = await apiSuperAdmin
         .from("branches")
@@ -93,11 +94,10 @@ test.describe("Edición por la pantalla", () => {
         .eq("company_id", empresa!.id)
         .eq("is_primary", true)
         .single()
-      const { data: persona } = await apiSuperAdmin
-        .from("staff")
-        .select("id")
-        .eq("full_name", "E2E Asesor A")
-        .single()
+      // El comercial sale del mundo de la prueba. Antes se buscaba por nombre
+      // ("E2E Asesor A") y ese comercial no existe: el plantel son A1 y A2, así
+      // que la consulta devolvía nada y la prueba moría en el montaje.
+      const persona = { id: mundo.staffA }
 
       const cliente = marca("editar")
       const { data: venta } = await apiSuperAdmin
@@ -114,10 +114,10 @@ test.describe("Edición por la pantalla", () => {
         .select("id")
         .single()
 
-      await abrirModulo(coordinador, mundo.empresaA.slug, "ventas")
+      await abrirModulo(superAdmin, mundo.empresaA.slug, "ventas")
       await abrirDialogoDe(
-        coordinador,
-        coordinador
+        superAdmin,
+        superAdmin
           .getByRole("button", {
             name: new RegExp(`Editar la venta de ${cliente}`),
           })
@@ -126,8 +126,8 @@ test.describe("Edición por la pantalla", () => {
         `el lápiz de ${cliente}`,
       )
 
-      await coordinador.locator("#valor").fill("1750000")
-      await guardar(coordinador)
+      await superAdmin.locator("#valor").fill("1750000")
+      await guardar(superAdmin)
 
       const { data: todas } = await apiSuperAdmin
         .from("sales")

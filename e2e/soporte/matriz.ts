@@ -51,6 +51,16 @@ interface Registro {
   campoEditable: string
   /** ¿La base deja borrarlo? Desde la 024, las cinco tablas sí. */
   borrable: boolean
+  /**
+   * Queda firmado al crearse: solo el super admin lo corrige o lo borra.
+   *
+   * Es el caso de la venta (039 y 042). Contra una venta se liquidan comisiones
+   * y se concilia cartera, así que dejarla abierta convierte cada cifra en
+   * provisional; y si se pudiera borrar, borrar y volver a crear sería la forma
+   * de saltarse el bloqueo. Los demás registros no llevan esta marca: corregir
+   * una jornada del día no mueve dinero.
+   */
+  firmado?: boolean
 }
 
 interface Contexto {
@@ -146,12 +156,17 @@ export function capacidadesDe(r: Registro): Caso[] {
     )
 
     test(
-      `el coordinador puede editar ${r.singular}`,
+      r.firmado
+        ? `el coordinador no puede editar ${r.singular} ya registrada`
+        : `el coordinador puede editar ${r.singular}`,
       anotar({
         modulo: r.modulo,
         rol: "coordinador",
-        tipo: "feature",
-        porque: "Corregir es tan habitual como registrar: se teclea mal y hay que arreglarlo.",
+        tipo: r.firmado ? "seguridad" : "feature",
+        porque: r.firmado
+          ? "Ni administrar la empresa alcanza para cambiar una cifra ya firmada: contra ella " +
+            "se liquidaron comisiones y se recibieron pagos. El cambio lo hace el super admin."
+          : "Corregir es tan habitual como registrar: se teclea mal y hay que arreglarlo.",
       }),
       async ({ apiCoordinador, apiSuperAdmin, rastro, mundo }) => {
         const ctx = { ...mundo.empresaA, staffId: mundo.staffA }
@@ -167,14 +182,68 @@ export function capacidadesDe(r: Registro): Caso[] {
           .update({ [r.campoEditable]: "corregido por la prueba" } as never)
           .eq("id", creado!.id)
 
+        if (!r.firmado) {
+          expect(
+            error,
+            `el coordinador no pudo editar ${r.singular}: ${error?.message}`,
+          ).toBeNull()
+          return
+        }
+
+        // Cuando RLS niega un UPDATE no hay error: simplemente no toca ninguna
+        // fila. Lo que hay que comprobar es que el dato siga como estaba.
+        const { data: despues } = await apiSuperAdmin
+          .from(r.tabla)
+          .select("*")
+          .eq("id", creado!.id)
+          .single()
         expect(
-          error,
-          `el coordinador no pudo editar ${r.singular}: ${error?.message}`,
-        ).toBeNull()
+          (despues as unknown as Record<string, unknown>)[r.campoEditable],
+          `el coordinador cambió ${r.singular} ya registrada`,
+        ).not.toBe("corregido por la prueba")
       },
     )
 
-    if (r.borrable) {
+    if (r.borrable && r.firmado) {
+      test(
+        `el coordinador no puede eliminar ${r.singular}, pero el super admin sí`,
+        anotar({
+          modulo: r.modulo,
+          rol: ["coordinador", "super admin"],
+          tipo: "seguridad",
+          porque:
+            "Si editar está cerrado y borrar no, el bloqueo es un adorno: se borra y se vuelve " +
+            "a crear con la cifra que se quiera. Por eso borrar una venta es del super admin, " +
+            "que es quien responde por el cambio.",
+        }),
+        async ({ apiCoordinador, apiSuperAdmin, rastro, mundo }) => {
+          const ctx = { ...mundo.empresaA, staffId: mundo.staffA }
+          const { data: creado } = await rastro.crear(
+            apiSuperAdmin,
+            r.tabla,
+            r.fila(ctx, r.unico?.(3)),
+          )
+          expect(creado?.id, "el montaje no pudo crear la fila").toBeTruthy()
+
+          await apiCoordinador.from(r.tabla).delete().eq("id", creado!.id)
+          const { data: sigue } = await apiSuperAdmin
+            .from(r.tabla)
+            .select("id")
+            .eq("id", creado!.id)
+            .maybeSingle()
+          expect(sigue, `el coordinador borró ${r.singular} ya registrada`).not.toBeNull()
+
+          // Y la otra mitad de la regla: el super admin sí puede.
+          await apiSuperAdmin.from(r.tabla).delete().eq("id", creado!.id)
+          const { data: despues } = await apiSuperAdmin
+            .from(r.tabla)
+            .select("id")
+            .eq("id", creado!.id)
+            .maybeSingle()
+          expect(despues, `el super admin no pudo eliminar ${r.singular}`).toBeNull()
+        },
+      )
+    } else if (r.borrable) {
       test(
         `el coordinador puede eliminar ${r.singular}`,
         anotar({
@@ -373,15 +442,19 @@ export function capacidadesDe(r: Registro): Caso[] {
     // Estas tres no aplican a la caja: ahí el asesor no llega a nada.
     if (!r.soloAdmin) {
       test(
-        `el asesor puede corregir ${r.singular} de un compañero`,
+        r.firmado
+          ? `el asesor no puede corregir ${r.singular} de un compañero`
+          : `el asesor puede corregir ${r.singular} de un compañero`,
         anotar({
           modulo: r.modulo,
           rol: "asesor",
-          tipo: "feature",
-          porque:
-            "Quien está en el punto ve el error de un compañero que ya se fue. Si no puede " +
-            "arreglarlo, el dato se queda mal hasta que aparezca un coordinador. Corregir deja " +
-            "rastro y se puede volver a corregir; por eso se permite y borrar no.",
+          tipo: r.firmado ? "seguridad" : "feature",
+          porque: r.firmado
+            ? "Para una jornada, corregir lo del compañero que ya se fue es parte del trabajo. " +
+              "Para una venta no: es plata, y la corrige quien responde por ella."
+            : "Quien está en el punto ve el error de un compañero que ya se fue. Si no puede " +
+              "arreglarlo, el dato se queda mal hasta que aparezca un coordinador. Corregir deja " +
+              "rastro y se puede volver a corregir; por eso se permite y borrar no.",
         }),
         async ({ apiAsesorA, apiSuperAdmin, rastro, mundo }) => {
           const ajeno = { ...mundo.empresaA, staffId: mundo.staffA2 }
@@ -396,33 +469,46 @@ export function capacidadesDe(r: Registro): Caso[] {
             .from(r.tabla)
             .update({ [r.campoEditable]: "corregido por un compañero" } as never)
             .eq("id", creado!.id)
-          expect(
-            error,
-            `el asesor no pudo corregir ${r.singular} ajena: ${error?.message}`,
-          ).toBeNull()
+
+          if (!r.firmado) {
+            expect(
+              error,
+              `el asesor no pudo corregir ${r.singular} ajena: ${error?.message}`,
+            ).toBeNull()
+          }
 
           const { data: despues } = await apiSuperAdmin
             .from(r.tabla)
             .select("*")
             .eq("id", creado!.id)
             .single()
-          expect(
-            (despues as unknown as Record<string, unknown>)[r.campoEditable],
-            "la corrección no se guardó",
-          ).toBe("corregido por un compañero")
+          const valor = (despues as unknown as Record<string, unknown>)[r.campoEditable]
+
+          if (r.firmado) {
+            expect(valor, `el asesor cambió ${r.singular} ya registrada`).not.toBe(
+              "corregido por un compañero",
+            )
+          } else {
+            expect(valor, "la corrección no se guardó").toBe("corregido por un compañero")
+          }
         },
       )
 
       if (r.borrable) {
         test(
-          `el asesor puede eliminar ${r.singular} suya`,
+          r.firmado
+            ? `el asesor no puede eliminar ${r.singular} suya`
+            : `el asesor puede eliminar ${r.singular} suya`,
           anotar({
             modulo: r.modulo,
             rol: "asesor",
-            tipo: "feature",
-            porque:
-              "Si puede crearla y corregirla, tiene que poder quitarla cuando la metió por " +
-              "error. Antes no podía, y la salida era dejarla en cero, que ensucia los informes.",
+            tipo: r.firmado ? "seguridad" : "feature",
+            porque: r.firmado
+              ? "Es el portillo del bloqueo: borrar la propia y volver a crearla con otra cifra " +
+                "sería editar sin pedirle permiso a nadie. Si se metió por error, lo quita el " +
+                "super admin y queda el rastro."
+              : "Si puede crearla y corregirla, tiene que poder quitarla cuando la metió por " +
+                "error. Antes no podía, y la salida era dejarla en cero, que ensucia los informes.",
           }),
           async ({ apiAsesorA, apiSuperAdmin, rastro, mundo }) => {
             const mia = { ...mundo.empresaA, staffId: mundo.staffA }
@@ -441,7 +527,12 @@ export function capacidadesDe(r: Registro): Caso[] {
               .select("id")
               .eq("id", creado!.id)
               .maybeSingle()
-            expect(sigue, `el asesor no pudo eliminar su propia ${r.singular}`).toBeNull()
+
+            if (r.firmado) {
+              expect(sigue, `el asesor borró su propia ${r.singular} ya registrada`).not.toBeNull()
+            } else {
+              expect(sigue, `el asesor no pudo eliminar su propia ${r.singular}`).toBeNull()
+            }
           },
         )
 

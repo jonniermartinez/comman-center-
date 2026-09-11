@@ -18,6 +18,8 @@ export const VENTA: Registro = {
   fila: venta,
   conResponsable: true,
   borrable: true,
+  // Una venta se firma al guardarla: solo el super admin la corrige o la borra.
+  firmado: true,
 }
 
 export const PAGO: Registro = {

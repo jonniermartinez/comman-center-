@@ -41,10 +41,23 @@ import { irA } from "./reintento"
  */
 export async function altaDeEmpresaPorLaInterfaz(pagina: Page, nombre: string) {
   await irA(pagina, "/empresas/nueva")
-  await pagina.locator("#name").fill(nombre)
+
+  // El nombre se escribe hasta que el asistente se dé por enterado.
+  //
+  // El campo se pinta en el HTML del servidor y acepta texto antes de que React
+  // hidrate, pero ese texto no llega al estado: el asistente sigue creyendo que
+  // el nombre está vacío y deja "Siguiente" deshabilitado para siempre. La
+  // prueba moría entonces esperando un botón que nunca se iba a habilitar, y el
+  // fallo parecía del asistente cuando era de la carrera con la hidratación.
+  // Es el mismo hueco que `abrirDialogo` documenta para los diálogos.
+  const siguiente = pagina.getByRole("button", { name: "Siguiente" })
+  await expect(async () => {
+    await pagina.locator("#name").fill(nombre)
+    await expect(siguiente).toBeEnabled({ timeout: 2_000 })
+  }).toPass({ timeout: 30_000 })
 
   for (let paso = 1; paso < 4; paso++) {
-    await pagina.getByRole("button", { name: "Siguiente" }).click()
+    await siguiente.click()
   }
 
   const crear = pagina.getByRole("button", { name: /Crear empresa/ })

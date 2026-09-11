@@ -40,11 +40,9 @@ test.describe("Pagos por la pantalla", () => {
         .eq("company_id", empresa!.id)
         .eq("is_primary", true)
         .single()
-      const { data: persona } = await apiSuperAdmin
-        .from("staff")
-        .select("id")
-        .eq("full_name", "E2E Asesor A")
-        .single()
+      // El comercial sale del mundo de la prueba: el plantel se llama A1, A2 y
+      // B1, así que buscar "E2E Asesor A" por nombre no encontraba a nadie.
+      const persona = { id: mundo.staffA }
 
       // La venta a la que abonar se crea por API: lo que se prueba aquí es el
       // pago, no otra vez el alta de venta.

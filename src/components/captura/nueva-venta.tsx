@@ -29,6 +29,12 @@ export interface Catalogo {
   name: string
 }
 
+/** Una forma de pago del catálogo de la empresa. */
+export interface Financiacion extends Catalogo {
+  /** Si hay que capturar el reparto: qué puso cada entidad (043). */
+  es_mixta: boolean
+}
+
 /** Una venta ya registrada, como la devuelve el listado. */
 export interface VentaExistente {
   id: string
@@ -145,7 +151,7 @@ export function NuevaVenta({
   companyId: string
   branches: { id: string; name: string; is_primary: boolean }[]
   staff: { id: string; full_name: string }[]
-  financiaciones: Catalogo[]
+  financiaciones: Financiacion[]
   productosEmpresa: ProductoVendible[]
   traficos: Catalogo[]
   escuelas: Catalogo[]
@@ -255,9 +261,9 @@ export function NuevaVenta({
   const saldo = valorFinal - recaudado
   const persona = staff.find((s) => s.id === staffId)
 
-  // "Mixta Addi", "Mixto", "Mixto Brilla": en el catálogo hay siete variantes y
-  // todas quieren decir lo mismo —la venta se pagó por más de una vía—.
-  const esMixta = financiacion.toLowerCase().startsWith("mixt")
+  // Si hay que pedir el reparto lo dice el catálogo, no cómo esté escrito el
+  // código: el día que alguien cree "Addi + contado" tiene que funcionar igual.
+  const esMixta = financiaciones.find((f) => f.code === financiacion)?.es_mixta ?? false
   const repartido = lineas.reduce((s, l) => s + l.valor, 0)
 
   const valido =

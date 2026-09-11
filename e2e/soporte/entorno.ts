@@ -162,7 +162,7 @@ export const EMPRESAS_REALES = [
   "ruta-segura",
   "atenas",
   "san-jose",
-  "tramites-buenaventura",
+  "punto-transito",
   "cevial",
   "tramites-candelaria",
   "tramites-florida",

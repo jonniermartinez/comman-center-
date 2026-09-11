@@ -46,7 +46,7 @@ export interface CompanyContext {
    */
   isSuperAdmin: boolean
   /** Catálogos para los formularios de alta. */
-  financiaciones: { code: string; name: string }[]
+  financiaciones: { code: string; name: string; es_mixta: boolean }[]
   /** La lista de precios de esta empresa. Es de donde sale el valor de una venta. */
   productosEmpresa: ProductoVendible[]
   traficos: { code: string; name: string }[]
@@ -106,7 +106,7 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
     supabase.from("company_modules").select("module_code").eq("company_id", company.id),
     supabase.rpc("can_manage_company", { target_company: company.id }),
     supabase.rpc("is_super_admin"),
-    supabase.from("financing_types").select("code, name").order("sort_order"),
+    supabase.from("financing_types").select("code, name, es_mixta").order("sort_order"),
     supabase
       .from("company_products")
       .select("id, name, price, company_product_bonuses(id, name, amount, active, sort_order)")

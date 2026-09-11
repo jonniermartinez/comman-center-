@@ -2,6 +2,7 @@ import { anotar } from "../soporte/anotaciones"
 import { clienteAnonimo, empresaPorSlug, type Cliente } from "../soporte/api"
 import { venta } from "../soporte/datos"
 import { expect, test } from "../soporte/fixtures"
+import { esDePrueba } from "../soporte/guardarrail"
 
 /**
  * Lo que la base le entrega a cada quien cuando pregunta por su cuenta.
@@ -26,12 +27,6 @@ async function contextoDe(admin: Cliente, slug: string) {
 
   if (!sede) throw new Error(`La empresa ${slug} no tiene sede principal`)
   return { empresa, companyId: empresa.id, branchId: sede.id }
-}
-
-async function staffDe(admin: Cliente, nombre: string) {
-  const { data } = await admin.from("staff").select("id").eq("full_name", nombre).single()
-  if (!data) throw new Error(`No existe la persona de pruebas "${nombre}"`)
-  return data.id
 }
 
 test.describe("RLS: lo que la base entrega a cada rol", () => {
@@ -96,7 +91,7 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
       porque:
         "Las cuentas de prueba viven en la misma base que los datos reales. Si alcanzaran a CEA o TTC, las pruebas serían una fuga.",
     }),
-    async ({ apiAsesorA, mundo }) => {
+    async ({ apiAsesorA }) => {
       const { data: empresas } = await apiAsesorA.from("companies").select("slug")
       const slugs = (empresas ?? []).map((e) => e.slug)
 
@@ -104,9 +99,21 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
         expect(slugs, `el asesor de pruebas alcanza ${real}`).not.toContain(real)
       }
 
-      // 16.500 ventas reales en la base; a este usuario le corresponden cero.
-      const { data: ventas } = await apiAsesorA.from("sales").select("id").limit(5)
-      expect(ventas ?? []).toHaveLength(0)
+      // 16.500 ventas reales en la base; a este usuario no le corresponde
+      // ninguna. Lo que se comprueba es de quién es cada venta que alcanza, no
+      // que la lista venga vacía: el plantel de cuentas es fijo y las pruebas
+      // corren en paralelo, así que este mismo asesor está asignado a la
+      // empresa de prueba de cada una de las que estén corriendo, y ver las
+      // ventas de todas ellas es lo correcto. Lo que no puede pasar es que
+      // asome una venta de una empresa del cliente.
+      const { data: ventas } = await apiAsesorA
+        .from("sales")
+        .select("id, companies(slug)")
+        .limit(20)
+      const reales = (ventas ?? [])
+        .map((v) => (v as unknown as { companies?: { slug?: string } }).companies?.slug ?? "")
+        .filter((slug) => !esDePrueba(slug))
+      expect(reales, "el asesor de pruebas alcanza ventas de una empresa del cliente").toEqual([])
     },
   )
 
@@ -122,8 +129,12 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
     async ({ apiAsesorA, apiSuperAdmin, mundo }) => {
       const a = await contextoDe(apiSuperAdmin, mundo.empresaA.slug)
       const b = await contextoDe(apiSuperAdmin, mundo.empresaB.slug)
-      const miStaff = await staffDe(apiSuperAdmin, "E2E Asesor A")
-      const otroStaff = await staffDe(apiSuperAdmin, "E2E Asesor B")
+      // Las personas salen del mundo de la prueba. Buscarlas por nombre
+      // ("E2E Asesor A") dejó de funcionar cuando el plantel pasó a llamarse
+      // A1, A2 y B1: la consulta no encontraba a nadie y la prueba moría antes
+      // de comprobar ningún permiso.
+      const miStaff = mundo.staffA
+      const otroStaff = mundo.staffA2
 
       // CONTROL POSITIVO: la misma fila tiene que entrar cuando sí está
       // permitida. Sin esto, los dos rechazos de abajo no demuestran nada:
@@ -170,7 +181,7 @@ test.describe("RLS: lo que la base entrega a cada rol", () => {
     }),
     async ({ apiCoordinador, apiSuperAdmin, mundo }) => {
       const a = await contextoDe(apiSuperAdmin, mundo.empresaA.slug)
-      const otroStaff = await staffDe(apiSuperAdmin, "E2E Asesor A")
+      const otroStaff = mundo.staffA
 
       // Es la diferencia de fondo entre los dos roles: el comercial registra lo
       // suyo, el coordinador corrige lo de todo el equipo.

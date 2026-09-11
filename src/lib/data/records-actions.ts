@@ -664,10 +664,11 @@ const TABLA: Record<
  * la aplicación solo dejaba crear y editar, así que una venta metida por error
  * —o duplicada— se quedaba ahí para siempre falseando el mes.
  *
- * Quién puede hacerlo lo decide la base, no esta función: las políticas de
- * borrado exigen `can_manage_company`, o sea super admin o coordinador. Un
- * asesor puede corregir lo suyo, pero hacer desaparecer un registro es cosa de
- * quien administra.
+ * Quién puede hacerlo lo decide la base, no esta función. Para una jornada,
+ * una agenda o un movimiento de caja basta con administrar la empresa, o con
+ * que el registro sea propio. Una venta, no: desde la 042 solo la borra el
+ * super admin, por lo mismo que solo él la corrige —borrar y volver a crear
+ * era la forma de saltarse ese bloqueo—.
  *
  * Es borrado de verdad, no marca: son datos operativos del día a día, no el
  * histórico de una empresa. Lo que sí queda es el rastro en la auditoría.
@@ -688,7 +689,17 @@ export async function deleteRecord(tipo: TipoRegistro, id: string): Promise<Resu
   // Si RLS no dejó borrar, PostgREST no da error: simplemente no toca ninguna
   // fila. Hay que comprobarlo, o la pantalla diría que borró algo que sigue ahí.
   const { data: sigue } = await supabase.from(tabla).select("id").eq("id", id).maybeSingle()
-  if (sigue) return { ok: false, error: "No tienes permiso para eliminar este registro." }
+  if (sigue) {
+    // Una venta no es que "no tengas permiso": es que ya está firmada. Decirlo
+    // así evita que alguien crea que le falta un rol y ande buscándolo.
+    return {
+      ok: false,
+      error:
+        tipo === "venta"
+          ? "Esta venta ya está registrada: borrarla solo lo puede hacer el super admin."
+          : "No tienes permiso para eliminar este registro.",
+    }
+  }
 
   await logAudit({
     action: "delete",

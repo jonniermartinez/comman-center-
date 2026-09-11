@@ -110,9 +110,14 @@ export async function rellenar(pagina: Page, campos: Record<string, string>) {
  * mensaje que no tiene que ver.
  */
 export async function guardar(pagina: Page, boton: RegExp = /Guardar|Registrar|Crear/) {
-  await pagina.getByRole("dialog").getByRole("button", { name: boton }).last().click()
-  await expect(
-    pagina.getByRole("dialog"),
-    "el diálogo no se cerró: el guardado falló",
-  ).toBeHidden({ timeout: 30_000 })
+  // Se apunta al diálogo por su `data-slot`, no por el rol: los popover de los
+  // combobox también son `role="dialog"` y quedan montados un rato después de
+  // cerrarse. Con el rol a secas, la espera de abajo encontraba dos elementos y
+  // fallaba por modo estricto diciendo "el guardado falló" aunque hubiera ido
+  // bien.
+  const dialogo = pagina.locator('[data-slot="dialog-content"]')
+  await dialogo.getByRole("button", { name: boton }).last().click()
+  await expect(dialogo, "el diálogo no se cerró: el guardado falló").toBeHidden({
+    timeout: 30_000,
+  })
 }

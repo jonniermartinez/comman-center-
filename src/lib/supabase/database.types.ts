@@ -1066,16 +1066,19 @@ export type Database = {
       financing_types: {
         Row: {
           code: string
+          es_mixta: boolean
           name: string
           sort_order: number
         }
         Insert: {
           code: string
+          es_mixta?: boolean
           name: string
           sort_order?: number
         }
         Update: {
           code?: string
+          es_mixta?: boolean
           name?: string
           sort_order?: number
         }
