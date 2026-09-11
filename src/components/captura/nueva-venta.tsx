@@ -11,7 +11,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -79,6 +78,39 @@ interface LineaFinanciacion {
 }
 
 /**
+ * Bloque del formulario.
+ *
+ * Una venta tiene cuatro asuntos distintos —quién la hizo, quién compra, qué
+ * compró y cómo la paga— y treinta campos seguidos se leen como una lista de
+ * casillas. Cada asunto va en su caja con título: se ve dónde empieza uno y
+ * termina el otro sin tener que leerlos.
+ */
+function Bloque({
+  titulo,
+  nota,
+  acciones,
+  children,
+}: {
+  titulo: string
+  nota?: string
+  acciones?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-lg border">
+      <header className="flex items-start justify-between gap-3 border-b bg-muted/30 px-4 py-2.5">
+        <div className="min-w-0">
+          <h3 className="text-sm font-medium">{titulo}</h3>
+          {nota && <p className="mt-0.5 text-xs text-muted-foreground">{nota}</p>}
+        </div>
+        {acciones}
+      </header>
+      <div className="space-y-4 p-4">{children}</div>
+    </section>
+  )
+}
+
+/**
  * Alta de una venta.
  *
  * El formulario sigue el orden en que ocurre la venta: quién compra, qué
@@ -88,6 +120,10 @@ interface LineaFinanciacion {
  *   * El precio lo pone el producto de la lista de la empresa.
  *   * La rebaja solo puede ser un bono autorizado de ese producto.
  *   * El saldo es el valor final menos los pagos, y los pagos van en su módulo.
+ *
+ * El resumen de plata vive pegado al pie y no al final del formulario: es la
+ * cifra que se está negociando, y si hay que bajar hasta el fondo para verla,
+ * se cierra el trato mirando otra cosa.
  *
  * Una venta guardada no se edita: la política de la base solo deja al super
  * admin (039), así que a los demás ni se les ofrece el lápiz.
@@ -187,7 +223,9 @@ export function NuevaVenta({
     let vigente = true
     getSaleDetail(registro.id).then((d) => {
       if (!vigente) return
-      setBonos(d.bonos.map((b) => ({ bonus_id: b.bonus_id ?? null, name: b.name, amount: b.amount })))
+      setBonos(
+        d.bonos.map((b) => ({ bonus_id: b.bonus_id ?? null, name: b.name, amount: b.amount })),
+      )
       setAdiciones(d.adiciones)
       setLineas(
         d.financiaciones.map((f) => ({
@@ -252,523 +290,589 @@ export function NuevaVenta({
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
+      <DialogContent className="grid max-h-[92svh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-5xl">
+        <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{editando ? "Editar venta" : "Nueva venta"}</DialogTitle>
           <DialogDescription>
             El crédito de un cliente: qué compró, cómo lo financió y cuánto abonó.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="min-w-0 space-y-2">
-            <Label htmlFor="fecha">Fecha</Label>
-            <Input
-              id="fecha"
-              type="date"
-              value={fecha}
-              max={hoy}
-              onChange={(e) => e.target.value && setFecha(e.target.value)}
-            />
-          </div>
-          <CampoSelect
-            id="sede"
-            label="Sede"
-            value={branchId}
-            onChange={setBranchId}
-            options={branches.map((b) => ({ value: b.id, label: b.name }))}
-          />
-          {canManage ? (
-            <CampoSelect
-              id="responsable"
-              label="Responsable"
-              value={staffId}
-              onChange={setStaffId}
-              vacio="Sin responsable"
-              options={staff.map((s) => ({ value: s.id, label: s.full_name }))}
-            />
-          ) : (
-            <div className="min-w-0 space-y-2">
-              <Label>Responsable</Label>
-              <p className="flex h-8 items-center text-sm">{persona?.full_name ?? "—"}</p>
-            </div>
-          )}
-        </div>
-
-        {/* ---------------- Titular de la licencia ---------------- */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <CampoTexto
-            id="nombre"
-            label="Titular de la licencia"
-            value={nombre}
-            onChange={setNombre}
-            placeholder="Nombre completo"
-          />
-          <CampoTexto id="documento" label="Documento" value={documento} onChange={setDocumento} />
-          <div className="min-w-0 space-y-2">
-            <Label htmlFor="celular">Celular</Label>
-            <div className="flex items-center gap-2">
-              <Input id="celular" value={celular} onChange={(e) => setCelular(e.target.value)} />
-              {/* El número ya está escrito: abrirlo en WhatsApp no debería
-                  costar copiarlo, pegarlo y buscarlo en el teléfono. */}
-              <Button
-                asChild={!!whatsapp}
-                variant="outline"
-                size="icon"
-                className="size-9 shrink-0"
-                disabled={!whatsapp}
-                title={whatsapp ? `Escribirle a ${nombre || "este número"}` : "Sin celular"}
-              >
-                {whatsapp ? (
-                  <a href={whatsapp} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="size-4" />
-                    <span className="sr-only">Abrir WhatsApp</span>
-                  </a>
+        <div className="overflow-y-auto px-6 py-5">
+          <div className="grid items-start gap-5 lg:grid-cols-2">
+            {/* ============== Columna izquierda: quién ============== */}
+            <div className="space-y-5">
+              <Bloque titulo="La venta">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="min-w-0 space-y-2">
+                    <Label htmlFor="fecha">Fecha</Label>
+                    <Input
+                      id="fecha"
+                      type="date"
+                      value={fecha}
+                      max={hoy}
+                      onChange={(e) => e.target.value && setFecha(e.target.value)}
+                    />
+                  </div>
+                  <CampoSelect
+                    id="sede"
+                    label="Sede"
+                    value={branchId}
+                    onChange={setBranchId}
+                    options={branches.map((b) => ({ value: b.id, label: b.name }))}
+                  />
+                </div>
+                {canManage ? (
+                  <CampoSelect
+                    id="responsable"
+                    label="Responsable"
+                    value={staffId}
+                    onChange={setStaffId}
+                    vacio="Sin responsable"
+                    options={staff.map((s) => ({ value: s.id, label: s.full_name }))}
+                  />
                 ) : (
-                  <MessageCircle className="size-4" />
+                  <div className="min-w-0 space-y-2">
+                    <Label>Responsable</Label>
+                    <p className="flex h-8 items-center text-sm">{persona?.full_name ?? "—"}</p>
+                  </div>
                 )}
-              </Button>
+              </Bloque>
+
+              <Bloque titulo="Titular de la licencia" nota="Quien va a manejar.">
+                <CampoTexto
+                  id="nombre"
+                  label="Nombre completo"
+                  value={nombre}
+                  onChange={setNombre}
+                  placeholder="Como aparece en la cédula"
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <CampoTexto
+                    id="documento"
+                    label="Documento"
+                    value={documento}
+                    onChange={setDocumento}
+                  />
+                  <div className="min-w-0 space-y-2">
+                    <Label htmlFor="celular">Celular</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="celular"
+                        value={celular}
+                        onChange={(e) => setCelular(e.target.value)}
+                      />
+                      {/* El número ya está escrito: abrirlo en WhatsApp no
+                          debería costar copiarlo y buscarlo en el teléfono. */}
+                      <Button
+                        asChild={!!whatsapp}
+                        variant="outline"
+                        size="icon"
+                        className="size-9 shrink-0"
+                        disabled={!whatsapp}
+                        title={
+                          whatsapp
+                            ? `Escribirle a ${nombre || "este número"} por WhatsApp`
+                            : "Escribe un celular para poder abrir WhatsApp"
+                        }
+                      >
+                        {whatsapp ? (
+                          <a href={whatsapp} target="_blank" rel="noopener noreferrer">
+                            <MessageCircle className="size-4" />
+                            <span className="sr-only">Abrir WhatsApp</span>
+                          </a>
+                        ) : (
+                          <MessageCircle className="size-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Bloque>
+
+              <Bloque titulo="Titular del crédito" nota="Quien firma la financiación.">
+                <div className="flex items-start gap-3">
+                  <Switch
+                    id="credito-igual"
+                    checked={creditoIgual}
+                    onCheckedChange={setCreditoIgual}
+                  />
+                  <Label htmlFor="credito-igual" className="font-normal">
+                    Es el mismo titular de la licencia
+                  </Label>
+                </div>
+
+                {!creditoIgual && (
+                  <div className="space-y-4 border-t pt-4">
+                    <CampoTexto
+                      id="credito-nombre"
+                      label="Nombre completo"
+                      value={creditoNombre}
+                      onChange={setCreditoNombre}
+                      placeholder="Quien firma el crédito"
+                    />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <CampoTexto
+                        id="credito-documento"
+                        label="Documento"
+                        value={creditoDocumento}
+                        onChange={setCreditoDocumento}
+                      />
+                      <CampoTexto
+                        id="credito-celular"
+                        label="Celular"
+                        value={creditoCelular}
+                        onChange={setCreditoCelular}
+                      />
+                    </div>
+                  </div>
+                )}
+              </Bloque>
+
+              <Bloque titulo="Observación" nota="Opcional.">
+                <Textarea
+                  id="obs"
+                  rows={3}
+                  value={observacion}
+                  onChange={(e) => setObservacion(e.target.value)}
+                  placeholder="Lo que haya que saber de esta venta y no quepa en un campo."
+                />
+              </Bloque>
             </div>
-          </div>
-        </div>
 
-        {/* ---------------- Titular del crédito ---------------- */}
-        <div className="space-y-3 rounded-lg border px-4 py-3">
-          <div className="flex items-start gap-3">
-            <Switch id="credito-igual" checked={creditoIgual} onCheckedChange={setCreditoIgual} />
-            <div className="space-y-0.5">
-              <Label htmlFor="credito-igual">El crédito va a nombre del mismo titular</Label>
-              <p className="text-xs text-muted-foreground">
-                Apágalo cuando quien firma la financiación no es quien va a manejar: un padre que
-                financia el curso del hijo, por ejemplo.
-              </p>
-            </div>
-          </div>
+            {/* ============== Columna derecha: qué y cómo ============== */}
+            <div className="space-y-5">
+              <Bloque titulo="Qué compró">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {productosEmpresa.length > 0 && (
+                    <CampoSelect
+                      id="producto"
+                      label="Producto"
+                      value={productoId}
+                      onChange={(v) => {
+                        setProductoId(v)
+                        // Los bonos son de un producto: al cambiarlo, los que
+                        // estaban aplicados ya no existen.
+                        setBonos([])
+                        const elegido = productosEmpresa.find((p) => p.id === v)
+                        if (elegido) setPrecioBase(elegido.price)
+                      }}
+                      vacio="Sin definir"
+                      options={productosEmpresa.map((p) => ({
+                        value: p.id,
+                        label: `${p.name} · ${formatCOP(p.price)}`,
+                      }))}
+                    />
+                  )}
+                  {/* Sin producto elegido el valor se digita: puede ser una
+                      empresa que todavía no cargó su lista, o una venta vieja
+                      importada que no apunta a ningún producto. */}
+                  {!producto && (
+                    <div className="min-w-0 space-y-2">
+                      <Label htmlFor="valor">Valor</Label>
+                      <MoneyInput id="valor" value={precioBase} onValueChange={setPrecioBase} />
+                    </div>
+                  )}
+                  <div className="min-w-0 space-y-2">
+                    <Label htmlFor="cantidad">Licencias</Label>
+                    <Input
+                      id="cantidad"
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      value={cantidad}
+                      onChange={(e) => setCantidad(Math.max(0, Number(e.target.value) || 0))}
+                      className="text-right tabular-nums"
+                    />
+                  </div>
+                </div>
 
-          {!creditoIgual && (
-            <div className="grid gap-4 sm:grid-cols-3">
-              <CampoTexto
-                id="credito-nombre"
-                label="Titular del crédito"
-                value={creditoNombre}
-                onChange={setCreditoNombre}
-                placeholder="Nombre completo"
-              />
-              <CampoTexto
-                id="credito-documento"
-                label="Documento"
-                value={creditoDocumento}
-                onChange={setCreditoDocumento}
-              />
-              <CampoTexto
-                id="credito-celular"
-                label="Celular"
-                value={creditoCelular}
-                onChange={setCreditoCelular}
-              />
-            </div>
-          )}
-        </div>
+                {producto && producto.price !== precioBase && (
+                  <p className="text-xs text-muted-foreground">
+                    Esta venta se registró por {formatCOP(precioBase)}. El precio de {producto.name}{" "}
+                    en la lista de hoy es {formatCOP(producto.price)}; se respeta el de la venta.
+                  </p>
+                )}
 
-        {/* ---------------- Qué compró ---------------- */}
-        <div className="grid gap-4 sm:grid-cols-4">
-          {productosEmpresa.length > 0 && (
-            <CampoSelect
-              id="producto"
-              label="Producto"
-              value={productoId}
-              onChange={(v) => {
-                setProductoId(v)
-                // Los bonos son de un producto: al cambiarlo, los que estaban
-                // aplicados ya no existen.
-                setBonos([])
-                const elegido = productosEmpresa.find((p) => p.id === v)
-                if (elegido) setPrecioBase(elegido.price)
-              }}
-              vacio="Sin definir"
-              options={productosEmpresa.map((p) => ({
-                value: p.id,
-                label: `${p.name} · ${formatCOP(p.price)}`,
-              }))}
-            />
-          )}
-          {/* Sin producto elegido el valor se digita: puede ser una empresa
-              que todavía no cargó su lista, o una venta vieja importada del
-              Excel que no apunta a ningún producto. */}
-          {!producto && (
-            <div className="min-w-0 space-y-2">
-              <Label htmlFor="valor">Valor</Label>
-              <MoneyInput id="valor" value={precioBase} onValueChange={setPrecioBase} />
-            </div>
-          )}
-          <CampoSelect
-            id="trafico"
-            label="Tráfico"
-            value={trafico}
-            onChange={setTrafico}
-            vacio="Sin definir"
-            options={traficos.map((t) => ({ value: t.code, label: t.name }))}
-          />
-          <CampoSelect
-            id="escuela"
-            label="Escuela"
-            value={escuela}
-            onChange={setEscuela}
-            vacio="Sin definir"
-            options={escuelas.map((e) => ({ value: e.code, label: e.name }))}
-          />
-          <CampoSelect
-            id="estado"
-            label="Estado del trámite"
-            value={estado}
-            onChange={setEstado}
-            vacio="Sin definir"
-            options={estados.map((e) => ({ value: e.code, label: e.name }))}
-          />
-        </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <CampoSelect
+                    id="trafico"
+                    label="Tráfico"
+                    value={trafico}
+                    onChange={setTrafico}
+                    vacio="Sin definir"
+                    options={traficos.map((t) => ({ value: t.code, label: t.name }))}
+                  />
+                  <CampoSelect
+                    id="escuela"
+                    label="Escuela"
+                    value={escuela}
+                    onChange={setEscuela}
+                    vacio="Sin definir"
+                    options={escuelas.map((e) => ({ value: e.code, label: e.name }))}
+                  />
+                  <CampoSelect
+                    id="estado"
+                    label="Estado"
+                    value={estado}
+                    onChange={setEstado}
+                    vacio="Sin definir"
+                    options={estados.map((e) => ({ value: e.code, label: e.name }))}
+                  />
+                </div>
+              </Bloque>
 
-        {producto && producto.price !== precioBase && (
-          <p className="text-xs text-muted-foreground">
-            Esta venta se registró por {formatCOP(precioBase)}. El precio de {producto.name} en la
-            lista de hoy es {formatCOP(producto.price)}; se respeta el de la venta.
-          </p>
-        )}
-
-        {/* ---------------- Bonos del producto ---------------- */}
-        {producto && producto.bonos.length > 0 && (
-          <div className="space-y-2">
-            <Label>Bonos autorizados</Label>
-            <div className="flex flex-wrap gap-2">
-              {producto.bonos.map((bono) => {
-                const aplicado = bonos.some((b) => b.bonus_id === bono.id)
-                return (
+              <Bloque
+                titulo="Bonos y adiciones"
+                nota="Lo que le baja y lo que le sube al precio de lista."
+                acciones={
                   <Button
-                    key={bono.id}
                     type="button"
-                    variant={aplicado ? "default" : "outline"}
+                    variant="outline"
                     size="sm"
-                    onClick={() =>
-                      setBonos((actual) =>
-                        aplicado
-                          ? actual.filter((b) => b.bonus_id !== bono.id)
-                          : [...actual, { bonus_id: bono.id, name: bono.name, amount: bono.amount }],
-                      )
+                    onClick={() => setAdiciones((a) => [...a, { concepto: "", amount: 0 }])}
+                  >
+                    <Plus className="size-4" />
+                    Adición
+                  </Button>
+                }
+              >
+                {producto && producto.bonos.length > 0 ? (
+                  <div className="space-y-2">
+                    <Label>Bonos autorizados</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {producto.bonos.map((bono) => {
+                        const aplicado = bonos.some((b) => b.bonus_id === bono.id)
+                        return (
+                          <Button
+                            key={bono.id}
+                            type="button"
+                            variant={aplicado ? "default" : "outline"}
+                            size="sm"
+                            onClick={() =>
+                              setBonos((actual) =>
+                                aplicado
+                                  ? actual.filter((b) => b.bonus_id !== bono.id)
+                                  : [
+                                      ...actual,
+                                      { bonus_id: bono.id, name: bono.name, amount: bono.amount },
+                                    ],
+                              )
+                            }
+                          >
+                            {bono.name} · −{formatCOP(bono.amount)}
+                          </Button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {producto
+                      ? `${producto.name} no tiene bonos autorizados.`
+                      : "Los bonos aparecen al elegir un producto."}
+                  </p>
+                )}
+
+                {adiciones.length > 0 && (
+                  <div className="space-y-2 border-t pt-4">
+                    <div className="grid grid-cols-[1fr_9rem_2.25rem] gap-3">
+                      <Label className="text-xs font-normal text-muted-foreground">Concepto</Label>
+                      <Label className="text-xs font-normal text-muted-foreground">Valor</Label>
+                      <span />
+                    </div>
+                    {adiciones.map((adicion, i) => (
+                      <div key={i} className="grid grid-cols-[1fr_9rem_2.25rem] items-center gap-3">
+                        <Input
+                          value={adicion.concepto}
+                          onChange={(e) =>
+                            setAdiciones((actual) =>
+                              actual.map((a, j) =>
+                                i === j ? { ...a, concepto: e.target.value } : a,
+                              ),
+                            )
+                          }
+                          placeholder="Examen médico, curso adicional…"
+                          aria-label={`Concepto de la adición ${i + 1}`}
+                        />
+                        <MoneyInput
+                          value={adicion.amount}
+                          onValueChange={(v) =>
+                            setAdiciones((actual) =>
+                              actual.map((a, j) => (i === j ? { ...a, amount: v } : a)),
+                            )
+                          }
+                          aria-label={`Valor de la adición ${i + 1}`}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-9"
+                          onClick={() => setAdiciones((actual) => actual.filter((_, j) => j !== i))}
+                        >
+                          <Trash2 className="size-4" />
+                          <span className="sr-only">Quitar la adición {i + 1}</span>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Bloque>
+
+              <Bloque
+                titulo="Financiación"
+                nota={esMixta ? "Una línea por cada vía de pago." : undefined}
+                acciones={
+                  esMixta ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setLineas((l) => [
+                          ...l,
+                          {
+                            financing_code: "",
+                            valor: 0,
+                            abono: 0,
+                            cuota: 0,
+                            titular_nombre: "",
+                            titular_id: "",
+                          },
+                        ])
+                      }
+                    >
+                      <Plus className="size-4" />
+                      Línea
+                    </Button>
+                  ) : undefined
+                }
+              >
+                <CampoSelect
+                  id="financiacion"
+                  label="Cómo la pagó"
+                  value={financiacion}
+                  onChange={setFinanciacion}
+                  vacio="Sin definir"
+                  options={financiaciones.map((f) => ({ value: f.code, label: f.name }))}
+                />
+
+                {esMixta && (
+                  <div className="space-y-3 border-t pt-4">
+                    {lineas.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Agrega una línea por cada entidad que puso plata, con su abono, su cuota y
+                        quién la firma.
+                      </p>
+                    )}
+
+                    {lineas.map((linea, i) => (
+                      <div key={i} className="space-y-3 rounded-lg bg-muted/40 p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Línea {i + 1}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-7"
+                            onClick={() => setLineas((actual) => actual.filter((_, j) => j !== i))}
+                          >
+                            <Trash2 className="size-3.5" />
+                            <span className="sr-only">Quitar la línea {i + 1}</span>
+                          </Button>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <CampoSelect
+                            id={`linea-tipo-${i}`}
+                            label="Entidad"
+                            value={linea.financing_code}
+                            onChange={(v) => cambiarLinea(i, { financing_code: v })}
+                            vacio="Sin definir"
+                            options={financiaciones.map((f) => ({ value: f.code, label: f.name }))}
+                          />
+                          <div className="min-w-0 space-y-2">
+                            <Label htmlFor={`linea-valor-${i}`}>Valor financiado</Label>
+                            <MoneyInput
+                              id={`linea-valor-${i}`}
+                              value={linea.valor}
+                              onValueChange={(v) => cambiarLinea(i, { valor: v })}
+                            />
+                          </div>
+                          <div className="min-w-0 space-y-2">
+                            <Label htmlFor={`linea-abono-${i}`}>Abono</Label>
+                            <MoneyInput
+                              id={`linea-abono-${i}`}
+                              value={linea.abono}
+                              onValueChange={(v) => cambiarLinea(i, { abono: v })}
+                            />
+                          </div>
+                          <div className="min-w-0 space-y-2">
+                            <Label htmlFor={`linea-cuota-${i}`}>Cuota</Label>
+                            <MoneyInput
+                              id={`linea-cuota-${i}`}
+                              value={linea.cuota}
+                              onValueChange={(v) => cambiarLinea(i, { cuota: v })}
+                            />
+                          </div>
+                          <CampoTexto
+                            id={`linea-titular-${i}`}
+                            label="Quién la firma"
+                            value={linea.titular_nombre}
+                            onChange={(v) => cambiarLinea(i, { titular_nombre: v })}
+                            placeholder={creditoIgual ? nombre : creditoNombre}
+                          />
+                          <CampoTexto
+                            id={`linea-titular-id-${i}`}
+                            label="Documento"
+                            value={linea.titular_id}
+                            onChange={(v) => cambiarLinea(i, { titular_id: v })}
+                          />
+                        </div>
+                      </div>
+                    ))}
+
+                    {lineas.length > 0 && repartido !== valorFinal && (
+                      <p className="text-xs text-amber-600">
+                        Las líneas suman {formatCOP(repartido)} y la venta vale{" "}
+                        {formatCOP(valorFinal)}: faltan{" "}
+                        {formatCOP(Math.abs(valorFinal - repartido))} por repartir.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </Bloque>
+
+            </div>
+          </div>
+        </div>
+
+        {/* ============== Pie: la plata y el guardar ============== */}
+        <div className="border-t bg-muted/40 px-6 py-3">
+          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+            <dl className="flex flex-wrap items-end gap-x-6 gap-y-2 text-sm">
+              <div>
+                <dt className="text-xs text-muted-foreground">Valor de lista</dt>
+                <dd className="font-medium tabular-nums">{formatCOP(valorLista)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Bonos</dt>
+                <dd className="font-medium tabular-nums">
+                  {totalBonos ? `−${formatCOP(totalBonos)}` : formatCOP(0)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Adiciones</dt>
+                <dd className="font-medium tabular-nums">
+                  {totalAdiciones ? `+${formatCOP(totalAdiciones)}` : formatCOP(0)}
+                </dd>
+              </div>
+              <div className="border-l pl-6">
+                <dt className="text-xs text-muted-foreground">Valor final</dt>
+                <dd className="text-lg font-semibold tabular-nums">{formatCOP(valorFinal)}</dd>
+              </div>
+              {editando && (
+                <div>
+                  <dt className="text-xs text-muted-foreground">Saldo</dt>
+                  <dd
+                    className={
+                      saldo > 0
+                        ? "font-medium tabular-nums text-amber-600"
+                        : "font-medium tabular-nums"
                     }
                   >
-                    {bono.name} · −{formatCOP(bono.amount)}
-                  </Button>
-                )
-              })}
-            </div>
-          </div>
-        )}
+                    {formatCOP(saldo)}
+                  </dd>
+                </div>
+              )}
+            </dl>
 
-        {/* ---------------- Adiciones ---------------- */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label>Adiciones</Label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setAdiciones((a) => [...a, { concepto: "", amount: 0 }])}
-            >
-              <Plus className="size-4" />
-              Agregar
-            </Button>
-          </div>
-          {adiciones.map((adicion, i) => (
-            <div key={i} className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-              <Input
-                value={adicion.concepto}
-                onChange={(e) =>
-                  setAdiciones((actual) =>
-                    actual.map((a, j) => (i === j ? { ...a, concepto: e.target.value } : a)),
-                  )
-                }
-                placeholder="Examen médico, curso adicional…"
-                aria-label={`Concepto de la adición ${i + 1}`}
-              />
-              <MoneyInput
-                value={adicion.amount}
-                onValueChange={(v) =>
-                  setAdiciones((actual) =>
-                    actual.map((a, j) => (i === j ? { ...a, amount: v } : a)),
-                  )
-                }
-                aria-label={`Valor de la adición ${i + 1}`}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-9"
-                onClick={() => setAdiciones((actual) => actual.filter((_, j) => j !== i))}
-              >
-                <Trash2 className="size-4" />
-                <span className="sr-only">Quitar la adición {i + 1}</span>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancelar
               </Button>
-            </div>
-          ))}
-        </div>
-
-        {/* ---------------- Financiación ---------------- */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <CampoSelect
-            id="financiacion"
-            label="Financiación"
-            value={financiacion}
-            onChange={setFinanciacion}
-            vacio="Sin definir"
-            options={financiaciones.map((f) => ({ value: f.code, label: f.name }))}
-          />
-          <div className="min-w-0 space-y-2">
-            <Label htmlFor="cantidad">Licencias</Label>
-            <Input
-              id="cantidad"
-              type="number"
-              min={0}
-              inputMode="numeric"
-              value={cantidad}
-              onChange={(e) => setCantidad(Math.max(0, Number(e.target.value) || 0))}
-              className="text-right tabular-nums"
-            />
-          </div>
-        </div>
-
-        {esMixta && (
-          <div className="space-y-3 rounded-lg border px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Cómo se repartió</Label>
-                <p className="text-xs text-muted-foreground">
-                  Una línea por cada vía de pago, con su abono, su cuota y quién la firma.
-                </p>
-              </div>
               <Button
-                type="button"
-                variant="outline"
-                size="sm"
+                disabled={!valido || pendiente || (editando && !isSuperAdmin)}
                 onClick={() =>
-                  setLineas((l) => [
-                    ...l,
-                    {
-                      financing_code: "",
-                      valor: 0,
-                      abono: 0,
-                      cuota: 0,
-                      titular_nombre: "",
-                      titular_id: "",
-                    },
-                  ])
+                  startTransition(async () => {
+                    const r = await saveSale({
+                      id: registro?.id,
+                      company_id: companyId,
+                      branch_id: branchId,
+                      report_date: fecha,
+                      staff_id: valorOpcional(staffId),
+                      responsable_nombre: persona?.full_name ?? null,
+                      ref_credito:
+                        registro?.ref_credito ??
+                        (documento.trim() ? `${documento.trim()} - ${fecha}` : null),
+                      financing_code: valorOpcional(financiacion),
+                      company_product_id: valorOpcional(productoId),
+                      product_code: registro?.product_code ?? null,
+                      school_code: valorOpcional(escuela),
+                      state_code: valorOpcional(estado),
+                      traffic_code: valorOpcional(trafico),
+                      licencia_nombre: nombre.trim(),
+                      licencia_id: documento.trim() || null,
+                      licencia_celular: celular.trim() || null,
+                      credito_nombre: creditoIgual ? nombre.trim() : creditoNombre.trim(),
+                      credito_id: creditoIgual
+                        ? documento.trim() || null
+                        : creditoDocumento.trim() || null,
+                      credito_celular: creditoIgual
+                        ? celular.trim() || null
+                        : creditoCelular.trim() || null,
+                      valor_inicial: valorLista,
+                      adicion: totalAdiciones,
+                      descuento: totalBonos,
+                      valor_final: valorFinal,
+                      cantidad_final: cantidad,
+                      observacion: observacion.trim() || null,
+                      bonos: bonos.map((b) => ({
+                        bonus_id: b.bonus_id,
+                        name: b.name,
+                        amount: b.amount,
+                      })),
+                      adiciones: adiciones
+                        .filter((a) => a.concepto.trim() && a.amount > 0)
+                        .map((a) => ({ concepto: a.concepto.trim(), amount: a.amount })),
+                      financiaciones: esMixta
+                        ? lineas.map((l) => ({
+                            financing_code: valorOpcional(l.financing_code),
+                            valor: l.valor,
+                            abono: l.abono,
+                            cuota: l.cuota,
+                            titular_nombre: l.titular_nombre.trim() || null,
+                            titular_id: l.titular_id.trim() || null,
+                          }))
+                        : [],
+                    })
+                    if (!r.ok) {
+                      toast.error(r.error ?? "No se pudo guardar la venta.")
+                      return
+                    }
+                    toast.success(editando ? "Venta actualizada" : "Venta registrada", {
+                      description: `${nombre} · ${formatCOP(valorFinal)}`,
+                    })
+                    setOpen(false)
+                  })
                 }
               >
-                <Plus className="size-4" />
-                Agregar financiación
+                <Save className="size-4" />
+                {pendiente ? "Guardando…" : editando ? "Guardar cambios" : "Guardar venta"}
               </Button>
             </div>
-
-            {lineas.map((linea, i) => (
-              <div key={i} className="grid gap-3 rounded-lg bg-muted/30 px-3 py-3">
-                <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_1fr_auto]">
-                  <CampoSelect
-                    id={`linea-tipo-${i}`}
-                    label="Tipo"
-                    value={linea.financing_code}
-                    onChange={(v) => cambiarLinea(i, { financing_code: v })}
-                    vacio="Sin definir"
-                    options={financiaciones.map((f) => ({ value: f.code, label: f.name }))}
-                  />
-                  <div className="min-w-0 space-y-2">
-                    <Label htmlFor={`linea-valor-${i}`}>Valor</Label>
-                    <MoneyInput
-                      id={`linea-valor-${i}`}
-                      value={linea.valor}
-                      onValueChange={(v) => cambiarLinea(i, { valor: v })}
-                    />
-                  </div>
-                  <div className="min-w-0 space-y-2">
-                    <Label htmlFor={`linea-abono-${i}`}>Abono</Label>
-                    <MoneyInput
-                      id={`linea-abono-${i}`}
-                      value={linea.abono}
-                      onValueChange={(v) => cambiarLinea(i, { abono: v })}
-                    />
-                  </div>
-                  <div className="min-w-0 space-y-2">
-                    <Label htmlFor={`linea-cuota-${i}`}>Cuota</Label>
-                    <MoneyInput
-                      id={`linea-cuota-${i}`}
-                      value={linea.cuota}
-                      onValueChange={(v) => cambiarLinea(i, { cuota: v })}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-9 self-end"
-                    onClick={() => setLineas((actual) => actual.filter((_, j) => j !== i))}
-                  >
-                    <Trash2 className="size-4" />
-                    <span className="sr-only">Quitar la financiación {i + 1}</span>
-                  </Button>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <CampoTexto
-                    id={`linea-titular-${i}`}
-                    label="Titular de esta financiación"
-                    value={linea.titular_nombre}
-                    onChange={(v) => cambiarLinea(i, { titular_nombre: v })}
-                    placeholder={creditoIgual ? nombre : creditoNombre}
-                  />
-                  <CampoTexto
-                    id={`linea-titular-id-${i}`}
-                    label="Documento"
-                    value={linea.titular_id}
-                    onChange={(v) => cambiarLinea(i, { titular_id: v })}
-                  />
-                </div>
-              </div>
-            ))}
-
-            {lineas.length > 0 && repartido !== valorFinal && (
-              <p className="text-xs text-amber-600">
-                Las líneas suman {formatCOP(repartido)} y la venta vale {formatCOP(valorFinal)}:
-                faltan {formatCOP(Math.abs(valorFinal - repartido))} por repartir.
-              </p>
-            )}
           </div>
-        )}
 
-        {/* ---------------- Cómo queda ---------------- */}
-        <div className="grid gap-2 rounded-lg border bg-muted/30 px-4 py-3 text-sm">
-          <div className="flex flex-wrap gap-x-6 gap-y-1">
-            <span>
-              Valor de lista: <strong className="tabular-nums">{formatCOP(valorLista)}</strong>
-            </span>
-            <span>
-              Bonos:{" "}
-              <strong className="tabular-nums">
-                {totalBonos ? `−${formatCOP(totalBonos)}` : formatCOP(0)}
-              </strong>
-            </span>
-            <span>
-              Adiciones:{" "}
-              <strong className="tabular-nums">
-                {totalAdiciones ? `+${formatCOP(totalAdiciones)}` : formatCOP(0)}
-              </strong>
-            </span>
-            <span>
-              Valor final: <strong className="tabular-nums">{formatCOP(valorFinal)}</strong>
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-1">
-            <span>
-              Recaudado: <strong className="tabular-nums">{formatCOP(recaudado)}</strong>
-            </span>
-            <span>
-              Saldo:{" "}
-              <strong className={saldo > 0 ? "tabular-nums text-amber-600" : "tabular-nums"}>
-                {formatCOP(saldo)}
-              </strong>
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            El recaudo se registra en Pagos, no acá: el saldo es el valor final menos los pagos de
-            esta venta.
-          </p>
+          {!editando && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Al guardar, la venta queda firmada: corregirla después solo lo puede hacer el super
+              admin.
+            </p>
+          )}
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="obs">Observación (opcional)</Label>
-          <Textarea
-            id="obs"
-            rows={2}
-            value={observacion}
-            onChange={(e) => setObservacion(e.target.value)}
-          />
-        </div>
-
-        {!editando && (
-          <p className="text-xs text-muted-foreground">
-            Al guardar, la venta queda firmada: corregirla después solo lo puede hacer el super
-            admin.
-          </p>
-        )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancelar
-          </Button>
-          <Button
-            disabled={!valido || pendiente || (editando && !isSuperAdmin)}
-            onClick={() =>
-              startTransition(async () => {
-                const r = await saveSale({
-                  id: registro?.id,
-                  company_id: companyId,
-                  branch_id: branchId,
-                  report_date: fecha,
-                  staff_id: valorOpcional(staffId),
-                  responsable_nombre: persona?.full_name ?? null,
-                  ref_credito:
-                    registro?.ref_credito ??
-                    (documento.trim() ? `${documento.trim()} - ${fecha}` : null),
-                  financing_code: valorOpcional(financiacion),
-                  company_product_id: valorOpcional(productoId),
-                  product_code: registro?.product_code ?? null,
-                  school_code: valorOpcional(escuela),
-                  state_code: valorOpcional(estado),
-                  traffic_code: valorOpcional(trafico),
-                  licencia_nombre: nombre.trim(),
-                  licencia_id: documento.trim() || null,
-                  licencia_celular: celular.trim() || null,
-                  credito_nombre: creditoIgual ? nombre.trim() : creditoNombre.trim(),
-                  credito_id: creditoIgual ? documento.trim() || null : creditoDocumento.trim() || null,
-                  credito_celular: creditoIgual
-                    ? celular.trim() || null
-                    : creditoCelular.trim() || null,
-                  valor_inicial: valorLista,
-                  adicion: totalAdiciones,
-                  descuento: totalBonos,
-                  valor_final: valorFinal,
-                  cantidad_final: cantidad,
-                  observacion: observacion.trim() || null,
-                  bonos: bonos.map((b) => ({
-                    bonus_id: b.bonus_id,
-                    name: b.name,
-                    amount: b.amount,
-                  })),
-                  adiciones: adiciones
-                    .filter((a) => a.concepto.trim() && a.amount > 0)
-                    .map((a) => ({ concepto: a.concepto.trim(), amount: a.amount })),
-                  financiaciones: esMixta
-                    ? lineas.map((l) => ({
-                        financing_code: valorOpcional(l.financing_code),
-                        valor: l.valor,
-                        abono: l.abono,
-                        cuota: l.cuota,
-                        titular_nombre: l.titular_nombre.trim() || null,
-                        titular_id: l.titular_id.trim() || null,
-                      }))
-                    : [],
-                })
-                if (!r.ok) {
-                  toast.error(r.error ?? "No se pudo guardar la venta.")
-                  return
-                }
-                toast.success(editando ? "Venta actualizada" : "Venta registrada", {
-                  description: `${nombre} · ${formatCOP(valorFinal)}`,
-                })
-                setOpen(false)
-              })
-            }
-          >
-            <Save className="size-4" />
-            {pendiente ? "Guardando…" : editando ? "Guardar cambios" : "Guardar venta"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
