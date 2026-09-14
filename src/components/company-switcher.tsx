@@ -42,13 +42,15 @@ export function CompanySwitcher({ current }: { current?: Company }) {
             // lado del dibujo y en un cuadrado de 34 px no se lee ninguno.
             <CompanyAvatar company={current} size={34} width={52} className="rounded-lg" />
           ) : (
-            <span
-              aria-hidden
-              className="flex size-[34px] shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-              style={{ background: "linear-gradient(to bottom, #0f172a, #334155)" }}
-            >
-              CC
-            </span>
+            // El símbolo del software, cuando no hay empresa activa.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src="/command-center-simbolo.png"
+              alt=""
+              width={34}
+              height={34}
+              className="size-[34px] shrink-0 rounded-lg border bg-white p-0.5"
+            />
           )}
 
           <span className="min-w-0 flex-1">
