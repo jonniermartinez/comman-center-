@@ -45,6 +45,10 @@ test.describe("Caja por la pantalla", () => {
       await abrirModulo(coordinador, mundo.empresaA.slug, "caja")
       await abrirDialogo(coordinador, /Nuevo movimiento/, /Nuevo movimiento/)
 
+      // El formulario arranca en "Salida", y una salida se guarda en negativo
+      // a propósito (así el neto de caja es una suma). La prueba quería un
+      // importe positivo: eso es una entrada, y hay que decirlo.
+      await coordinador.getByRole("tab", { name: "Entrada" }).click()
       await elegirPrimera(coordinador, "sede")
       await elegirPrimera(coordinador, "concepto")
       await rellenar(coordinador, {

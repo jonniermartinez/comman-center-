@@ -64,7 +64,10 @@ test.describe("Pagos por la pantalla", () => {
       await abrirModulo(coordinador, mundo.empresaA.slug, "pagos")
       await abrirDialogo(coordinador, /Registrar pago/, /Registrar pago/)
 
+      // La búsqueda no es en vivo: se envía con Enter o con el botón Buscar.
+      // Escribir y esperar el resultado sin enviar no encontraba nunca nada.
       await coordinador.locator("#buscar").fill(cliente)
+      await coordinador.locator("#buscar").press("Enter")
       await coordinador.getByText(cliente).first().click()
       await rellenar(coordinador, {
         fecha: HOY,

@@ -17,8 +17,21 @@ export function mesDe(fechaISO: string): string {
   return `${fechaISO.slice(0, 7)}-01`
 }
 
+/**
+ * Hoy, en la fecha local de la máquina, no en UTC.
+ *
+ * `toISOString()` da la fecha de Greenwich: a partir de las 7 de la noche en
+ * Bogotá ya es mañana, y la aplicación —que rechaza fechas futuras— dejaba el
+ * botón de guardar deshabilitado. Las pruebas de ventas, pagos, caja y
+ * jornada fallaban solo después de esa hora.
+ */
 export function hoyISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  const d = new Date()
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0"),
+  ].join("-")
 }
 
 export interface Contexto {

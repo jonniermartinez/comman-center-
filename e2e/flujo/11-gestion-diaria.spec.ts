@@ -46,8 +46,10 @@ test.describe("Gestión diaria por la pantalla", () => {
       await abrirModulo(coordinador, mundo.empresaA.slug, "gestion-diaria")
       await abrirDialogo(coordinador, /Registrar jornada/, /Registrar jornada/)
 
+      // En la jornada el comercial se elige en "persona", no en "responsable"
+      // como en ventas y pagos: la prueba buscaba un campo que no existe.
       await elegirPrimera(coordinador, "sede")
-      await elegirPrimera(coordinador, "responsable")
+      await elegirPrimera(coordinador, "persona")
       await coordinador.locator("#fecha").fill(HOY)
       await rellenar(coordinador, {
         "ll-efec": "2",
