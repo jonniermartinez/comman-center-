@@ -62,6 +62,11 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
           financiaciones={company.financiaciones}
           productosEmpresa={company.productosEmpresa}
           traficos={company.traficos}
+          canales={company.canales}
+          categorias={company.categorias}
+          tiposVenta={company.tiposVenta}
+          centrosMedicos={company.centrosMedicos}
+          tiposId={company.tiposId}
           escuelas={company.escuelas}
           estados={company.estados}
           canManage={company.canManage}
@@ -178,6 +183,11 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
                     financiaciones={company.financiaciones}
                     productosEmpresa={company.productosEmpresa}
                     traficos={company.traficos}
+                    canales={company.canales}
+                    categorias={company.categorias}
+                    tiposVenta={company.tiposVenta}
+                    centrosMedicos={company.centrosMedicos}
+                    tiposId={company.tiposId}
                     escuelas={company.escuelas}
                     estados={company.estados}
                     canManage={company.canManage}

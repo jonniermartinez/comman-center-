@@ -1,0 +1,4 @@
+Me gustaría que en la parte de comprobante hubiera una opción de agregar una foto, una imagen, ¿por qué?
+Porque resulta que a veces los clientes hacen pago y ese pago queda como en el CRM
+pero el asesor tiene que ir hasta el CRM, buscar el chat para que por si pasa alguna situación buscar el comprobante pago
+No, que una vez hizo el pago y puedan juntar una o varias fotos de los pagos que se realizaron de este cliente

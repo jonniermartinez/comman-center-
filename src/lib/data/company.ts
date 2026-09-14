@@ -50,6 +50,13 @@ export interface CompanyContext {
   /** La lista de precios de esta empresa. Es de donde sale el valor de una venta. */
   productosEmpresa: ProductoVendible[]
   traficos: { code: string; name: string }[]
+  /** Canal por el que llegó el cliente (Facebook, WhatsApp, referido…). */
+  canales: { code: string; name: string }[]
+  /** Categoría del anuncio que lo trajo. */
+  categorias: { code: string; name: string }[]
+  /** Presencial o digital. Es lo que se cruza contra la gestión diaria. */
+  tiposVenta: { code: string; name: string }[]
+  centrosMedicos: { code: string; name: string }[]
   tiposId: { code: string; name: string }[]
   productos: { code: string; name: string }[]
   escuelas: { code: string; name: string }[]
@@ -85,6 +92,10 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
     financiaciones,
     productosEmpresa,
     traficos,
+    canales,
+    categorias,
+    tiposVenta,
+    centrosMedicos,
     tiposId,
     productos,
     escuelas,
@@ -115,6 +126,11 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
       .order("sort_order")
       .order("name"),
     supabase.from("traffic_sources").select("code, name").order("sort_order"),
+    supabase.from("channels").select("code, name").order("sort_order"),
+    supabase.from("ad_categories").select("code, name").order("sort_order"),
+    // El catálogo trae un código basura que se coló al importar; solo valen dos.
+    supabase.from("sale_types").select("code, name").in("code", ["presencial", "digital"]).order("sort_order"),
+    supabase.from("medical_centers").select("code, name").order("sort_order"),
     supabase.from("id_types").select("code, name").order("sort_order"),
     supabase.from("products").select("code, name").order("sort_order"),
     supabase.from("schools").select("code, name").order("sort_order"),
@@ -153,6 +169,10 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
         .map((b) => ({ id: b.id, name: b.name, amount: Number(b.amount) })),
     })),
     traficos: traficos.data ?? [],
+    canales: canales.data ?? [],
+    categorias: categorias.data ?? [],
+    tiposVenta: tiposVenta.data ?? [],
+    centrosMedicos: centrosMedicos.data ?? [],
     tiposId: tiposId.data ?? [],
     productos: productos.data ?? [],
     escuelas: escuelas.data ?? [],

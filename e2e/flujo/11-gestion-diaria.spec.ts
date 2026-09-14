@@ -50,7 +50,8 @@ test.describe("Gestión diaria por la pantalla", () => {
       await elegirPrimera(coordinador, "responsable")
       await coordinador.locator("#fecha").fill(HOY)
       await rellenar(coordinador, {
-        "ll-cont": "40",
+        "ll-efec": "2",
+        "ll-seg": "38",
         "ll-agen": "12",
         "at-venta": "3",
       })

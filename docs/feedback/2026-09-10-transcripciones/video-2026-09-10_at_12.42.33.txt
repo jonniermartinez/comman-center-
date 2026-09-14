@@ -1,0 +1,17 @@
+Bueno, esa atención tiene tres fases. La primer fase es atención venta presencial, que solo se compone de estos tres, por eso aquí muestro un total de atención de la gente que se atendió.
+Entonces, por ejemplo, atención ventesitosa, seguimiento inclinado, hace parte uno. ¿Por qué? Porque un cliente va presencialmente al punto físico de tienda y es o venta, o seguimiento o inclinado.
+Y ahí para allá no hay otra tipificación para esa gestión comercial.
+Ahora, luego está el subtítulo que también es editable, que es atención agenda tendía o atención agenda, que es lo mismo, que es este de acá.
+¿Por qué tú lo ves por acá y no lo ves antes de este total? ¿Por qué tú lo ves por acá? Porque esto simplemente yo lo hago para verificar si los que me confirmaron de esta mañana realmente fueron.
+Por ejemplo, Unión tiene problemas con llenar el reporte de gestión, pero si estuviera bien, por ejemplo, no queda agenda que confirmaron tres y fueron tres.
+Ah, listo, de los tres que confirmaron fueron los tres, a los que confirmaron tres, pero fueron dos.
+Pero yo no necesito sumarlo, porque esta misma, este mismo dos que me marca aquí en atención agenda, puede ser una venta.
+Entonces, yo no puedo sumar uno más uno, porque entonces más, como si fueran dos clientes y es el mismo cliente, por eso va por fuera de la suma de total de clientes que se atendieron.
+Entonces, aquí iría, entonces vuelvo y repito, un subtítulo de atención venta presencial, entonces puede tipificarse entre ventas y todos los seguimientos inclinados.
+Luego viene el otro subtítulo, atención agenda, que también es editable, y luego viene el otro título, que tú le puedes colocar atención administrativa o atención posventa.
+Porque lo que tú ves, estas cuatro de aquí, y comentar a cuatro de nuestros tres, atención asociados en rolamiento y certificaciones, no lo hacen todos, solamente algunos.
+Y algunas empresas, es la parte administrativa, no tienen nada que ver con las ventas, porque lo pusimos, porque a veces el comercial decía, ¿por qué no hiciste esta gestión?
+No es que se ocupan en rolamiento, en certificación, entonces necesitamos corroborar cuántas en rolamiento y certificaciones está haciendo al día, en caso de que le corresponda ya.
+Te sería modificar esa parte de acá.
+Y que al igual como te lo he estado diciendo llamada, esa agenda también tenga un total de atención, tanto para venta y para administrativa.
+En atención agenda, no, porque aunque es un subtítulo es editable y simplemente es un dato, ¿listo?

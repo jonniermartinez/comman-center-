@@ -1,0 +1,21 @@
+por ejemplo te dejar la lista pero falta mucha información de la base acá o
+sea de pronto tú asumas que porque no tiene una información igualmente cosas
+que si tienen información pero no lo agregas, o sea todo lo que está en la
+base debe estar acá, listo? entre ellos está el canal o sea por ejemplo no vimos
+el canal, falta la categoría, falta el tipo de documento o sea simplemente se
+agregó como documento pero el tipo de documento es importante porque no
+solamente vendemos a colombianos, diferenciar por ejemplo este es el
+cliente y va otro apartado que es los datos del cliente titular del crédito o
+el pago ¿me entiendes? porque se le hace así es diferente por ejemplo si es un
+crédito a nombre de quien queda el crédito ese cliente tenemos que tener la
+información, ¿cuál es la información? el nombre de celular tipo documento
+documento listo como mínimo o por ejemplo que es menor de edad y el que pagó fue el
+papá pues listo entonces el cliente es el joven pero el papá es el titular de
+pago ¿me entiendes? por eso es importante como tal dividir esos dos
+no vimos no vi el pagare, no vi el voucher, no vi el contrato, exámenes médicos,
+eventos, pago de vento
+no vi los exámenes, el evento por ejemplo es sencilla o doble ¿me entiendes? o
+como lo tienen pues como está aquí es importante el tipo de eventa toda esta
+información tiene que estar acá o sea de evolución, valor inicial, adición, descuento,
+valor final, recodo, saldo, valor de la lámina, o sea toda esta información tiene
+todos estos datos a llenar tienen que estar aquí para poder llenarlos listo

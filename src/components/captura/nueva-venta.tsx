@@ -1,7 +1,7 @@
 "use client"
 
-import { MessageCircle, Pencil, Plus, Save, Trash2 } from "lucide-react"
-import { useEffect, useState, useTransition } from "react"
+import { ExternalLink, MessageCircle, Paperclip, Pencil, Plus, Save, Trash2, X } from "lucide-react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
 
 import { CampoSelect, CampoTexto, valorOpcional } from "@/components/captura/campos"
@@ -20,7 +20,12 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import type { ProductoVendible } from "@/lib/data/company"
-import { getSaleDetail, saveSale } from "@/lib/data/records-actions"
+import {
+  getSaleDetail,
+  saveSale,
+  uploadPaymentReceipt,
+  type AdjuntoVenta,
+} from "@/lib/data/records-actions"
 import { formatCOP, todayISO } from "@/lib/format"
 import { enlaceWhatsApp } from "@/lib/whatsapp"
 
@@ -48,9 +53,19 @@ export interface VentaExistente {
   school_code: string | null
   state_code: string | null
   traffic_code: string | null
+  channel_code: string | null
+  ad_category_code: string | null
+  sale_type_code: string | null
+  medical_center_code: string | null
+  consecutivo_examen: string | null
+  pagare: string | null
+  voucher: string | null
+  contrato: string | null
+  licencia_tipo_id: string | null
   licencia_nombre: string | null
   licencia_id: string | null
   licencia_celular: string | null
+  credito_tipo_id: string | null
   credito_nombre: string | null
   credito_id: string | null
   credito_celular: string | null
@@ -141,6 +156,11 @@ export function NuevaVenta({
   financiaciones,
   productosEmpresa,
   traficos,
+  canales,
+  categorias,
+  tiposVenta,
+  centrosMedicos,
+  tiposId,
   escuelas,
   estados,
   canManage,
@@ -154,6 +174,11 @@ export function NuevaVenta({
   financiaciones: Financiacion[]
   productosEmpresa: ProductoVendible[]
   traficos: Catalogo[]
+  canales: Catalogo[]
+  categorias: Catalogo[]
+  tiposVenta: Catalogo[]
+  centrosMedicos: Catalogo[]
+  tiposId: Catalogo[]
   escuelas: Catalogo[]
   estados: Catalogo[]
   /** Quien administra registra a nombre de cualquiera; el comercial, lo suyo. */
@@ -173,6 +198,8 @@ export function NuevaVenta({
     registro?.branch_id ?? branches.find((b) => b.is_primary)?.id ?? branches[0]?.id ?? "",
   )
   const [nombre, setNombre] = useState(registro?.licencia_nombre ?? "")
+  // CC es el caso de casi todos; se arranca ahí y se cambia cuando no lo es.
+  const [tipoDoc, setTipoDoc] = useState(registro?.licencia_tipo_id ?? "cc")
   const [documento, setDocumento] = useState(registro?.licencia_id ?? "")
   const [celular, setCelular] = useState(registro?.licencia_celular ?? "")
 
@@ -184,6 +211,7 @@ export function NuevaVenta({
     !registro || !registro.credito_id || registro.credito_id === registro.licencia_id
   const [creditoIgual, setCreditoIgual] = useState(mismoTitular)
   const [creditoNombre, setCreditoNombre] = useState(registro?.credito_nombre ?? "")
+  const [creditoTipoDoc, setCreditoTipoDoc] = useState(registro?.credito_tipo_id ?? "cc")
   const [creditoDocumento, setCreditoDocumento] = useState(registro?.credito_id ?? "")
   const [creditoCelular, setCreditoCelular] = useState(registro?.credito_celular ?? "")
 
@@ -212,6 +240,18 @@ export function NuevaVenta({
   const [financiacion, setFinanciacion] = useState(registro?.financing_code ?? "")
   const [lineas, setLineas] = useState<LineaFinanciacion[]>([])
   const [trafico, setTrafico] = useState(registro?.traffic_code ?? "")
+  const [tipoVenta, setTipoVenta] = useState(registro?.sale_type_code ?? "")
+  const [canal, setCanal] = useState(registro?.channel_code ?? "")
+  const [categoria, setCategoria] = useState(registro?.ad_category_code ?? "")
+  const [centroMedico, setCentroMedico] = useState(registro?.medical_center_code ?? "")
+  const [examen, setExamen] = useState(registro?.consecutivo_examen ?? "")
+  const [pagare, setPagare] = useState(registro?.pagare ?? "")
+  const [voucher, setVoucher] = useState(registro?.voucher ?? "")
+  const [contrato, setContrato] = useState(registro?.contrato ?? "")
+  // Fotos del comprobante: las que ya están guardadas y las que se van a subir.
+  const [adjuntos, setAdjuntos] = useState<AdjuntoVenta[]>([])
+  const [archivos, setArchivos] = useState<File[]>([])
+  const inputArchivos = useRef<HTMLInputElement>(null)
   const [escuela, setEscuela] = useState(registro?.school_code ?? "")
   const [estado, setEstado] = useState(registro?.state_code ?? "")
   const [cantidad, setCantidad] = useState(Number(registro?.cantidad_final ?? 1))
@@ -233,6 +273,7 @@ export function NuevaVenta({
         d.bonos.map((b) => ({ bonus_id: b.bonus_id ?? null, name: b.name, amount: b.amount })),
       )
       setAdiciones(d.adiciones)
+      setAdjuntos(d.adjuntos)
       setLineas(
         d.financiaciones.map((f) => ({
           financing_code: f.financing_code ?? "",
@@ -327,7 +368,27 @@ export function NuevaVenta({
                     onChange={setBranchId}
                     options={branches.map((b) => ({ value: b.id, label: b.name }))}
                   />
+                  <CampoSelect
+                    id="tipo-venta"
+                    label="Tipo de venta"
+                    value={tipoVenta}
+                    onChange={setTipoVenta}
+                    vacio="Sin definir"
+                    options={tiposVenta.map((t) => ({ value: t.code, label: t.name }))}
+                  />
+                  <CampoSelect
+                    id="canal"
+                    label="Canal"
+                    value={canal}
+                    onChange={setCanal}
+                    vacio="Sin definir"
+                    options={canales.map((c) => ({ value: c.code, label: c.name }))}
+                  />
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Presencial es la que en gestión diaria va como atención venta exitosa; digital,
+                  la que va como llamada efectiva.
+                </p>
                 {canManage ? (
                   <CampoSelect
                     id="responsable"
@@ -353,7 +414,14 @@ export function NuevaVenta({
                   onChange={setNombre}
                   placeholder="Como aparece en la cédula"
                 />
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-[7rem_1fr_1fr]">
+                  <CampoSelect
+                    id="tipo-doc"
+                    label="Tipo"
+                    value={tipoDoc}
+                    onChange={setTipoDoc}
+                    options={tiposId.map((t) => ({ value: t.code, label: t.name }))}
+                  />
                   <CampoTexto
                     id="documento"
                     label="Documento"
@@ -417,7 +485,14 @@ export function NuevaVenta({
                       onChange={setCreditoNombre}
                       placeholder="Quien firma el crédito"
                     />
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 sm:grid-cols-[7rem_1fr_1fr]">
+                      <CampoSelect
+                        id="credito-tipo-doc"
+                        label="Tipo"
+                        value={creditoTipoDoc}
+                        onChange={setCreditoTipoDoc}
+                        options={tiposId.map((t) => ({ value: t.code, label: t.name }))}
+                      />
                       <CampoTexto
                         id="credito-documento"
                         label="Documento"
@@ -433,6 +508,33 @@ export function NuevaVenta({
                     </div>
                   </div>
                 )}
+              </Bloque>
+
+              <Bloque
+                titulo="Documentos del trámite"
+                nota="Los números con los que la base sigue el crédito. Opcionales."
+              >
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <CampoTexto id="pagare" label="Pagaré" value={pagare} onChange={setPagare} />
+                  <CampoTexto id="voucher" label="Voucher" value={voucher} onChange={setVoucher} />
+                  <CampoTexto id="contrato" label="Contrato" value={contrato} onChange={setContrato} />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <CampoSelect
+                    id="centro-medico"
+                    label="Examen médico"
+                    value={centroMedico}
+                    onChange={setCentroMedico}
+                    vacio="Sin definir"
+                    options={centrosMedicos.map((c) => ({ value: c.code, label: c.name }))}
+                  />
+                  <CampoTexto
+                    id="examen"
+                    label="Consecutivo del examen"
+                    value={examen}
+                    onChange={setExamen}
+                  />
+                </div>
               </Bloque>
 
               <Bloque titulo="Observación" nota="Opcional.">
@@ -500,7 +602,7 @@ export function NuevaVenta({
                   </p>
                 )}
 
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <CampoSelect
                     id="trafico"
                     label="Tráfico"
@@ -508,6 +610,14 @@ export function NuevaVenta({
                     onChange={setTrafico}
                     vacio="Sin definir"
                     options={traficos.map((t) => ({ value: t.code, label: t.name }))}
+                  />
+                  <CampoSelect
+                    id="categoria"
+                    label="Categoría del anuncio"
+                    value={categoria}
+                    onChange={setCategoria}
+                    vacio="Sin definir"
+                    options={categorias.map((c) => ({ value: c.code, label: c.name }))}
                   />
                   <CampoSelect
                     id="escuela"
@@ -752,6 +862,76 @@ export function NuevaVenta({
                 )}
               </Bloque>
 
+              <Bloque
+                titulo="Comprobantes de pago"
+                nota="Una o varias fotos del pago, para no tener que buscarlas en el CRM."
+                acciones={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => inputArchivos.current?.click()}
+                  >
+                    <Paperclip className="size-4" />
+                    Adjuntar
+                  </Button>
+                }
+              >
+                <input
+                  ref={inputArchivos}
+                  id="comprobantes"
+                  type="file"
+                  multiple
+                  accept="image/png,image/jpeg,image/webp,image/heic,application/pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const nuevos = Array.from(e.target.files ?? [])
+                    if (nuevos.length) setArchivos((a) => [...a, ...nuevos])
+                    e.target.value = ""
+                  }}
+                />
+                {adjuntos.length === 0 && archivos.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Sin comprobantes adjuntos.</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {adjuntos.map((a) => (
+                      <li key={a.id} className="flex items-center gap-2 text-sm">
+                        {a.url ? (
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex min-w-0 items-center gap-1 underline underline-offset-4"
+                          >
+                            <span className="truncate">{a.path.split("/").pop()}</span>
+                            <ExternalLink className="size-3.5 shrink-0" />
+                          </a>
+                        ) : (
+                          <span className="truncate text-muted-foreground">
+                            {a.path.split("/").pop()}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                    {archivos.map((f, i) => (
+                      <li key={`${f.name}-${i}`} className="flex items-center gap-2 text-sm">
+                        <span className="truncate">{f.name}</span>
+                        <span className="text-xs text-muted-foreground">por subir</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-6"
+                          onClick={() => setArchivos((a) => a.filter((_, j) => j !== i))}
+                        >
+                          <X className="size-3.5" />
+                          <span className="sr-only">Quitar {f.name}</span>
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Bloque>
             </div>
           </div>
         </div>
@@ -804,6 +984,19 @@ export function NuevaVenta({
                 disabled={!valido || pendiente || (editando && !isSuperAdmin)}
                 onClick={() =>
                   startTransition(async () => {
+                    // Las fotos se suben antes de guardar la venta: si una falla
+                    // no se registra nada a medias.
+                    const rutas: string[] = []
+                    for (const archivo of archivos) {
+                      const datos = new FormData()
+                      datos.set("file", archivo)
+                      const subida = await uploadPaymentReceipt(companyId, datos, "ventas")
+                      if (!subida.ok || !subida.path) {
+                        toast.error(subida.error ?? `No se pudo subir ${archivo.name}.`)
+                        return
+                      }
+                      rutas.push(subida.path)
+                    }
                     const r = await saveSale({
                       id: registro?.id,
                       company_id: companyId,
@@ -820,6 +1013,16 @@ export function NuevaVenta({
                       school_code: valorOpcional(escuela),
                       state_code: valorOpcional(estado),
                       traffic_code: valorOpcional(trafico),
+                      channel_code: valorOpcional(canal),
+                      ad_category_code: valorOpcional(categoria),
+                      sale_type_code: valorOpcional(tipoVenta),
+                      medical_center_code: valorOpcional(centroMedico),
+                      consecutivo_examen: examen.trim() || null,
+                      pagare: pagare.trim() || null,
+                      voucher: voucher.trim() || null,
+                      contrato: contrato.trim() || null,
+                      licencia_tipo_id: valorOpcional(tipoDoc),
+                      credito_tipo_id: creditoIgual ? valorOpcional(tipoDoc) : valorOpcional(creditoTipoDoc),
                       licencia_nombre: nombre.trim(),
                       licencia_id: documento.trim() || null,
                       licencia_celular: celular.trim() || null,
@@ -854,11 +1057,13 @@ export function NuevaVenta({
                             titular_id: l.titular_id.trim() || null,
                           }))
                         : [],
+                      adjuntos: rutas,
                     })
                     if (!r.ok) {
                       toast.error(r.error ?? "No se pudo guardar la venta.")
                       return
                     }
+                    setArchivos([])
                     toast.success(editando ? "Venta actualizada" : "Venta registrada", {
                       description: `${nombre} · ${formatCOP(valorFinal)}`,
                     })

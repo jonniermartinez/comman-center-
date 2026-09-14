@@ -1,0 +1,14 @@
+El primer capéis lo que te decía es que, por ejemplo, en el comand cuando tú vas a
+ventas y va a registrar una venta, comúnmente en la base, que es donde registrábamos las
+ventas, apareció un apartado de venta presencial y digital. Asimismo, si nos vamos a gestión,
+que es la gestión diaria, llama efectiva, representa las ventas digitales y atenciónmente,
+si todas representan las ventas presenciales, que eso sí lo encontramos en gestión diaria.
+Por ejemplo, aquí en agendas está llamada efectiva y en atención está venta, si todo
+está listo, ahí está. Entonces, ¿qué te estoy diciendo? Yo necesito, por ejemplo,
+que dentro del primer capéis, el primer dashboard, identifique cuántas ventas exitosas te
+atención hay y cuántas efectiva ventas llamadas hay. Asimismo, me arrastré el dato de las
+ventas. ¿Cuántas ventas presenciales y digitales registraron? ¿Por qué? Pues como asimismo
+está acá, yo me he dado cuenta que, por ejemplo, en la base llenan bien esta información
+y me puedo dar cuenta al perfecto cuántas ventas presenciales y digitales hay, pero
+a veces me llenan mal esta información en gestión y sí es importante para mí saber
+también en gestión cómo lo están clasificando. Entonces básicamente, imagínate, prate.

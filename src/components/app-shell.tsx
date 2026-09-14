@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  Gauge,
   CalendarClock,
   ChevronRight,
   ClipboardList,
@@ -89,6 +90,7 @@ function tituloDe(pathname: string, conAcceso: boolean): string {
     "gestion-diaria": "Gestión Diaria",
     agendas: "Agendas",
     caja: "Ingreso y Gasto",
+    indicadores: "Indicadores",
     objetivos: "Objetivos",
     productos: "Productos",
     sedes: "Sedes",
@@ -175,6 +177,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           label="Dashboard"
                           icon={BarChart3}
                           active={pathname === base}
+                        />
+                        <NavLink
+                          href={`${base}/indicadores`}
+                          label="Indicadores"
+                          icon={Gauge}
+                          active={isActive(`${base}/indicadores`)}
                         />
                         <NavLink
                           href={`${base}/objetivos`}

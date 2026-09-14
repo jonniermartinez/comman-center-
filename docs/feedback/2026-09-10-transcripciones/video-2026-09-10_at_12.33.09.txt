@@ -1,0 +1,12 @@
+Jener, por ejemplo, mira, a quien llamadas está contestadas y no contestadas de modo editable
+y las tipificaciones, entonces tiene que como diferenciarlo, ¿me entiendes?
+Visualmente, por ejemplo, acá tú ves que los títulos están en un colorcito y yo ya
+los llenan, porque si no se vuelve como un poquito, como que visualmente no, no sé,
+no se entiende al 100%, entonces, por ejemplo, la idea es que no contestadas, efectiva, seguimiento,
+agenda, pues venta y no interesadas sean editables, pero contestadas no están editables, que sea la
+suma de esta tipificación de aquí abajo, ¿me entiendes? Obviamente no iría la no contestada,
+porque pues es la inversa, ¿no? O sea, contestadas que no están editables y no que sea la suma de
+lo que ellos coloquen aquí, ya que de esa forma me di cuenta de muchos errores que ellos tienen
+y que el apartado no sé dónde, total de llamadas, porque no, no está, o sea, no está el total de
+llamadas, como que hay algo aquí que diga total de llamadas que son malas contestadas, de la no
+contestadas, en agenda.

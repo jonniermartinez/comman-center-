@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { requireSession } from "@/lib/auth/session"
 import { logAudit } from "@/lib/data/audit"
+import { totalesJornada } from "@/lib/jornada"
 import { createClient } from "@/lib/supabase/server"
 
 export interface Result {
@@ -68,9 +69,9 @@ export interface ActividadInput {
   llamada_seguimiento: number
   llamada_agenda: number
   llamada_no_interesado: number
-  llamada_contestada: number
   llamada_postventa: number
   atencion_venta: number
+  atencion_venta_externa: number
   atencion_seguimiento: number
   atencion_declinado: number
   atencion_asociado: number
@@ -98,6 +99,10 @@ export async function saveActivity(input: ActividadInput): Promise<Result> {
     {
       ...campos,
       id,
+      // Contestadas no se digita: es la suma de las tipificaciones. Se guarda
+      // calculada para que la columna siga diciendo la verdad, aunque ninguna
+      // vista la lea (044).
+      llamada_contestada: totalesJornada(input).llamadas_contestadas,
       period_month: periodo(input.report_date),
       hora_llegada: input.hora_llegada || null,
       hora_salida: input.hora_salida || null,
@@ -152,6 +157,13 @@ export interface VentaInput {
   school_code?: string | null
   state_code?: string | null
   channel_code?: string | null
+  ad_category_code?: string | null
+  sale_type_code?: string | null
+  medical_center_code?: string | null
+  consecutivo_examen?: string | null
+  pagare?: string | null
+  voucher?: string | null
+  contrato?: string | null
   traffic_code?: string | null
   licencia_tipo_id?: string | null
   licencia_id?: string | null
@@ -178,6 +190,8 @@ export interface VentaInput {
   adiciones?: AdicionInput[]
   /** Detalle de una financiación mixta. Vacío si se pagó por una sola vía. */
   financiaciones?: FinanciacionInput[]
+  /** Rutas de las fotos del comprobante ya subidas al bucket. Se agregan, no se reemplazan. */
+  adjuntos?: string[]
 }
 
 /**
@@ -197,7 +211,7 @@ export async function saveSale(input: VentaInput): Promise<Result> {
   const session = await requireSession()
   const supabase = await createClient()
 
-  const { bonos = [], adiciones = [], financiaciones = [], ...venta } = input
+  const { bonos = [], adiciones = [], financiaciones = [], adjuntos = [], ...venta } = input
 
   const { data, error } = await supabase
     .from("sales")
@@ -281,12 +295,34 @@ export async function saveSale(input: VentaInput): Promise<Result> {
     if (e) return { ok: false, error: explicar(e.message) }
   }
 
+  // Las fotos del comprobante se agregan a las que ya había: quitar una es
+  // corregir la venta, y eso queda para el super admin (044).
+  if (adjuntos.length) {
+    const { error: e } = await supabase.from("sale_attachments").insert(
+      adjuntos.map((path) => ({
+        sale_id: saleId,
+        company_id: input.company_id,
+        path,
+        created_by: session.profile.id,
+      })),
+    )
+    if (e) return { ok: false, error: explicar(e.message) }
+  }
+
   refrescar()
   return { ok: true }
 }
 
+/** Una foto del comprobante ya guardada, con su URL firmada para verla. */
+export interface AdjuntoVenta {
+  id: string
+  path: string
+  url: string | null
+}
+
 /**
- * El detalle de una venta ya guardada: bonos, adiciones y financiaciones.
+ * El detalle de una venta ya guardada: bonos, adiciones, financiaciones y
+ * fotos del comprobante.
  *
  * Lo necesita el formulario cuando se abre para corregir. No viaja con el
  * listado porque son tres consultas más por fila y en pantalla se ven
@@ -297,11 +333,12 @@ export async function getSaleDetail(saleId: string): Promise<{
   bonos: BonoAplicado[]
   adiciones: AdicionInput[]
   financiaciones: FinanciacionInput[]
+  adjuntos: AdjuntoVenta[]
 }> {
   await requireSession()
   const supabase = await createClient()
 
-  const [bonos, adiciones, financiaciones] = await Promise.all([
+  const [bonos, adiciones, financiaciones, adjuntos] = await Promise.all([
     supabase.from("sale_bonuses").select("bonus_id, name, amount").eq("sale_id", saleId),
     supabase.from("sale_additions").select("concepto, amount").eq("sale_id", saleId),
     supabase
@@ -309,9 +346,21 @@ export async function getSaleDetail(saleId: string): Promise<{
       .select("financing_code, valor, abono, cuota, titular_nombre, titular_id")
       .eq("sale_id", saleId)
       .order("sort_order"),
+    supabase
+      .from("sale_attachments")
+      .select("id, path")
+      .eq("sale_id", saleId)
+      .order("created_at"),
   ])
 
+  const urls = await urlsComprobantes((adjuntos.data ?? []).map((a) => a.path))
+
   return {
+    adjuntos: (adjuntos.data ?? []).map((a) => ({
+      id: a.id,
+      path: a.path,
+      url: urls[a.path] ?? null,
+    })),
     bonos: (bonos.data ?? []).map((b) => ({
       bonus_id: b.bonus_id,
       name: b.name,
@@ -602,6 +651,8 @@ const MAX_COMPROBANTE = 5 * 1024 * 1024
 export async function uploadPaymentReceipt(
   companyId: string,
   formData: FormData,
+  /** Carpeta dentro de la empresa: `pagos` para un abono, `ventas` para el comprobante de una venta. */
+  carpeta: "pagos" | "ventas" = "pagos",
 ): Promise<Result & { path?: string }> {
   await requireSession()
   const archivo = formData.get("file")
@@ -615,7 +666,7 @@ export async function uploadPaymentReceipt(
 
   const supabase = await createClient()
   const extension = archivo.name.split(".").pop()?.toLowerCase() || "jpg"
-  const path = `${companyId}/pagos/${crypto.randomUUID()}.${extension}`
+  const path = `${companyId}/${carpeta}/${crypto.randomUUID()}.${extension}`
 
   const { error } = await supabase.storage
     .from(BUCKET_COMPROBANTES)
