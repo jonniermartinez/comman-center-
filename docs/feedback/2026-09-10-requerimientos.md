@@ -230,7 +230,13 @@ total. Hoy el dashboard muestra "Ventas del mes" solo como total.
 
 ---
 
-## 6. Resumen de trabajo, en el orden que conviene
+## 6. Estado al 13 de septiembre de 2026
+
+Todo lo de abajo quedó hecho en el commit `ed64f3d` (migración 044, formularios,
+pantalla Indicadores, logos). Lo que sigue abierto son las dudas de la sección 5;
+el detalle está en la planilla `docs/Control de cambios - Command Center.xlsx`.
+
+## 7. Resumen de trabajo, en el orden que se hizo
 
 1. Formulario de jornada: contestadas y totales calculados, tres bloques de atención,
    campo venta externa, estilo por bloques. Migración: columna `atencion_venta_externa`,

@@ -79,6 +79,9 @@ se guarda en `payments.voucher`; la aplicación firma una URL de una hora para
 abrirlo. Con una venta a crédito el comprobante es obligatorio al registrar el
 abono; de contado es opcional.
 
+Desde la 044 una venta también lleva fotos del comprobante, una o varias: van
+en `<company_id>/ventas/<uuid>.<ext>` y cada ruta queda en `sale_attachments`.
+
 ## 4. Variables de entorno
 
 ```
