@@ -337,7 +337,11 @@ export function NuevaVenta({
         )}
       </DialogTrigger>
 
-      <DialogContent className="grid max-h-[92svh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-5xl">
+      {/* A pantalla completa: son cuatro bloques por columna y en un diálogo
+            de 1.024 px había que bajar tres pantallas para llegar a la
+            financiación. Con todo el ancho caben tres columnas y casi nada
+            queda fuera de la vista. */}
+      <DialogContent className="grid h-[calc(100svh-1.5rem)] w-[calc(100vw-1.5rem)] max-h-none grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-none">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{editando ? "Editar venta" : "Nueva venta"}</DialogTitle>
           <DialogDescription>
@@ -346,7 +350,7 @@ export function NuevaVenta({
         </DialogHeader>
 
         <div className="overflow-y-auto px-6 py-5">
-          <div className="grid items-start gap-5 lg:grid-cols-2">
+          <div className="grid items-start gap-5 lg:grid-cols-2 xl:grid-cols-3">
             {/* ============== Columna izquierda: quién ============== */}
             <div className="space-y-5">
               <Bloque titulo="La venta">
@@ -510,45 +514,10 @@ export function NuevaVenta({
                 )}
               </Bloque>
 
-              <Bloque
-                titulo="Documentos del trámite"
-                nota="Los números con los que la base sigue el crédito. Opcionales."
-              >
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <CampoTexto id="pagare" label="Pagaré" value={pagare} onChange={setPagare} />
-                  <CampoTexto id="voucher" label="Voucher" value={voucher} onChange={setVoucher} />
-                  <CampoTexto id="contrato" label="Contrato" value={contrato} onChange={setContrato} />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <CampoSelect
-                    id="centro-medico"
-                    label="Examen médico"
-                    value={centroMedico}
-                    onChange={setCentroMedico}
-                    vacio="Sin definir"
-                    options={centrosMedicos.map((c) => ({ value: c.code, label: c.name }))}
-                  />
-                  <CampoTexto
-                    id="examen"
-                    label="Consecutivo del examen"
-                    value={examen}
-                    onChange={setExamen}
-                  />
-                </div>
-              </Bloque>
 
-              <Bloque titulo="Observación" nota="Opcional.">
-                <Textarea
-                  id="obs"
-                  rows={3}
-                  value={observacion}
-                  onChange={(e) => setObservacion(e.target.value)}
-                  placeholder="Lo que haya que saber de esta venta y no quepa en un campo."
-                />
-              </Bloque>
             </div>
 
-            {/* ============== Columna derecha: qué y cómo ============== */}
+            {/* ============== Columna del medio: qué compró ============== */}
             <div className="space-y-5">
               <Bloque titulo="Qué compró">
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -736,6 +705,38 @@ export function NuevaVenta({
                 )}
               </Bloque>
 
+
+
+              <Bloque
+                titulo="Documentos del trámite"
+                nota="Los números con los que la base sigue el crédito. Opcionales."
+              >
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <CampoTexto id="pagare" label="Pagaré" value={pagare} onChange={setPagare} />
+                  <CampoTexto id="voucher" label="Voucher" value={voucher} onChange={setVoucher} />
+                  <CampoTexto id="contrato" label="Contrato" value={contrato} onChange={setContrato} />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <CampoSelect
+                    id="centro-medico"
+                    label="Examen médico"
+                    value={centroMedico}
+                    onChange={setCentroMedico}
+                    vacio="Sin definir"
+                    options={centrosMedicos.map((c) => ({ value: c.code, label: c.name }))}
+                  />
+                  <CampoTexto
+                    id="examen"
+                    label="Consecutivo del examen"
+                    value={examen}
+                    onChange={setExamen}
+                  />
+                </div>
+              </Bloque>
+            </div>
+
+            {/* ============== Tercera columna: cómo la pagó ============== */}
+            <div className="space-y-5">
               <Bloque
                 titulo="Financiación"
                 nota={esMixta ? "Una línea por cada vía de pago." : undefined}
@@ -931,6 +932,16 @@ export function NuevaVenta({
                     ))}
                   </ul>
                 )}
+              </Bloque>
+
+              <Bloque titulo="Observación" nota="Opcional.">
+                <Textarea
+                  id="obs"
+                  rows={3}
+                  value={observacion}
+                  onChange={(e) => setObservacion(e.target.value)}
+                  placeholder="Lo que haya que saber de esta venta y no quepa en un campo."
+                />
               </Bloque>
             </div>
           </div>

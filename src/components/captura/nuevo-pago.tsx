@@ -42,6 +42,7 @@ export interface PagoExistente {
   amount: number
   method_code: string | null
   recibo: string | null
+  contrato: string | null
   /** Ruta del comprobante en el bucket, si se adjuntó. */
   voucher: string | null
   /** Financiación de la venta a la que pertenece; decide si el comprobante es obligatorio. */
@@ -89,6 +90,7 @@ export function NuevoPago({
   const [monto, setMonto] = useState(Number(registro?.amount ?? 0))
   const [medio, setMedio] = useState(registro?.method_code ?? "")
   const [recibo, setRecibo] = useState(registro?.recibo ?? "")
+  const [contrato, setContrato] = useState(registro?.contrato ?? "")
   const [archivo, setArchivo] = useState<File | null>(null)
   const inputArchivo = useRef<HTMLInputElement>(null)
   const [buscando, startBusqueda] = useTransition()
@@ -195,6 +197,10 @@ export function NuevoPago({
               <div className="min-w-0 space-y-2">
                 <Label htmlFor="recibo">Número de recibo o voucher</Label>
                 <Input id="recibo" value={recibo} onChange={(e) => setRecibo(e.target.value)} />
+              </div>
+              <div className="min-w-0 space-y-2">
+                <Label htmlFor="contrato">Número de contrato</Label>
+                <Input id="contrato" value={contrato} onChange={(e) => setContrato(e.target.value)} />
               </div>
             </div>
 
@@ -380,6 +386,7 @@ export function NuevoPago({
                   amount: monto,
                   method_code: valorOpcional(medio),
                   recibo: recibo.trim() || null,
+                  contrato: contrato.trim() || null,
                   voucher,
                 })
                 if (!r.ok) {

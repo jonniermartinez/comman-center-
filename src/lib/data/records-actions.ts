@@ -393,6 +393,7 @@ export interface PagoInput {
   amount: number
   method_code?: string | null
   recibo?: string | null
+  contrato?: string | null
   /** Ruta del comprobante en el bucket comprobantes-pago. */
   voucher?: string | null
   observacion?: string | null
