@@ -6,8 +6,9 @@
  * Un ratio se calcula sobre los totales del filtro, nunca promediando los
  * ratios de cada comercial: promediar ratios da un número falso.
  *
- * Las metas son las que fijó la gerencia en septiembre de 2026. Son una regla
- * del negocio, no un dato de cada empresa, así que viven acá y no en la base.
+ * Las metas por defecto son las que fijó la gerencia en septiembre de 2026 y
+ * viven acá. Cada empresa puede fijar las suyas (migración 045); esas llegan
+ * como dato y pisan la de acá indicador por indicador.
  */
 
 import { safeRatio } from "@/lib/kpi"
@@ -88,7 +89,11 @@ export function consolidar(filas: FilaIndicadores[]): FilaIndicadores {
   return { staff_id: null, responsable_nombre: "Total", ...total }
 }
 
-/** Metas fijadas por la gerencia. Ratios en fracción; cantidades por jornada. */
+/**
+ * Metas por defecto, las que fijó la gerencia. Ratios en fracción; cantidades
+ * por jornada. Cada empresa puede pisar cualquiera desde el tablero (tabla
+ * `company_kpi_targets`, migración 045); estas rigen mientras no lo haga.
+ */
 export const METAS = {
   contactabilidad: 0.7,
   conversion_agenda: 0.6,
@@ -101,6 +106,17 @@ export const METAS = {
   agendas_atendidas_por_jornada: 6,
   dias_laborados: 0.8,
 } as const
+
+export type CodigoKpi = keyof typeof METAS
+
+export const CODIGOS_KPI = Object.keys(METAS) as CodigoKpi[]
+
+export function esCodigoKpi(code: string): code is CodigoKpi {
+  return code in METAS
+}
+
+/** Las metas que una empresa fijó por su cuenta, por código. */
+export type MetasEmpresa = Partial<Record<CodigoKpi, number>>
 
 /**
  * Techo de los indicadores de banda: pasado este ratio el indicador va en rojo
@@ -127,7 +143,7 @@ export type Semaforo =
   | "banda"
 
 export interface Kpi {
-  code: string
+  code: CodigoKpi
   nombre: string
   /** Cómo se calcula, en palabras. */
   formula: string
@@ -136,6 +152,8 @@ export interface Kpi {
   denominador: number
   logrado: number | null
   meta: number
+  /** La meta por defecto. Distinta de `meta` cuando la empresa fijó la suya. */
+  metaPorDefecto: number
   semaforo: Semaforo
   /** Ratio a partir del cual la banda se pone en rojo. Solo en `banda`. */
   tope: number | null
@@ -158,19 +176,20 @@ export interface Kpi {
  * tipo para que no se pueda declarar una banda sin decir dónde termina.
  */
 type ConfigKpi = {
-  code: string
+  code: CodigoKpi
   nombre: string
   formula: string
   unit: Kpi["unit"]
   numerador: number
   denominador: number
-  meta: number
   /** Solo para `con_techo` sobre cantidades: ver `Kpi.alarma`. */
   alarma?: boolean
 } & ({ semaforo: "superar" | "con_techo" } | { semaforo: "banda"; tope: number })
 
-function kpi(cfg: ConfigKpi): Kpi {
+function kpi(cfg: ConfigKpi, metas: MetasEmpresa): Kpi {
   const logrado = safeRatio(cfg.numerador, cfg.denominador)
+  const metaPorDefecto = METAS[cfg.code]
+  const meta = metas[cfg.code] ?? metaPorDefecto
   return {
     code: cfg.code,
     nombre: cfg.nombre,
@@ -179,11 +198,12 @@ function kpi(cfg: ConfigKpi): Kpi {
     numerador: cfg.numerador,
     denominador: cfg.denominador,
     logrado,
-    meta: cfg.meta,
+    meta,
+    metaPorDefecto,
     semaforo: cfg.semaforo,
     tope: "tope" in cfg ? cfg.tope : null,
     alarma: cfg.alarma ?? false,
-    efectividad: logrado === null ? null : logrado / cfg.meta,
+    efectividad: logrado === null ? null : logrado / meta,
   }
 }
 
@@ -192,6 +212,12 @@ export type Tono = "verde" | "ambar" | "rojo" | "neutro"
 /** Cómo se pinta un KPI: el color y qué tan llena va la barra. */
 export interface LecturaKpi {
   tono: Tono
+  /**
+   * El tono en palabras, para que el color no sea lo único que lo diga: dos
+   * rojos no significan lo mismo —uno es "lejos de la meta", otro "dato
+   * imposible"— y la persona tiene que saber cuál está viendo.
+   */
+  etiqueta: string
   /** Qué tan llena va la barra, de 0 a 100. */
   avance: number
   /** Dónde cae la meta dentro de la barra, en % de su ancho. 100 = al final. */
@@ -219,18 +245,28 @@ const HOLGURA = 1e-9
  */
 export function leerKpi(k: Kpi): LecturaKpi {
   const e = k.efectividad
-  if (k.logrado === null || e === null) return { tono: "neutro", avance: 0, marcaMeta: 100 }
+  if (k.logrado === null || e === null) {
+    return { tono: "neutro", etiqueta: "Sin datos", avance: 0, marcaMeta: 100 }
+  }
 
   const escalar = (valor: number, escala: number) =>
     Math.min(100, Math.max(0, (valor / escala) * 100))
   // Debajo de la meta los tres se leen igual: qué tan lejos quedó.
-  const corto: Tono = e >= CERCA ? "ambar" : "rojo"
+  const corto: Pick<LecturaKpi, "tono" | "etiqueta"> =
+    e >= CERCA ? { tono: "ambar", etiqueta: "Cerca de la meta" } : { tono: "rojo", etiqueta: "Por debajo" }
+  const cumple: Pick<LecturaKpi, "tono" | "etiqueta"> = { tono: "verde", etiqueta: "Cumple" }
 
   if (k.semaforo === "banda" && k.tope !== null) {
-    const tono: Tono =
-      k.logrado > k.tope ? "rojo" : e > 1 + HOLGURA ? "ambar" : e >= 1 - HOLGURA ? "verde" : corto
+    const lectura =
+      k.logrado > k.tope
+        ? { tono: "rojo" as const, etiqueta: "Pasado del tope" }
+        : e > 1 + HOLGURA
+          ? { tono: "ambar" as const, etiqueta: "Sobre la meta" }
+          : e >= 1 - HOLGURA
+            ? cumple
+            : corto
     return {
-      tono,
+      ...lectura,
       avance: escalar(k.logrado, k.tope),
       marcaMeta: escalar(k.meta, k.tope),
     }
@@ -242,14 +278,18 @@ export function leerKpi(k: Kpi): LecturaKpi {
     // En los de cantidad ese 100 % no está en la cifra, y la imposibilidad
     // viene ya comprobada en `alarma`.
     const imposible = k.unit === "porcentaje" ? k.logrado > 1 + HOLGURA : k.alarma
-    const tono: Tono = imposible ? "rojo" : e >= 1 - HOLGURA ? "verde" : corto
+    const lectura = imposible
+      ? { tono: "rojo" as const, etiqueta: "Dato imposible" }
+      : e >= 1 - HOLGURA
+        ? cumple
+        : corto
     return k.unit === "porcentaje"
-      ? { tono, avance: escalar(k.logrado, 1), marcaMeta: escalar(k.meta, 1) }
-      : { tono, avance: escalar(e, 1), marcaMeta: 100 }
+      ? { ...lectura, avance: escalar(k.logrado, 1), marcaMeta: escalar(k.meta, 1) }
+      : { ...lectura, avance: escalar(e, 1), marcaMeta: 100 }
   }
 
   return {
-    tono: e >= 1 - HOLGURA ? "verde" : corto,
+    ...(e >= 1 - HOLGURA ? cumple : corto),
     avance: escalar(e, 1),
     marcaMeta: 100,
   }
@@ -260,114 +300,111 @@ export function leerKpi(k: Kpi): LecturaKpi {
  *
  * `diasHabiles` es cuántos días hábiles caben en el período por comercial;
  * `comerciales` cuántas personas están sumadas, para que el absentismo del
- * consolidado se mida contra hábiles × personas.
+ * consolidado se mida contra hábiles × personas. `metas` son las que la
+ * empresa fijó por su cuenta; lo que no esté ahí usa la meta por defecto.
  */
-export function kpisDe(t: FilaIndicadores, diasHabiles: number, comerciales: number): Kpi[] {
+export function kpisDe(
+  t: FilaIndicadores,
+  diasHabiles: number,
+  comerciales: number,
+  metas: MetasEmpresa = {},
+): Kpi[] {
   const ventasGestion = t.llamada_efectiva + t.atencion_venta + t.atencion_venta_externa
+  const definir = (cfg: ConfigKpi) => kpi(cfg, metas)
   return [
-    kpi({
+    definir({
       code: "contactabilidad",
       nombre: "Contactabilidad",
       formula: "Llamadas contestadas ÷ total de llamadas",
       unit: "porcentaje",
       numerador: t.llamadas_contestadas,
       denominador: t.total_llamadas,
-      meta: METAS.contactabilidad,
       semaforo: "superar",
     }),
-    kpi({
+    definir({
       code: "conversion_agenda",
       nombre: "Conversión de agenda",
       formula: "Total de agendas ÷ llamadas contestadas",
       unit: "porcentaje",
       numerador: t.total_agendas,
       denominador: t.llamadas_contestadas,
-      meta: METAS.conversion_agenda,
       semaforo: "con_techo",
     }),
-    kpi({
+    definir({
       code: "confirmacion_agenda",
       nombre: "Confirmación de agenda",
       formula: "Agendas confirmadas ÷ total de agendas",
       unit: "porcentaje",
       numerador: t.agenda_confirmada,
       denominador: t.total_agendas,
-      meta: METAS.confirmacion_agenda,
       semaforo: "con_techo",
     }),
-    kpi({
+    definir({
       code: "venta_presencial",
       nombre: "Venta presencial",
       formula: "Ventas presenciales ÷ total de atención presencial",
       unit: "porcentaje",
       numerador: t.atencion_venta + t.atencion_venta_externa,
       denominador: t.total_atencion,
-      meta: METAS.venta_presencial,
       semaforo: "banda",
       tope: TOPES.venta_presencial,
     }),
-    kpi({
+    definir({
       code: "volumen_agendas",
       nombre: "Volumen de agendas",
       formula: "Total de agendas ÷ total de llamadas",
       unit: "porcentaje",
       numerador: t.total_agendas,
       denominador: t.total_llamadas,
-      meta: METAS.volumen_agendas,
       semaforo: "superar",
     }),
-    kpi({
+    definir({
       code: "seguimiento",
       nombre: "Seguimiento",
       formula: "Llamadas de seguimiento ÷ total de llamadas",
       unit: "porcentaje",
       numerador: t.llamada_seguimiento,
       denominador: t.total_llamadas,
-      meta: METAS.seguimiento,
       semaforo: "banda",
       tope: TOPES.seguimiento,
     }),
-    kpi({
+    definir({
       code: "agenda_a_venta",
       nombre: "Conversión de agenda a venta",
       formula: "Ventas de la gestión (efectivas + presenciales) ÷ total de agendas",
       unit: "porcentaje",
       numerador: ventasGestion,
       denominador: t.total_agendas,
-      meta: METAS.agenda_a_venta,
       semaforo: "con_techo",
     }),
-    kpi({
+    definir({
       code: "contestadas_por_jornada",
       nombre: "Llamadas contestadas al día",
-      formula: "Llamadas contestadas ÷ jornadas registradas · meta 45 por asesor",
+      formula: "Llamadas contestadas ÷ jornadas registradas, por asesor",
       unit: "cantidad",
       numerador: t.llamadas_contestadas,
       denominador: t.dias_laborados,
-      meta: METAS.contestadas_por_jornada,
       semaforo: "superar",
     }),
-    kpi({
+    definir({
       code: "agendas_atendidas_por_jornada",
       nombre: "Agendas efectivas al día",
-      formula: "Atención de agenda ÷ jornadas registradas · meta 6 por asesor",
+      formula: "Atención de agenda ÷ jornadas registradas, por asesor",
       unit: "cantidad",
       numerador: t.atencion_agenda,
       denominador: t.dias_laborados,
-      meta: METAS.agendas_atendidas_por_jornada,
       semaforo: "con_techo",
       // Atender más agendas de las que hubo es el dato imposible que hay que
       // cazar acá: superar las seis diarias está bien, atender ocho de seis no.
       alarma: t.atencion_agenda > t.total_agendas,
     }),
-    kpi({
+    definir({
       code: "dias_laborados",
       nombre: "Días laborados",
       formula: "Jornadas registradas ÷ días hábiles del período",
       unit: "porcentaje",
       numerador: t.dias_laborados,
       denominador: diasHabiles * Math.max(comerciales, 1),
-      meta: METAS.dias_laborados,
       semaforo: "superar",
     }),
   ]

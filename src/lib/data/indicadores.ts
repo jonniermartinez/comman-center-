@@ -1,7 +1,14 @@
 import "server-only"
 
 import { businessDaysInMonth } from "@/lib/kpi"
-import { diasHabilesEnRango, finDeMes, mesesDe, type FilaIndicadores } from "@/lib/indicadores"
+import {
+  diasHabilesEnRango,
+  esCodigoKpi,
+  finDeMes,
+  mesesDe,
+  type FilaIndicadores,
+  type MetasEmpresa,
+} from "@/lib/indicadores"
 import { createClient } from "@/lib/supabase/server"
 
 export interface DatosIndicadores {
@@ -16,6 +23,8 @@ export interface DatosIndicadores {
   diasHabiles: number
   /** Los días hábiles configurados por mes, para el campo editable. */
   configurados: { period_month: string; dias: number }[]
+  /** Las metas que la empresa fijó por su cuenta. Lo que falte usa la de por defecto. */
+  metas: MetasEmpresa
 }
 
 export async function loadIndicadores(
@@ -26,7 +35,7 @@ export async function loadIndicadores(
   const supabase = await createClient()
   const meses = mesesDe(desde, hasta)
 
-  const [filas, config] = await Promise.all([
+  const [filas, config, metasFijadas] = await Promise.all([
     supabase.rpc("indicadores_por_comercial", {
       p_company: companyId,
       p_desde: desde,
@@ -37,9 +46,17 @@ export async function loadIndicadores(
       .select("period_month, dias")
       .eq("company_id", companyId)
       .in("period_month", meses),
+    supabase.from("company_kpi_targets").select("kpi_code, meta").eq("company_id", companyId),
   ])
 
   if (filas.error) throw new Error(`indicadores: ${filas.error.message}`)
+
+  // Un código que el tablero ya no conozca se ignora: la fila queda en la base
+  // sin hacer daño hasta que alguien la borre.
+  const metas: MetasEmpresa = {}
+  for (const m of metasFijadas.data ?? []) {
+    if (esCodigoKpi(m.kpi_code) && Number(m.meta) > 0) metas[m.kpi_code] = Number(m.meta)
+  }
 
   const configurados = (config.data ?? []).map((c) => ({
     period_month: c.period_month,
@@ -72,5 +89,6 @@ export async function loadIndicadores(
     }),
     diasHabiles,
     configurados,
+    metas,
   }
 }

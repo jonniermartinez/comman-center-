@@ -28,6 +28,7 @@ import {
   type FilaIndicadores,
 } from "@/lib/indicadores"
 import { businessDaysInMonth, monthLabel } from "@/lib/kpi"
+import { cn } from "@/lib/utils"
 import { mesActivo } from "@/lib/store/periodo-server"
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
@@ -71,7 +72,7 @@ export default async function IndicadoresPage({
 
   const total = consolidar(filas)
   const conJornada = filas.filter((f) => f.dias_laborados > 0).length
-  const kpis = kpisDe(total, datos.diasHabiles, conJornada)
+  const kpis = kpisDe(total, datos.diasHabiles, conJornada, datos.metas)
   const promedios = promediosDe(total)
   const reparto = repartoPorCanal(total)
   const meses = mesesDe(desde, hasta)
@@ -180,18 +181,25 @@ export default async function IndicadoresPage({
 
         <SectionCard>
           <SectionCardHeader
-            title="Distribución por canal"
+            title="Distribución de ventas por canal"
             description="Ventas presenciales ÷ total de ventas y digitales ÷ total. Los dos suman 100 %, así que van sin meta y sin semáforo: es un reparto, no un objetivo."
           />
-          <dl className="space-y-3">
+          <Reparto
+            presencial={reparto.presencial.ratio}
+            digital={reparto.digital.ratio}
+            total={reparto.conTipo}
+          />
+          <dl className="mt-4 grid grid-cols-2 gap-3">
             <Distribucion
               label="Presencial"
+              tono="sky"
               valor={reparto.presencial.cantidad}
               ratio={reparto.presencial.ratio}
               total={reparto.conTipo}
             />
             <Distribucion
               label="Digital"
+              tono="violet"
               valor={reparto.digital.cantidad}
               ratio={reparto.digital.ratio}
               total={reparto.conTipo}
@@ -218,11 +226,13 @@ export default async function IndicadoresPage({
       <SectionCard className="mt-4">
         <SectionCardHeader
           title="Indicadores con meta"
-          description="Meta, logrado y efectividad (logrado ÷ meta), sobre los totales del filtro. No todos se colorean igual: unos se empujan sin techo, en otros pasar del 100 % delata un error de captura, y venta presencial y seguimiento tienen un óptimo del que también se puede uno pasar."
+          description={`Meta, logrado y efectividad (logrado ÷ meta), sobre los totales del filtro. Verde cumple, ámbar está cerca, rojo está lejos o el dato es imposible. No todos se leen igual: unos se empujan sin techo, en otros pasar del 100 % delata un error de captura, y venta presencial y seguimiento tienen un óptimo del que también se puede uno pasar.${
+            company.canManage ? " La meta de cada indicador se cambia en su tarjeta; vacía vuelve a la de por defecto." : ""
+          }`}
         />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {kpis.map((k) => (
-            <KpiCard key={k.code} kpi={k} />
+            <KpiCard key={k.code} kpi={k} companyId={company.id} editable={company.canManage} />
           ))}
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
@@ -336,31 +346,69 @@ function FilaCruce({
   )
 }
 
+/** Los dos canales en una sola barra apilada: el reparto se ve de un vistazo. */
+function Reparto({
+  presencial,
+  digital,
+  total,
+}: {
+  presencial: number | null
+  digital: number | null
+  total: number
+}) {
+  if (!total) {
+    return (
+      <div className="flex h-8 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground">
+        Sin ventas con tipo en el período
+      </div>
+    )
+  }
+  const p = (presencial ?? 0) * 100
+  const d = (digital ?? 0) * 100
+  return (
+    <div
+      className="flex h-8 w-full overflow-hidden rounded-lg text-xs font-semibold text-white"
+      role="img"
+      aria-label={`${formatPercent(presencial)} presencial, ${formatPercent(digital)} digital`}
+    >
+      {p > 0 && (
+        <div className="flex items-center justify-center bg-sky-600" style={{ width: `${p}%` }}>
+          {p >= 12 && formatPercent(presencial)}
+        </div>
+      )}
+      {d > 0 && (
+        <div className="flex items-center justify-center bg-violet-600" style={{ width: `${d}%` }}>
+          {d >= 12 && formatPercent(digital)}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Distribucion({
   label,
+  tono,
   valor,
   ratio,
   total,
 }: {
   label: string
+  tono: "sky" | "violet"
   valor: number
   ratio: number | null
   total: number
 }) {
+  const colores = {
+    sky: "border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900 dark:bg-sky-950/60 dark:text-sky-100",
+    violet:
+      "border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-900 dark:bg-violet-950/60 dark:text-violet-100",
+  }
   return (
-    <div>
-      <div className="flex items-baseline justify-between text-sm">
-        <dt>{label}</dt>
-        <dd className="font-semibold tabular-nums">{formatPercent(ratio)}</dd>
-      </div>
-      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-primary"
-          style={{ width: `${(ratio ?? 0) * 100}%` }}
-        />
-      </div>
-      <p className="mt-1 text-xs tabular-nums text-muted-foreground">
-        {formatNumber(valor)} ÷ {formatNumber(total)}
+    <div className={`rounded-lg border px-3 py-2 ${colores[tono]}`}>
+      <dt className="text-xs font-medium">{label}</dt>
+      <dd className="text-2xl font-bold leading-8 tabular-nums">{formatPercent(ratio)}</dd>
+      <p className="text-xs tabular-nums opacity-80">
+        {formatNumber(valor)} de {formatNumber(total)} ventas
       </p>
     </div>
   )
@@ -393,18 +441,51 @@ function Promedio({ label, valor }: { label: string; valor: number | null }) {
   )
 }
 
-/** Cada columna de la hoja de gestión, en el mismo orden y con los mismos bloques. */
-const COLUMNAS: { grupo: string; campos: { key: keyof FilaIndicadores; label: string; total?: boolean }[] }[] = [
+type Campo = { key: keyof FilaIndicadores; label: string; total?: boolean }
+
+/** Los colores de los bloques, los mismos del formulario de la jornada. */
+type TonoBloque = "sky" | "emerald" | "amber" | "violet" | "slate"
+
+const ENCABEZADO: Record<TonoBloque, string> = {
+  sky: "border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900 dark:bg-sky-950/60 dark:text-sky-100",
+  emerald:
+    "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-100",
+  amber:
+    "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-100",
+  violet:
+    "border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-900 dark:bg-violet-950/60 dark:text-violet-100",
+  slate: "border-border bg-muted/40 text-foreground",
+}
+
+/** El lavado suave del mismo tono, para las celdas de datos del bloque. */
+const CELDA: Record<TonoBloque, string> = {
+  sky: "bg-sky-50/40 dark:bg-sky-950/20",
+  emerald: "bg-emerald-50/40 dark:bg-emerald-950/20",
+  amber: "bg-amber-50/40 dark:bg-amber-950/20",
+  violet: "bg-violet-50/40 dark:bg-violet-950/20",
+  slate: "",
+}
+
+/**
+ * Cada columna de la hoja de gestión, en el mismo orden, con los mismos
+ * bloques y los mismos colores que el formulario de la jornada, para que la
+ * tabla se lea como el Excel. Un bloque puede traer sub-bloques con nombre: la
+ * cola del CRM son tres tríos (chats, tareas, caducadas) que sin su título se
+ * leían como "inicial, medio, final" repetido tres veces sin saber cuál era cuál.
+ */
+const COLUMNAS: { grupo: string; tono: TonoBloque; bloques: { nombre?: string; campos: Campo[] }[] }[] = [
   {
     grupo: "Jornada",
-    campos: [
+    tono: "slate",
+    bloques: [{ campos: [
       { key: "dias_laborados", label: "Días" },
       { key: "dias_tarde", label: "Tarde" },
-    ],
+    ] }],
   },
   {
     grupo: "Llamadas",
-    campos: [
+    tono: "sky",
+    bloques: [{ campos: [
       { key: "llamada_efectiva", label: "Efectiva" },
       { key: "llamada_seguimiento", label: "Seguim." },
       { key: "llamada_agenda", label: "Agenda" },
@@ -413,93 +494,161 @@ const COLUMNAS: { grupo: string; campos: { key: keyof FilaIndicadores; label: st
       { key: "llamadas_contestadas", label: "Contest.", total: true },
       { key: "llamada_no_contestada", label: "No cont." },
       { key: "total_llamadas", label: "Total", total: true },
-    ],
+    ] }],
   },
   {
     grupo: "Agendas",
-    campos: [
+    tono: "emerald",
+    bloques: [{ campos: [
       { key: "agenda_confirmada", label: "Confirm." },
       { key: "agenda_posible", label: "Posible" },
       { key: "agenda_reprograma", label: "Reprog." },
       { key: "agenda_no_contesta", label: "No cont." },
       { key: "agenda_cancela", label: "Cancela" },
       { key: "total_agendas", label: "Total", total: true },
-    ],
+    ] }],
   },
   {
     grupo: "Atención presencial",
-    campos: [
-      { key: "atencion_venta", label: "Venta" },
-      { key: "atencion_venta_externa", label: "Externa" },
-      { key: "atencion_seguimiento", label: "Seguim." },
-      { key: "atencion_declinado", label: "Declin." },
-      { key: "total_atencion", label: "Total", total: true },
+    tono: "amber",
+    bloques: [
+      {
+        nombre: "Venta presencial",
+        campos: [
+          { key: "atencion_venta", label: "Venta" },
+          { key: "atencion_venta_externa", label: "Externa" },
+          { key: "atencion_seguimiento", label: "Seguim." },
+          { key: "atencion_declinado", label: "Declin." },
+          { key: "total_atencion", label: "Total", total: true },
+        ],
+      },
+      { nombre: "Agenda", campos: [{ key: "atencion_agenda", label: "Atendida" }] },
+      {
+        nombre: "Administrativa",
+        campos: [
+          { key: "atencion_asociado", label: "Asoc." },
+          { key: "atencion_enrolamiento", label: "Enrol." },
+          { key: "atencion_certificados", label: "Certif." },
+          { key: "atencion_renovacion", label: "Renov." },
+          { key: "total_administrativa", label: "Total", total: true },
+        ],
+      },
     ],
   },
-  { grupo: "Agenda", campos: [{ key: "atencion_agenda", label: "Atendida" }] },
   {
-    grupo: "Administrativa",
-    campos: [
-      { key: "atencion_asociado", label: "Asoc." },
-      { key: "atencion_enrolamiento", label: "Enrol." },
-      { key: "atencion_certificados", label: "Certif." },
-      { key: "atencion_renovacion", label: "Renov." },
-      { key: "total_administrativa", label: "Total", total: true },
-    ],
-  },
-  {
-    grupo: "Cola del CRM (chats · tareas · caducadas)",
-    campos: [
-      { key: "chats_inicial", label: "Ini." },
-      { key: "chats_medio", label: "Medio" },
-      { key: "chats_final", label: "Final" },
-      { key: "tareas_inicial", label: "Ini." },
-      { key: "tareas_medio", label: "Medio" },
-      { key: "tareas_final", label: "Final" },
-      { key: "caducadas_inicial", label: "Ini." },
-      { key: "caducadas_medio", label: "Medio" },
-      { key: "caducadas_final", label: "Final" },
+    grupo: "Cola del CRM",
+    tono: "violet",
+    bloques: [
+      {
+        nombre: "Chats",
+        campos: [
+          { key: "chats_inicial", label: "Inicial" },
+          { key: "chats_medio", label: "Medio día" },
+          { key: "chats_final", label: "Final" },
+        ],
+      },
+      {
+        nombre: "Tareas",
+        campos: [
+          { key: "tareas_inicial", label: "Inicial" },
+          { key: "tareas_medio", label: "Medio día" },
+          { key: "tareas_final", label: "Final" },
+        ],
+      },
+      {
+        nombre: "Caducadas",
+        campos: [
+          { key: "caducadas_inicial", label: "Inicial" },
+          { key: "caducadas_medio", label: "Medio día" },
+          { key: "caducadas_final", label: "Final" },
+        ],
+      },
     ],
   },
 ]
 
 function TablaTotales({ filas, total }: { filas: FilaIndicadores[]; total: FilaIndicadores }) {
-  const celda = (f: FilaIndicadores, key: keyof FilaIndicadores, destacada?: boolean) => (
+  const columnas = COLUMNAS.flatMap((g) =>
+    g.bloques.flatMap((b, bi) =>
+      b.campos.map((c, ci) => ({
+        ...c,
+        tono: g.tono,
+        // La primera columna de cada bloque lleva borde: separa los grupos.
+        borde: bi === 0 && ci === 0 ? "border-l-2" : ci === 0 ? "border-l" : "",
+      })),
+    ),
+  )
+  const conSubBloques = COLUMNAS.some((g) => g.bloques.some((b) => b.nombre))
+
+  const celda = (f: FilaIndicadores, col: (typeof columnas)[number]) => (
     <TableCell
-      key={String(key)}
-      className={
-        destacada
-          ? "bg-muted/40 text-right font-medium tabular-nums"
-          : "text-right tabular-nums"
-      }
+      key={String(col.key)}
+      className={cn(
+        "text-right tabular-nums",
+        col.borde,
+        col.total ? "font-medium bg-muted/50" : CELDA[col.tono],
+      )}
     >
-      {formatNumber(Number(f[key] ?? 0))}
+      {formatNumber(Number(f[col.key] ?? 0))}
     </TableCell>
   )
+
   return (
     <Table className="text-xs">
       <TableHeader>
-        <TableRow>
-          <TableHead rowSpan={2} className="sticky left-0 bg-card">
+        <TableRow className="border-b-0">
+          <TableHead rowSpan={conSubBloques ? 3 : 2} className="sticky left-0 bg-card align-bottom">
             Comercial
           </TableHead>
-          {COLUMNAS.map((g) => (
-            <TableHead key={g.grupo} colSpan={g.campos.length} className="border-l text-center">
-              {g.grupo}
+          {COLUMNAS.map((g) => {
+            const ancho = g.bloques.reduce((n, b) => n + b.campos.length, 0)
+            const sinSub = g.bloques.every((b) => !b.nombre)
+            return (
+              <TableHead
+                key={g.grupo}
+                colSpan={ancho}
+                rowSpan={conSubBloques && sinSub ? 2 : 1}
+                className={cn("border-l-2 border-b text-center font-semibold", ENCABEZADO[g.tono])}
+              >
+                {g.grupo}
+              </TableHead>
+            )
+          })}
+        </TableRow>
+        {conSubBloques && (
+          <TableRow className="border-b-0">
+            {COLUMNAS.flatMap((g) =>
+              g.bloques.every((b) => !b.nombre)
+                ? []
+                : g.bloques.map((b, bi) => (
+                    <TableHead
+                      key={`${g.grupo}-${b.nombre}`}
+                      colSpan={b.campos.length}
+                      className={cn(
+                        "border-b text-center font-medium",
+                        bi === 0 ? "border-l-2" : "border-l",
+                        ENCABEZADO[g.tono],
+                      )}
+                    >
+                      {b.nombre}
+                    </TableHead>
+                  )),
+            )}
+          </TableRow>
+        )}
+        <TableRow>
+          {columnas.map((c) => (
+            <TableHead
+              key={String(c.key)}
+              className={cn(
+                "text-right",
+                c.borde,
+                c.total ? "bg-muted/50 font-medium" : CELDA[c.tono],
+              )}
+            >
+              {c.label}
             </TableHead>
           ))}
-        </TableRow>
-        <TableRow>
-          {COLUMNAS.flatMap((g) =>
-            g.campos.map((c, i) => (
-              <TableHead
-                key={`${g.grupo}-${String(c.key)}`}
-                className={`text-right ${i === 0 ? "border-l" : ""} ${c.total ? "bg-muted/40" : ""}`}
-              >
-                {c.label}
-              </TableHead>
-            )),
-          )}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -508,16 +657,16 @@ function TablaTotales({ filas, total }: { filas: FilaIndicadores[]; total: FilaI
           .map((f) => (
             <TableRow key={f.staff_id ?? "sin"}>
               <TableCell className="sticky left-0 max-w-40 truncate bg-card">{f.responsable_nombre}</TableCell>
-              {COLUMNAS.flatMap((g) => g.campos.map((c) => celda(f, c.key, c.total)))}
+              {columnas.map((c) => celda(f, c))}
             </TableRow>
           ))}
         <TableRow className="font-semibold">
           <TableCell className="sticky left-0 bg-card">Total</TableCell>
-          {COLUMNAS.flatMap((g) => g.campos.map((c) => celda(total, c.key, c.total)))}
+          {columnas.map((c) => celda(total, c))}
         </TableRow>
         {filas.every((f) => f.dias_laborados === 0) && (
           <TableRow>
-            <TableCell colSpan={40} className="py-6 text-center text-sm text-muted-foreground">
+            <TableCell colSpan={columnas.length + 1} className="py-6 text-center text-sm text-muted-foreground">
               Sin jornadas registradas en el período.
             </TableCell>
           </TableRow>

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { requireSession } from "@/lib/auth/session"
 import { logAudit } from "@/lib/data/audit"
 import { slugify } from "@/lib/format"
+import { esCodigoKpi } from "@/lib/indicadores"
 import { createClient } from "@/lib/supabase/server"
 
 export interface Result {
@@ -458,6 +459,51 @@ export async function setBusinessDays(
     entity_id: `${companyId}:${periodMonth}`,
     company_id: companyId,
     after: { dias },
+  })
+
+  refrescar()
+  return { ok: true }
+}
+
+/**
+ * La meta de un indicador del tablero para esta empresa.
+ *
+ * `meta` en 0 (o vacío) borra la fila y el indicador vuelve a la meta por
+ * defecto del código. Los ratios llegan en fracción (0,7), las cantidades tal
+ * cual (45); la tarjeta se encarga de la conversión.
+ */
+export async function setKpiTarget(
+  companyId: string,
+  kpiCode: string,
+  meta: number,
+): Promise<Result> {
+  const session = await requireSession()
+  const supabase = await createClient()
+
+  if (!esCodigoKpi(kpiCode)) return { ok: false, error: "Ese indicador no existe." }
+  if (!Number.isFinite(meta) || meta < 0) return { ok: false, error: "La meta no es un número válido." }
+
+  if (meta === 0) {
+    const { error } = await supabase
+      .from("company_kpi_targets")
+      .delete()
+      .eq("company_id", companyId)
+      .eq("kpi_code", kpiCode)
+    if (error) return { ok: false, error: error.message }
+  } else {
+    const { error } = await supabase.from("company_kpi_targets").upsert(
+      { company_id: companyId, kpi_code: kpiCode, meta, updated_by: session.profile.id },
+      { onConflict: "company_id,kpi_code" },
+    )
+    if (error) return { ok: false, error: error.message }
+  }
+
+  await logAudit({
+    action: "update",
+    entity: "company_kpi_targets",
+    entity_id: `${companyId}:${kpiCode}`,
+    company_id: companyId,
+    after: { meta },
   })
 
   refrescar()
