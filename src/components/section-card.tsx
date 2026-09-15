@@ -4,6 +4,10 @@ import { cn } from "@/lib/utils"
  * Tarjeta base del sistema visual: borde de 1px, radio xl, superficie blanca
  * sobre el fondo gris de la página. Reemplaza el uso directo de `<Card>` para
  * que todas las secciones tengan el mismo padding y radio.
+ *
+ * Lleva `min-w-0` porque suele ser hija de una rejilla: sin él, una tabla
+ * adentro obliga a la columna a medir lo que mide la tabla y en celular la
+ * página entera se desborda hacia el lado.
  */
 export function SectionCard({
   className,
@@ -12,7 +16,7 @@ export function SectionCard({
 }: React.ComponentProps<"section">) {
   return (
     <section
-      className={cn("rounded-xl border bg-card p-4 sm:p-6", className)}
+      className={cn("min-w-0 rounded-xl border bg-card p-4 sm:p-6", className)}
       {...props}
     >
       {children}

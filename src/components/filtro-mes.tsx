@@ -43,7 +43,7 @@ export function FiltroMes() {
       </Button>
 
       <div className="relative">
-        <span className="block min-w-36 px-1 text-center text-sm font-medium tabular-nums">
+        <span className="block min-w-28 px-1 text-center text-sm font-medium tabular-nums sm:min-w-36">
           {monthLabel(mes)}
         </span>
         <input

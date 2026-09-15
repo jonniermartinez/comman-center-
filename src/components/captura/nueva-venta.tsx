@@ -341,15 +341,15 @@ export function NuevaVenta({
             de 1.024 px había que bajar tres pantallas para llegar a la
             financiación. Con todo el ancho caben tres columnas y casi nada
             queda fuera de la vista. */}
-      <DialogContent className="grid h-[calc(100svh-1.5rem)] w-[calc(100vw-1.5rem)] max-h-none grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-none">
-        <DialogHeader className="border-b px-6 py-4">
+      <DialogContent className="grid h-[calc(100svh-1.5rem)] w-[calc(100vw-1.5rem)] max-h-none grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-none max-sm:overflow-hidden max-sm:py-0">
+        <DialogHeader className="border-b px-4 py-4 sm:px-6 max-sm:pt-[max(1rem,env(safe-area-inset-top))]">
           <DialogTitle>{editando ? "Editar venta" : "Nueva venta"}</DialogTitle>
           <DialogDescription>
             El crédito de un cliente: qué compró, cómo lo financió y cuánto abonó.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="overflow-y-auto px-6 py-5">
+        <div className="overflow-y-auto px-4 py-5 sm:px-6">
           <div className="grid items-start gap-5 lg:grid-cols-2 xl:grid-cols-3">
             {/* ============== Columna izquierda: quién ============== */}
             <div className="space-y-5">
@@ -948,26 +948,26 @@ export function NuevaVenta({
         </div>
 
         {/* ============== Pie: la plata y el guardar ============== */}
-        <div className="border-t bg-muted/40 px-6 py-3">
+        <div className="border-t bg-muted/40 px-4 py-3 sm:px-6 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
             <dl className="flex flex-wrap items-end gap-x-6 gap-y-2 text-sm">
-              <div>
+              <div className="max-sm:hidden">
                 <dt className="text-xs text-muted-foreground">Valor de lista</dt>
                 <dd className="font-medium tabular-nums">{formatCOP(valorLista)}</dd>
               </div>
-              <div>
+              <div className="max-sm:hidden">
                 <dt className="text-xs text-muted-foreground">Bonos</dt>
                 <dd className="font-medium tabular-nums">
                   {totalBonos ? `−${formatCOP(totalBonos)}` : formatCOP(0)}
                 </dd>
               </div>
-              <div>
+              <div className="max-sm:hidden">
                 <dt className="text-xs text-muted-foreground">Adiciones</dt>
                 <dd className="font-medium tabular-nums">
                   {totalAdiciones ? `+${formatCOP(totalAdiciones)}` : formatCOP(0)}
                 </dd>
               </div>
-              <div className="border-l pl-6">
+              <div className="sm:border-l sm:pl-6">
                 <dt className="text-xs text-muted-foreground">Valor final</dt>
                 <dd className="text-lg font-semibold tabular-nums">{formatCOP(valorFinal)}</dd>
               </div>
@@ -987,7 +987,7 @@ export function NuevaVenta({
               )}
             </dl>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 max-sm:w-full max-sm:*:flex-1">
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Cancelar
               </Button>
