@@ -139,6 +139,16 @@ export interface Kpi {
   semaforo: Semaforo
   /** Ratio a partir del cual la banda se pone en rojo. Solo en `banda`. */
   tope: number | null
+  /**
+   * El dato es imposible y va en rojo pase lo que pase.
+   *
+   * Existe por los indicadores de cantidad con techo. En un ratio el techo es
+   * el 100 % y se ve en la propia cifra —no se puede agendar más veces de las
+   * que se contestó el teléfono—, pero "seis agendas al día" no tiene 100 %
+   * que mirar. Ahí la imposibilidad se comprueba contra otro campo y llega
+   * resuelta.
+   */
+  alarma: boolean
   /** Logrado ÷ meta. Es el "porcentaje de cumplimiento" que piden en todos los KPI. */
   efectividad: number | null
 }
@@ -155,6 +165,8 @@ type ConfigKpi = {
   numerador: number
   denominador: number
   meta: number
+  /** Solo para `con_techo` sobre cantidades: ver `Kpi.alarma`. */
+  alarma?: boolean
 } & ({ semaforo: "superar" | "con_techo" } | { semaforo: "banda"; tope: number })
 
 function kpi(cfg: ConfigKpi): Kpi {
@@ -170,6 +182,7 @@ function kpi(cfg: ConfigKpi): Kpi {
     meta: cfg.meta,
     semaforo: cfg.semaforo,
     tope: "tope" in cfg ? cfg.tope : null,
+    alarma: cfg.alarma ?? false,
     efectividad: logrado === null ? null : logrado / cfg.meta,
   }
 }
@@ -226,8 +239,13 @@ export function leerKpi(k: Kpi): LecturaKpi {
   if (k.semaforo === "con_techo") {
     // Un ratio por encima del 100 % no existe en estos indicadores: si aparece,
     // alguien sumó mal la hoja de gestión y el rojo es la alarma de captura.
-    const tono: Tono = k.logrado > 1 + HOLGURA ? "rojo" : e >= 1 - HOLGURA ? "verde" : corto
-    return { tono, avance: escalar(k.logrado, 1), marcaMeta: escalar(k.meta, 1) }
+    // En los de cantidad ese 100 % no está en la cifra, y la imposibilidad
+    // viene ya comprobada en `alarma`.
+    const imposible = k.unit === "porcentaje" ? k.logrado > 1 + HOLGURA : k.alarma
+    const tono: Tono = imposible ? "rojo" : e >= 1 - HOLGURA ? "verde" : corto
+    return k.unit === "porcentaje"
+      ? { tono, avance: escalar(k.logrado, 1), marcaMeta: escalar(k.meta, 1) }
+      : { tono, avance: escalar(e, 1), marcaMeta: 100 }
   }
 
   return {
@@ -337,7 +355,10 @@ export function kpisDe(t: FilaIndicadores, diasHabiles: number, comerciales: num
       numerador: t.atencion_agenda,
       denominador: t.dias_laborados,
       meta: METAS.agendas_atendidas_por_jornada,
-      semaforo: "superar",
+      semaforo: "con_techo",
+      // Atender más agendas de las que hubo es el dato imposible que hay que
+      // cazar acá: superar las seis diarias está bien, atender ocho de seis no.
+      alarma: t.atencion_agenda > t.total_agendas,
     }),
     kpi({
       code: "dias_laborados",
