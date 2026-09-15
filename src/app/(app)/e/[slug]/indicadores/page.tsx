@@ -24,6 +24,7 @@ import {
   kpisDe,
   mesesDe,
   promediosDe,
+  repartoPorCanal,
   type FilaIndicadores,
 } from "@/lib/indicadores"
 import { businessDaysInMonth, monthLabel } from "@/lib/kpi"
@@ -72,6 +73,7 @@ export default async function IndicadoresPage({
   const conJornada = filas.filter((f) => f.dias_laborados > 0).length
   const kpis = kpisDe(total, datos.diasHabiles, conJornada)
   const promedios = promediosDe(total)
+  const reparto = repartoPorCanal(total)
   const meses = mesesDe(desde, hasta)
   const periodo =
     desde === hasta
@@ -109,6 +111,10 @@ export default async function IndicadoresPage({
               editable={company.canManage}
             />
           ))}
+          {/* Los días hábiles que había y las jornadas que de verdad se
+              registraron se leen juntos o no dicen nada: es el punto de partida
+              de media docena de indicadores. */}
+          <Registradas valor={total.dias_laborados} comerciales={conJornada} />
         </div>
       </div>
 
@@ -175,24 +181,26 @@ export default async function IndicadoresPage({
         <SectionCard>
           <SectionCardHeader
             title="Distribución por canal"
-            description="Qué parte de las ventas de la base es de cada tipo."
+            description="Ventas presenciales ÷ total de ventas y digitales ÷ total. Los dos suman 100 %, así que van sin meta y sin semáforo: es un reparto, no un objetivo."
           />
           <dl className="space-y-3">
             <Distribucion
               label="Presencial"
-              valor={total.ventas_presencial}
-              total={total.ventas_presencial + total.ventas_digital}
+              valor={reparto.presencial.cantidad}
+              ratio={reparto.presencial.ratio}
+              total={reparto.conTipo}
             />
             <Distribucion
               label="Digital"
-              valor={total.ventas_digital}
-              total={total.ventas_presencial + total.ventas_digital}
+              valor={reparto.digital.cantidad}
+              ratio={reparto.digital.ratio}
+              total={reparto.conTipo}
             />
           </dl>
-          {total.ventas_sin_tipo > 0 && (
+          {reparto.sinTipo > 0 && (
             <p className="mt-3 text-xs text-muted-foreground">
-              {total.ventas_sin_tipo} venta(s) no dicen si fueron presenciales o digitales y quedan
-              fuera del reparto.
+              {reparto.sinTipo} venta(s) no dicen si fueron presenciales o digitales y quedan fuera
+              del reparto.
             </p>
           )}
           <div className="mt-4 border-t pt-4">
@@ -210,7 +218,7 @@ export default async function IndicadoresPage({
       <SectionCard className="mt-4">
         <SectionCardHeader
           title="Indicadores con meta"
-          description="Meta, logrado y efectividad (logrado ÷ meta). Los ratios se calculan sobre los totales del filtro."
+          description="Meta, logrado y efectividad (logrado ÷ meta), sobre los totales del filtro. No todos se colorean igual: unos se empujan sin techo, en otros pasar del 100 % delata un error de captura, y venta presencial y seguimiento tienen un óptimo del que también se puede uno pasar."
         />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {kpis.map((k) => (
@@ -328,20 +336,50 @@ function FilaCruce({
   )
 }
 
-function Distribucion({ label, valor, total }: { label: string; valor: number; total: number }) {
-  const ratio = total ? valor / total : 0
+function Distribucion({
+  label,
+  valor,
+  ratio,
+  total,
+}: {
+  label: string
+  valor: number
+  ratio: number | null
+  total: number
+}) {
   return (
     <div>
       <div className="flex items-baseline justify-between text-sm">
         <dt>{label}</dt>
-        <dd className="tabular-nums">
-          <span className="font-semibold">{formatPercent(total ? ratio : null)}</span>
-          <span className="ml-1.5 text-xs text-muted-foreground">{formatNumber(valor)}</span>
-        </dd>
+        <dd className="font-semibold tabular-nums">{formatPercent(ratio)}</dd>
       </div>
       <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary" style={{ width: `${ratio * 100}%` }} />
+        <div
+          className="h-full rounded-full bg-primary"
+          style={{ width: `${(ratio ?? 0) * 100}%` }}
+        />
       </div>
+      <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+        {formatNumber(valor)} ÷ {formatNumber(total)}
+      </p>
+    </div>
+  )
+}
+
+/**
+ * Las jornadas que registró el equipo, al lado de los días hábiles que tenía el
+ * período. Va sin caja editable porque es un dato de la gestión diaria, pero
+ * con el mismo peso: se leen como un par.
+ */
+function Registradas({ valor, comerciales }: { valor: number; comerciales: number }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs text-muted-foreground">
+        Jornadas registradas · {comerciales} comercial(es)
+      </p>
+      <p className="flex h-8 w-28 items-center justify-end rounded-lg border bg-muted/40 px-2.5 text-sm font-medium tabular-nums">
+        {formatNumber(valor)}
+      </p>
     </div>
   )
 }
