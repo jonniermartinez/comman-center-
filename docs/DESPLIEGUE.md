@@ -85,10 +85,43 @@ Las claves públicas van en `wrangler.jsonc` bajo `vars` o en
 `.env.production`. No hay claves secretas: la aplicación funciona entera con la
 clave publicable y RLS.
 
+## El límite que duele no es el tamaño
+
+El worker cabe de sobra en el plan gratuito, pero **no cabe en su tiempo de
+CPU**. Medido el 15/09/2026 contra el despliegue, con `curl`, sin sesión y sin
+carga:
+
+| Petición | Fallos |
+|---|---|
+| 30 a `/empresas` | 5 (16 %) |
+| 20 a `/empresas`, seguidas | 4 (20 %) |
+| 10 a `/empresas`, espaciadas 25 s | 2 (20 %) |
+| 10 a `/icon.png` (asset estático) | **0** |
+| 25 a `/empresas` con `next start` local | **0** |
+
+El error es `Error 1102 · Worker exceeded resource limits`, y cae hasta en el
+redirect a `/login`, que no hace casi nada. Las dos últimas filas son el
+diagnóstico: el asset estático lo sirve el binding `ASSETS` sin ejecutar el
+worker y nunca falla, y el **mismo build contra la misma base, servido por Node
+en local, no falla ni una vez**. No es el código ni Supabase: es el runtime.
+
+Encaja con los **10 ms de CPU por invocación** del plan gratuito, que para
+Next.js sobre OpenNext se quedan cortos. Si se confirma, se arregla pasando
+Workers al plan de pago —30 s de CPU—, que es un cambio de plan y no de código.
+
+Para confirmarlo antes de tocar nada:
+
+```bash
+npx wrangler tail command-center --format pretty
+```
+
+Bajo carga sostenida empeora: grabando el tutorial, la tasa subió al 42 % y
+llegó a fallar trece pantallas seguidas con cinco reintentos cada una.
+
 ## Notas
 
 - Tamaño actual: **1,37 MB comprimidos**, holgado frente al límite de 3 MB del
-  plan gratuito.
+  plan gratuito. El tamaño nunca ha sido el problema; ver arriba.
 - `observability` está activo: los logs se ven en **Workers → command-center →
   Logs** sin configurar nada más.
 - Con `main` conectada a despliegue automático, **todo push a `main` sale a
