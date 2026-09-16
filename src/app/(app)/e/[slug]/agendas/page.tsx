@@ -1,6 +1,7 @@
+import { ExternalLink } from "lucide-react"
 import { notFound } from "next/navigation"
 
-import { NuevaAgenda, type AgendaExistente } from "@/components/captura/nueva-agenda"
+import { SincronizarKommo } from "@/components/kommo/sincronizar-kommo"
 import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
@@ -16,6 +17,7 @@ import {
 import { construirHref, getCompanyContext } from "@/lib/data/company"
 import { leerFiltros, listAppointments } from "@/lib/data/records"
 import { formatDate } from "@/lib/format"
+import { createClient } from "@/lib/supabase/server"
 
 /** Citas concertadas con clientes y en qué terminaron. */
 export default async function AgendasPage({
@@ -31,20 +33,25 @@ export default async function AgendasPage({
   }
 
   const pagina = await listAppointments(company.id, leerFiltros(sp))
+
+  // La fila solo la ve quien administra (RLS): para un asesor no hay botón.
+  const supabase = await createClient()
+  const { data: kommo } = company.canManage
+    ? await supabase
+        .from("kommo_integrations")
+        .select("config")
+        .eq("company_id", company.id)
+        .maybeSingle()
+    : { data: null }
+  const modoKommo = (kommo?.config as { modo?: string } | null)?.modo
   const filtrando = Object.values(sp).some((v) => typeof v === "string" && v)
 
   return (
     <RecordsScaffold
       title="Agendas"
-      description={`Citas concertadas por ${company.name} y su resultado.`}
+      description={`Citas de ${company.name} y su resultado. Se crean y se corrigen en Kommo.`}
       actions={
-        <NuevaAgenda
-          companyId={company.id}
-          branches={company.branches}
-          staff={company.staff}
-          canManage={company.canManage}
-          myStaffId={company.myStaffId}
-        />
+        modoKommo && <SincronizarKommo companyId={company.id} />
       }
       filters={<RecordFilters sedes={company.branches} responsables={company.staff} buscar="Nombre o celular…" />}
       total={pagina.total}
@@ -62,7 +69,7 @@ export default async function AgendasPage({
             <TableHead>Responsable</TableHead>
             <TableHead className="w-32">Resultado</TableHead>
             <TableHead>Observación</TableHead>
-            <TableHead className="w-10" />
+            <TableHead className="w-32">Origen</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -72,7 +79,9 @@ export default async function AgendasPage({
               <TableCell className="tabular-nums text-muted-foreground">
                 {a.scheduled_time?.slice(0, 5) ?? "—"}
               </TableCell>
-              <TableCell className="max-w-56 truncate">{a.nombre ?? "—"}</TableCell>
+              <TableCell className="max-w-56 truncate">
+                {a.nombre ?? "—"}
+              </TableCell>
               <TableCell className="tabular-nums text-muted-foreground">
                 {a.celular ?? "—"}
               </TableCell>
@@ -95,14 +104,7 @@ export default async function AgendasPage({
                 {a.observacion ?? ""}
               </TableCell>
               <TableCell>
-                <NuevaAgenda
-                  companyId={company.id}
-                  branches={company.branches}
-                  staff={company.staff}
-                  canManage={company.canManage}
-                  myStaffId={company.myStaffId}
-                  registro={a as unknown as AgendaExistente}
-                />
+                <Origen fila={a} />
               </TableCell>
             </TableRow>
           ))}
@@ -111,5 +113,37 @@ export default async function AgendasPage({
         </TableBody>
       </Table>
     </RecordsScaffold>
+  )
+}
+
+const ORIGENES: Record<string, string> = { kommo: "Kommo", excel: "Excel", app: "App" }
+
+/** De dónde salió la agenda. Las de Kommo llevan su id y abren el lead allá. */
+function Origen({
+  fila,
+}: {
+  fila: { source: string; external_lead_id: number | null; external_url: string | null }
+}) {
+  const nombre = ORIGENES[fila.source] ?? fila.source
+  if (fila.source !== "kommo" || !fila.external_url) {
+    return (
+      <Badge variant="secondary" className="text-[10px] font-normal">
+        {nombre}
+      </Badge>
+    )
+  }
+  return (
+    <a
+      href={fila.external_url}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-1 text-xs tabular-nums hover:underline"
+    >
+      <Badge variant="outline" className="text-[10px] font-normal">
+        {nombre}
+      </Badge>
+      #{fila.external_lead_id}
+      <ExternalLink className="size-3" />
+    </a>
   )
 }

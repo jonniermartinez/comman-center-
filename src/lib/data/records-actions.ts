@@ -453,37 +453,6 @@ export async function saveCashMovement(input: MovimientoCajaInput): Promise<Resu
   return { ok: true }
 }
 
-export interface AgendaInput {
-  id?: string
-  company_id: string
-  branch_id: string
-  scheduled_at: string
-  scheduled_time?: string | null
-  nombre?: string | null
-  celular?: string | null
-  staff_id?: string | null
-  responsable_nombre?: string | null
-  resultado?: string | null
-  observacion?: string | null
-}
-
-export async function saveAppointment(input: AgendaInput): Promise<Result> {
-  const session = await requireSession()
-  const supabase = await createClient()
-
-  const { error } = await supabase.from("appointments").upsert({
-    ...input,
-    scheduled_time: input.scheduled_time || null,
-    created_by: session.profile.id,
-    updated_by: session.profile.id,
-  })
-
-  if (error) return { ok: false, error: explicar(error.message) }
-
-  refrescar()
-  return { ok: true }
-}
-
 /**
  * Define, cambia o quita una meta.
  *

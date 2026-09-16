@@ -9,6 +9,7 @@ import {
   History,
   LayoutGrid,
   MapPin,
+  Plug,
   Receipt,
   Settings,
   Tag,
@@ -228,6 +229,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         label="Equipo"
                         icon={Users}
                         active={isActive(`${base}/usuarios`)}
+                      />
+                      <NavLink
+                        href={`${base}/kommo`}
+                        label="Kommo"
+                        icon={Plug}
+                        active={isActive(`${base}/kommo`)}
                       />
                       <NavLink
                         href={`${base}/configuracion`}

@@ -42,7 +42,12 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string | null
+          external_contact_id: number | null
+          external_id: string | null
+          external_lead_id: number | null
+          external_url: string | null
           id: string
+          kommo_completado: boolean
           nombre: string | null
           observacion: string | null
           responsable_nombre: string | null
@@ -62,7 +67,12 @@ export type Database = {
           company_id: string
           created_at?: string
           created_by?: string | null
+          external_contact_id?: number | null
+          external_id?: string | null
+          external_lead_id?: number | null
+          external_url?: string | null
           id?: string
+          kommo_completado?: boolean
           nombre?: string | null
           observacion?: string | null
           responsable_nombre?: string | null
@@ -82,7 +92,12 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string | null
+          external_contact_id?: number | null
+          external_id?: string | null
+          external_lead_id?: number | null
+          external_url?: string | null
           id?: string
+          kommo_completado?: boolean
           nombre?: string | null
           observacion?: string | null
           responsable_nombre?: string | null
@@ -1224,6 +1239,134 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      kommo_eventos: {
+        Row: {
+          accion: string
+          company_id: string
+          entidad: string
+          entity_id: number | null
+          error: string | null
+          id: number
+          payload: Json
+          recibido_at: string
+        }
+        Insert: {
+          accion: string
+          company_id: string
+          entidad: string
+          entity_id?: number | null
+          error?: string | null
+          id?: never
+          payload: Json
+          recibido_at?: string
+        }
+        Update: {
+          accion?: string
+          company_id?: string
+          entidad?: string
+          entity_id?: number | null
+          error?: string | null
+          id?: never
+          payload?: Json
+          recibido_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kommo_eventos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kommo_integrations: {
+        Row: {
+          company_id: string
+          config: Json
+          created_at: string
+          created_by: string | null
+          last_error: string | null
+          last_sync_at: string | null
+          last_sync_count: number | null
+          subdomain: string
+          token: string
+          token_hint: string
+          updated_at: string
+          updated_by: string | null
+          webhook_hash: string | null
+          webhook_ultimo_at: string | null
+        }
+        Insert: {
+          company_id: string
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          last_error?: string | null
+          last_sync_at?: string | null
+          last_sync_count?: number | null
+          subdomain: string
+          token: string
+          token_hint: string
+          updated_at?: string
+          updated_by?: string | null
+          webhook_hash?: string | null
+          webhook_ultimo_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          last_error?: string | null
+          last_sync_at?: string | null
+          last_sync_count?: number | null
+          subdomain?: string
+          token?: string
+          token_hint?: string
+          updated_at?: string
+          updated_by?: string | null
+          webhook_hash?: string | null
+          webhook_ultimo_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kommo_integrations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kommo_integrations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kommo_integrations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_user_activity"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "kommo_integrations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kommo_integrations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_user_activity"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       medical_centers: {
         Row: {
@@ -2844,6 +2987,60 @@ export type Database = {
       }
       is_active_user: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      kommo_aplicar: {
+        Args: {
+          p_accion: string
+          p_company: string
+          p_entidad: string
+          p_item: Json
+        }
+        Returns: undefined
+      }
+      kommo_completar_contactos: { Args: never; Returns: number }
+      kommo_conectar: {
+        Args: { p_company: string; p_subdomain: string; p_token: string }
+        Returns: undefined
+      }
+      kommo_configurar: {
+        Args: { p_company: string; p_config: Json }
+        Returns: undefined
+      }
+      kommo_desconectar: { Args: { p_company: string }; Returns: undefined }
+      kommo_generar_webhook: { Args: { p_company: string }; Returns: string }
+      kommo_get: {
+        Args: { p_company: string; p_path: string; p_query?: string }
+        Returns: Json
+      }
+      kommo_guardar_tarea: {
+        Args: {
+          p_company: string
+          p_config: Json
+          p_subdomain: string
+          p_tarea: Json
+        }
+        Returns: boolean
+      }
+      kommo_guardar_tareas: {
+        Args: { p_company: string; p_tareas: Json }
+        Returns: number
+      }
+      kommo_http: {
+        Args: { p_company: string; p_path: string; p_query?: string }
+        Returns: Json
+      }
+      kommo_instalar_webhook: {
+        Args: { p_base_url: string; p_company: string }
+        Returns: string
+      }
+      kommo_num: { Args: { p: string }; Returns: number }
+      kommo_registrar_sync: {
+        Args: { p_company: string; p_count: number; p_error: string }
+        Returns: undefined
+      }
+      kommo_webhook_recibir: {
+        Args: { p_payload: Json; p_secreto: string }
+        Returns: number
+      }
       link_payments_to_sales: { Args: never; Returns: number }
       log_audit: {
         Args: {
