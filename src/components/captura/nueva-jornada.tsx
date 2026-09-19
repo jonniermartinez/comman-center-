@@ -50,8 +50,6 @@ export interface JornadaExistente extends Valores {
   hora_llegada: string | null
   hora_salida: string | null
   notas: string | null
-  /** Ese día se tipificaron agendas en la aplicación: los cinco contadores son suyos. */
-  agendas_automaticas?: boolean | null
 }
 
 /**
@@ -168,10 +166,6 @@ export function NuevaJornada({
   const valido = !!staffId && !!branchId && fecha <= hoy
   const set = (campo: keyof Valores) => (valor: number) => setV((x) => ({ ...x, [campo]: valor }))
   const t = totalesJornada(v)
-  // Ese día ya se contó solo (052): la base ignora lo que mande el formulario
-  // en esas cinco casillas, así que se enseñan apagadas en vez de aceptar una
-  // edición que después no aparece.
-  const agendasAutomaticas = Boolean(registro?.agendas_automaticas)
 
   function limpiar() {
     setV({ ...CERO })
@@ -276,19 +270,15 @@ export function NuevaJornada({
 
             <Bloque
               titulo="Agendas"
-              nota={
-                agendasAutomaticas
-                  ? "Los llenaron las tipificaciones del módulo de Agendas. Para corregir un número, corrige la agenda."
-                  : "El total incluye las que no contestaron."
-              }
+              nota="El total incluye las que no contestaron."
               tono="emerald"
               totales={[{ label: "Total de agendas", value: t.total_agendas, destacado: true }]}
             >
-              <CampoNumero id="ag-conf" label="Confirmada" value={v.agenda_confirmada} onChange={set("agenda_confirmada")} disabled={agendasAutomaticas} />
-              <CampoNumero id="ag-pos" label="Posible asistencia" value={v.agenda_posible} onChange={set("agenda_posible")} disabled={agendasAutomaticas} />
-              <CampoNumero id="ag-rep" label="Reprograma" value={v.agenda_reprograma} onChange={set("agenda_reprograma")} disabled={agendasAutomaticas} />
-              <CampoNumero id="ag-noc" label="No contesta" value={v.agenda_no_contesta} onChange={set("agenda_no_contesta")} disabled={agendasAutomaticas} />
-              <CampoNumero id="ag-can" label="Cancela" value={v.agenda_cancela} onChange={set("agenda_cancela")} disabled={agendasAutomaticas} />
+              <CampoNumero id="ag-conf" label="Confirmada" value={v.agenda_confirmada} onChange={set("agenda_confirmada")} />
+              <CampoNumero id="ag-pos" label="Posible asistencia" value={v.agenda_posible} onChange={set("agenda_posible")} />
+              <CampoNumero id="ag-rep" label="Reprograma" value={v.agenda_reprograma} onChange={set("agenda_reprograma")} />
+              <CampoNumero id="ag-noc" label="No contesta" value={v.agenda_no_contesta} onChange={set("agenda_no_contesta")} />
+              <CampoNumero id="ag-can" label="Cancela" value={v.agenda_cancela} onChange={set("agenda_cancela")} />
             </Bloque>
           </div>
 

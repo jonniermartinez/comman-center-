@@ -48,19 +48,7 @@ export function RecordFilters({
     router.push(`${pathname}?${next.toString()}`)
   }
 
-  const CLAVES = ["desde", "hasta", "sede", "responsable", "q"] as const
-  const hayFiltros = CLAVES.some((k) => params.get(k))
-
-  // Limpiar borra los filtros, no la URL. Lo demás que viaje ahí —la pestaña
-  // abierta en Agendas, por ejemplo— no es un filtro, y llevarse por delante
-  // eso sacaría al usuario de donde estaba parado.
-  function limpiar() {
-    const next = new URLSearchParams(params.toString())
-    for (const clave of CLAVES) next.delete(clave)
-    next.delete("p")
-    const q = next.toString()
-    router.push(q ? `${pathname}?${q}` : pathname)
-  }
+  const hayFiltros = ["desde", "hasta", "sede", "responsable", "q"].some((k) => params.get(k))
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -159,7 +147,7 @@ export function RecordFilters({
       )}
 
       {hayFiltros && (
-        <Button variant="ghost" size="sm" onClick={limpiar}>
+        <Button variant="ghost" size="sm" onClick={() => router.push(pathname)}>
           <X className="size-4" />
           Limpiar
         </Button>

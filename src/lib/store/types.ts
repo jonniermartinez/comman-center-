@@ -66,8 +66,6 @@ export interface Company {
   domain?: string | null
   /** WhatsApp de atención de la oficina, en formato internacional. */
   whatsapp?: string | null
-  /** Plantilla del recordatorio de agendas por WhatsApp. */
-  agenda_recordatorio?: string | null
   accent_color: string
   crm_label?: string
   /** Hora esperada de entrada. De acá sale el indicador de llegadas tarde. */

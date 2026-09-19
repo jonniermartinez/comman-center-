@@ -24,8 +24,6 @@ export interface CompanyContext {
   hora_entrada: string
   /** WhatsApp de atención de la oficina, si lo configuraron. */
   whatsapp: string | null
-  /** Plantilla del recordatorio de agendas. Sin ella rige la de la aplicación. */
-  agenda_recordatorio: string | null
   domain: string | null
   branches: { id: string; name: string; is_primary: boolean }[]
   staff: { id: string; full_name: string }[]
@@ -79,7 +77,7 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
 
   const { data: company } = await supabase
     .from("companies")
-    .select("id, name, slug, crm_label, hora_entrada, whatsapp, domain, agenda_recordatorio")
+    .select("id, name, slug, crm_label, hora_entrada, whatsapp, domain")
     .eq("slug", slug)
     .maybeSingle()
 

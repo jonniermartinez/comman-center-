@@ -24,7 +24,7 @@ export type SaleRow = Database["public"]["Tables"]["sales"]["Row"]
 export type PaymentRow = Database["public"]["Tables"]["payments"]["Row"]
 export type ActivityRow = Database["public"]["Views"]["v_daily_activity"]["Row"]
 export type CashRow = Database["public"]["Tables"]["cash_movements"]["Row"]
-export type AppointmentRow = Database["public"]["Views"]["v_agendas"]["Row"]
+export type AppointmentRow = Database["public"]["Tables"]["appointments"]["Row"]
 
 export const POR_PAGINA = 25
 
@@ -75,7 +75,7 @@ export function leerFiltros(params: Record<string, string | string[] | undefined
  * navegador es justo lo que hay que evitar.
  */
 async function consultar<T>(
-  tabla: "sales" | "payments" | "v_daily_activity" | "cash_movements" | "v_agendas",
+  tabla: "sales" | "payments" | "v_daily_activity" | "cash_movements" | "appointments",
   companyId: string,
   filtros: Filtros,
   opciones: {
@@ -146,15 +146,8 @@ export function listCashMovements(companyId: string, filtros: Filtros) {
   })
 }
 
-/**
- * El histórico de agendas, con su gestión al lado.
- *
- * Lee `v_agendas` y no `appointments` para que la columna de estado diga lo
- * mismo que dicen las colas de trabajo: el estado que deduce el calendario, no
- * el último texto que escribió Kommo.
- */
 export function listAppointments(companyId: string, filtros: Filtros) {
-  return consultar<AppointmentRow>("v_agendas", companyId, filtros, {
+  return consultar<AppointmentRow>("appointments", companyId, filtros, {
     campoFecha: "scheduled_at",
     busqueda: ["nombre", "celular"],
   })
