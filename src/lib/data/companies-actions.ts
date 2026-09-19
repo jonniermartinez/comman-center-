@@ -152,6 +152,7 @@ export async function updateCompany(
     crm_label?: string | null
     domain?: string | null
     whatsapp?: string | null
+    agenda_recordatorio?: string | null
   },
 ): Promise<Result> {
   await requireSession()

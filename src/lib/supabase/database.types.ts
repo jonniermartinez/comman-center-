@@ -1,6 +1,3 @@
-// Generado con el MCP de Supabase (generate_typescript_types).
-// No editar a mano: se regenera cada vez que cambia el esquema.
-
 export type Json =
   | string
   | number
@@ -34,6 +31,150 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      appointment_eventos: {
+        Row: {
+          actor: string | null
+          actor_nombre: string | null
+          appointment_id: string
+          company_id: string
+          detalle: string | null
+          id: string
+          ocurrido_en: string
+          tipo: string
+        }
+        Insert: {
+          actor?: string | null
+          actor_nombre?: string | null
+          appointment_id: string
+          company_id: string
+          detalle?: string | null
+          id?: string
+          ocurrido_en?: string
+          tipo: string
+        }
+        Update: {
+          actor?: string | null
+          actor_nombre?: string | null
+          appointment_id?: string
+          company_id?: string
+          detalle?: string | null
+          id?: string
+          ocurrido_en?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_eventos_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_eventos_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "v_user_activity"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "appointment_eventos_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_eventos_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "v_agendas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_eventos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_gestion: {
+        Row: {
+          appointment_id: string
+          asistencia: string | null
+          company_id: string
+          created_at: string
+          estado: string
+          intentos_validacion: number
+          reprogramada_para: string | null
+          seguimientos_post: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          appointment_id: string
+          asistencia?: string | null
+          company_id: string
+          created_at?: string
+          estado?: string
+          intentos_validacion?: number
+          reprogramada_para?: string | null
+          seguimientos_post?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          appointment_id?: string
+          asistencia?: string | null
+          company_id?: string
+          created_at?: string
+          estado?: string
+          intentos_validacion?: number
+          reprogramada_para?: string | null
+          seguimientos_post?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_gestion_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_gestion_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "v_agendas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_gestion_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_gestion_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_gestion_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_user_activity"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       appointments: {
         Row: {
@@ -463,6 +604,7 @@ export type Database = {
       companies: {
         Row: {
           accent_color: string
+          agenda_recordatorio: string | null
           archived_at: string | null
           city: string | null
           created_at: string
@@ -482,6 +624,7 @@ export type Database = {
         }
         Insert: {
           accent_color?: string
+          agenda_recordatorio?: string | null
           archived_at?: string | null
           city?: string | null
           created_at?: string
@@ -501,6 +644,7 @@ export type Database = {
         }
         Update: {
           accent_color?: string
+          agenda_recordatorio?: string | null
           archived_at?: string | null
           city?: string | null
           created_at?: string
@@ -1008,6 +1152,7 @@ export type Database = {
           agenda_no_contesta: number
           agenda_posible: number
           agenda_reprograma: number
+          agendas_automaticas: boolean
           atencion_agenda: number
           atencion_asociado: number
           atencion_certificados: number
@@ -1057,6 +1202,7 @@ export type Database = {
           agenda_no_contesta?: number
           agenda_posible?: number
           agenda_reprograma?: number
+          agendas_automaticas?: boolean
           atencion_agenda?: number
           atencion_asociado?: number
           atencion_certificados?: number
@@ -1106,6 +1252,7 @@ export type Database = {
           agenda_no_contesta?: number
           agenda_posible?: number
           agenda_reprograma?: number
+          agendas_automaticas?: boolean
           atencion_agenda?: number
           atencion_asociado?: number
           atencion_certificados?: number
@@ -2499,6 +2646,56 @@ export type Database = {
       }
     }
     Views: {
+      v_agendas: {
+        Row: {
+          asistencia: string | null
+          branch_id: string | null
+          celular: string | null
+          company_id: string | null
+          estado: string | null
+          estado_efectivo: string | null
+          external_lead_id: number | null
+          external_url: string | null
+          gestionada_en: string | null
+          hoy: string | null
+          id: string | null
+          intentos_validacion: number | null
+          nombre: string | null
+          observacion: string | null
+          prioridad: number | null
+          reprogramada_para: string | null
+          responsable_nombre: string | null
+          resultado: string | null
+          scheduled_at: string | null
+          scheduled_time: string | null
+          seguimientos_post: number | null
+          source: string | null
+          staff_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_branch_monthly: {
         Row: {
           branch_id: string | null
@@ -2559,6 +2756,7 @@ export type Database = {
           agenda_no_contesta: number | null
           agenda_posible: number | null
           agenda_reprograma: number | null
+          agendas_automaticas: boolean | null
           atencion_agenda: number | null
           atencion_asociado: number | null
           atencion_certificados: number | null
@@ -2922,6 +3120,19 @@ export type Database = {
         Args: { p_password: string; target_user: string }
         Returns: undefined
       }
+      agenda_asistencia: {
+        Args: { p_agenda: string; p_nota?: string; p_resultado: string }
+        Returns: undefined
+      }
+      agenda_llamada: {
+        Args: {
+          p_agenda: string
+          p_fecha?: string
+          p_nota?: string
+          p_resultado: string
+        }
+        Returns: undefined
+      }
       can_manage_company: { Args: { target_company: string }; Returns: boolean }
       company_data_counts: { Args: { target_company: string }; Returns: Json }
       company_role: {
@@ -3063,6 +3274,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_status"]
       }
+      puede_gestionar_agenda: { Args: { p_agenda: string }; Returns: boolean }
       purge_test_user: { Args: { target_user: string }; Returns: undefined }
       restore_user: { Args: { target_user: string }; Returns: undefined }
       safe_ratio: {

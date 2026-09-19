@@ -94,6 +94,7 @@ export async function loadSnapshot(): Promise<Database> {
       logo_url: c.logo_url,
       domain: opt(c.domain),
       whatsapp: opt(c.whatsapp),
+      agenda_recordatorio: opt(c.agenda_recordatorio),
       accent_color: c.accent_color,
       crm_label: opt(c.crm_label),
       hora_entrada: c.hora_entrada,

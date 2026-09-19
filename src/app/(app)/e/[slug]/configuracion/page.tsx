@@ -33,6 +33,7 @@ import {
   setCompanyModules,
   updateCompany,
 } from "@/lib/data/companies-actions"
+import { RECORDATORIO_POR_DEFECTO } from "@/lib/agendas"
 import { useCanManage, useDb, useIsSuperAdmin } from "@/lib/store/hooks"
 import { MODULES, type ModuleCode } from "@/lib/store/types"
 import { cn } from "@/lib/utils"
@@ -53,6 +54,7 @@ export default function ConfiguracionPage() {
   const [crmLabel, setCrmLabel] = useState(company.crm_label ?? "")
   const [dominio, setDominio] = useState(company.domain ?? "")
   const [whatsapp, setWhatsapp] = useState(company.whatsapp ?? "")
+  const [recordatorio, setRecordatorio] = useState(company.agenda_recordatorio ?? "")
   const [accent, setAccent] = useState(company.accent_color)
   const [borrando, setBorrando] = useState(false)
 
@@ -172,6 +174,22 @@ export default function ConfiguracionPage() {
                 Título del módulo de Gestión Diaria, como &ldquo;CRM - LV Unión&rdquo;.
               </p>
             </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="recordatorio">Recordatorio de agendas</Label>
+              <Input
+                id="recordatorio"
+                value={recordatorio}
+                onChange={(e) => setRecordatorio(e.target.value)}
+                placeholder={RECORDATORIO_POR_DEFECTO}
+              />
+              <p className="text-xs text-muted-foreground">
+                El mensaje de WhatsApp que se abre escrito desde el módulo de Agendas. Se
+                reemplazan <code className="font-mono">{"{cliente}"}</code>,{" "}
+                <code className="font-mono">{"{fecha}"}</code>,{" "}
+                <code className="font-mono">{"{hora}"}</code> y{" "}
+                <code className="font-mono">{"{empresa}"}</code>. En blanco va el de la aplicación.
+              </p>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -205,6 +223,7 @@ export default function ConfiguracionPage() {
                   crm_label: crmLabel.trim() || null,
                   domain: dominio.trim().replace(/^https?:\/\//, "").replace(/\/$/, "") || null,
                   whatsapp: whatsapp.replace(/\D/g, "") || null,
+                  agenda_recordatorio: recordatorio.trim() || null,
                   accent_color: accent,
                 })
                 if (r.ok) toast.success("Datos actualizados")
