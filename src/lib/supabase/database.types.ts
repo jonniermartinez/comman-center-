@@ -1,6 +1,3 @@
-// Generado con el MCP de Supabase (generate_typescript_types).
-// No editar a mano: se regenera cada vez que cambia el esquema.
-
 export type Json =
   | string
   | number
@@ -1027,6 +1024,7 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string | null
+          eventos_automaticos: boolean
           hora_llegada: string | null
           hora_salida: string | null
           id: string
@@ -1076,6 +1074,7 @@ export type Database = {
           company_id: string
           created_at?: string
           created_by?: string | null
+          eventos_automaticos?: boolean
           hora_llegada?: string | null
           hora_salida?: string | null
           id?: string
@@ -1125,6 +1124,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string | null
+          eventos_automaticos?: boolean
           hora_llegada?: string | null
           hora_salida?: string | null
           id?: string
@@ -1239,6 +1239,171 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      jornada_eventos: {
+        Row: {
+          actor: string | null
+          categoria: string | null
+          clase: string
+          company_id: string
+          contestada: boolean | null
+          created_at: string
+          duracion_ms: number | null
+          fin: string
+          id: string
+          inicio: string
+          jornada_id: string
+          tipificacion: string | null
+        }
+        Insert: {
+          actor?: string | null
+          categoria?: string | null
+          clase: string
+          company_id: string
+          contestada?: boolean | null
+          created_at?: string
+          duracion_ms?: number | null
+          fin?: string
+          id?: string
+          inicio: string
+          jornada_id: string
+          tipificacion?: string | null
+        }
+        Update: {
+          actor?: string | null
+          categoria?: string | null
+          clase?: string
+          company_id?: string
+          contestada?: boolean | null
+          created_at?: string
+          duracion_ms?: number | null
+          fin?: string
+          id?: string
+          inicio?: string
+          jornada_id?: string
+          tipificacion?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornada_eventos_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornada_eventos_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "v_user_activity"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "jornada_eventos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornada_eventos_jornada_id_fkey"
+            columns: ["jornada_id"]
+            isOneToOne: false
+            referencedRelation: "jornadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornada_eventos_jornada_id_fkey"
+            columns: ["jornada_id"]
+            isOneToOne: false
+            referencedRelation: "v_jornada_resumen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jornadas: {
+        Row: {
+          branch_id: string
+          company_id: string
+          created_at: string
+          fin: string | null
+          id: string
+          inicio: string
+          pausa_inicio: string | null
+          pausa_tipo: string | null
+          report_date: string
+          staff_id: string
+          ultima_marca: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          branch_id: string
+          company_id: string
+          created_at?: string
+          fin?: string | null
+          id?: string
+          inicio?: string
+          pausa_inicio?: string | null
+          pausa_tipo?: string | null
+          report_date: string
+          staff_id: string
+          ultima_marca?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          branch_id?: string
+          company_id?: string
+          created_at?: string
+          fin?: string | null
+          id?: string
+          inicio?: string
+          pausa_inicio?: string | null
+          pausa_tipo?: string | null
+          report_date?: string
+          staff_id?: string
+          ultima_marca?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornadas_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornadas_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornadas_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornadas_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornadas_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_user_activity"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       kommo_eventos: {
         Row: {
@@ -2580,6 +2745,7 @@ export type Database = {
           company_id: string | null
           created_at: string | null
           created_by: string | null
+          eventos_automaticos: boolean | null
           hora_entrada: string | null
           hora_llegada: string | null
           hora_salida: string | null
@@ -2695,6 +2861,53 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_jornada_resumen: {
+        Row: {
+          atenciones: number | null
+          branch_id: string | null
+          company_id: string | null
+          contestadas: number | null
+          efectivo_ms: number | null
+          fin: string | null
+          id: string | null
+          inicio: string | null
+          laborado_ms: number | null
+          llamadas: number | null
+          no_contestadas: number | null
+          pausa_inicio: string | null
+          pausa_tipo: string | null
+          pausas: number | null
+          pausas_ms: number | null
+          promedio_llamada_ms: number | null
+          report_date: string | null
+          responsable_nombre: string | null
+          staff_id: string | null
+          ultima_marca: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornadas_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornadas_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornadas_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
@@ -2987,6 +3200,44 @@ export type Database = {
       }
       is_active_user: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      jornada_abrir: {
+        Args: { p_branch: string; p_company: string; p_staff: string }
+        Returns: string
+      }
+      jornada_cerrar: { Args: { p_jornada: string }; Returns: undefined }
+      jornada_columna: {
+        Args: {
+          p_categoria: string
+          p_clase: string
+          p_contestada: boolean
+          p_tipificacion: string
+        }
+        Returns: string
+      }
+      jornada_crm: {
+        Args: {
+          p_caducadas: number
+          p_chats: number
+          p_jornada: string
+          p_momento: string
+          p_tareas: number
+        }
+        Returns: undefined
+      }
+      jornada_pausa: {
+        Args: { p_jornada: string; p_tipo?: string }
+        Returns: undefined
+      }
+      jornada_tipificar: {
+        Args: {
+          p_categoria: string
+          p_clase: string
+          p_contestada: boolean
+          p_jornada: string
+          p_tipificacion: string
+        }
+        Returns: undefined
+      }
       kommo_aplicar: {
         Args: {
           p_accion: string
@@ -3063,6 +3314,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_status"]
       }
+      puede_gestionar_jornada: { Args: { p_jornada: string }; Returns: boolean }
       purge_test_user: { Args: { target_user: string }; Returns: undefined }
       restore_user: { Args: { target_user: string }; Returns: undefined }
       safe_ratio: {

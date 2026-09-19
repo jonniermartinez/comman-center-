@@ -2,10 +2,10 @@
 
 import {
   BarChart3,
-  Gauge,
   CalendarClock,
   ChevronRight,
   ClipboardList,
+  Gauge,
   History,
   LayoutGrid,
   MapPin,
@@ -14,6 +14,7 @@ import {
   Settings,
   Tag,
   Target,
+  Timer,
   Users,
   Wallet,
 } from "lucide-react"
@@ -88,6 +89,7 @@ function tituloDe(pathname: string, conAcceso: boolean): string {
     ventas: "Ventas",
     pagos: "Pagos",
     "gestion-diaria": "Gestión Diaria",
+    "mi-jornada": "Mi jornada",
     agendas: "Agendas",
     caja: "Ingreso y Gasto",
     indicadores: "Indicadores",
@@ -127,6 +129,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const capturaItems = ([
     { href: `${base}/ventas`, label: "Ventas", icon: Receipt, module: "ventas" },
     { href: `${base}/pagos`, label: "Pagos", icon: Wallet, module: "pagos" },
+    { href: `${base}/mi-jornada`, label: "Mi jornada", icon: Timer, module: "actividad_diaria" },
     { href: `${base}/gestion-diaria`, label: "Gestión Diaria", icon: ClipboardList, module: "actividad_diaria" },
     { href: `${base}/agendas`, label: "Agendas", icon: CalendarClock, module: "agendas" },
     { href: `${base}/caja`, label: "Ingreso y Gasto", icon: Wallet, module: "caja" },

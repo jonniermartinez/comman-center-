@@ -3,6 +3,7 @@
 import { Combobox } from "@/components/combobox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 
 /** Contador entero. Es el campo más repetido de los formularios de captura. */
 export function CampoNumero({
@@ -10,15 +11,21 @@ export function CampoNumero({
   label,
   value,
   onChange,
+  disabled,
 }: {
   id: string
   label: string
   value: number
   onChange: (value: number) => void
+  /** El número lo escriben los eventos de la jornada: se enseña, no se edita. */
+  disabled?: boolean
 }) {
   return (
     <div className="grid grid-cols-[1fr_5rem] items-center gap-3">
-      <Label htmlFor={id} className="text-sm font-normal">
+      <Label
+        htmlFor={id}
+        className={cn("text-sm font-normal", disabled && "text-muted-foreground")}
+      >
         {label}
       </Label>
       <Input
@@ -27,6 +34,7 @@ export function CampoNumero({
         min={0}
         inputMode="numeric"
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
         className="text-right tabular-nums"
       />

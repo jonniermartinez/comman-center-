@@ -50,6 +50,8 @@ export interface JornadaExistente extends Valores {
   hora_llegada: string | null
   hora_salida: string | null
   notas: string | null
+  /** Ese día se registró desde «Mi jornada»: los contadores son de los eventos. */
+  eventos_automaticos?: boolean | null
 }
 
 /**
@@ -166,6 +168,11 @@ export function NuevaJornada({
   const valido = !!staffId && !!branchId && fecha <= hoy
   const set = (campo: keyof Valores) => (valor: number) => setV((x) => ({ ...x, [campo]: valor }))
   const t = totalesJornada(v)
+  // Ese día se tipificó desde «Mi jornada» (051): la base ignora lo que mande
+  // el formulario en esos contadores, así que se enseñan apagados en vez de
+  // aceptar una edición que después no aparece. La hora, las notas y la cola
+  // del CRM sí se siguen pudiendo corregir acá.
+  const auto = Boolean(registro?.eventos_automaticos)
 
   function limpiar() {
     setV({ ...CERO })
@@ -199,6 +206,17 @@ export function NuevaJornada({
               : "Una jornada por persona y día. Volver a guardar la misma corrige lo registrado. Los totales se calculan solos."}
           </DialogDescription>
         </DialogHeader>
+
+        {auto && (
+          <Alert>
+            <AlertDescription>
+              Este día se registró desde <strong>Mi jornada</strong>: las llamadas, las agendas y
+              las atenciones las contaron las tipificaciones, una por una, y por eso salen
+              apagadas. Si un número está mal, lo que hay que corregir es la gestión. La hora, la
+              cola del CRM y las notas sí se editan acá.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-4">
           <div className="min-w-0 space-y-2">
@@ -258,13 +276,13 @@ export function NuevaJornada({
                 { label: "Total de llamadas", value: t.total_llamadas, destacado: true },
               ]}
             >
-              <CampoNumero id="ll-efec" label="Efectiva (venta digital)" value={v.llamada_efectiva} onChange={set("llamada_efectiva")} />
-              <CampoNumero id="ll-seg" label="Seguimiento" value={v.llamada_seguimiento} onChange={set("llamada_seguimiento")} />
-              <CampoNumero id="ll-agen" label="Agenda" value={v.llamada_agenda} onChange={set("llamada_agenda")} />
-              <CampoNumero id="ll-noint" label="No interesado" value={v.llamada_no_interesado} onChange={set("llamada_no_interesado")} />
-              <CampoNumero id="ll-post" label="Postventa" value={v.llamada_postventa} onChange={set("llamada_postventa")} />
+              <CampoNumero id="ll-efec" label="Efectiva (venta digital)" value={v.llamada_efectiva} onChange={set("llamada_efectiva")} disabled={auto} />
+              <CampoNumero id="ll-seg" label="Seguimiento" value={v.llamada_seguimiento} onChange={set("llamada_seguimiento")} disabled={auto} />
+              <CampoNumero id="ll-agen" label="Agenda" value={v.llamada_agenda} onChange={set("llamada_agenda")} disabled={auto} />
+              <CampoNumero id="ll-noint" label="No interesado" value={v.llamada_no_interesado} onChange={set("llamada_no_interesado")} disabled={auto} />
+              <CampoNumero id="ll-post" label="Postventa" value={v.llamada_postventa} onChange={set("llamada_postventa")} disabled={auto} />
               <div className="border-t pt-2.5">
-                <CampoNumero id="ll-nocont" label="No contestada" value={v.llamada_no_contestada} onChange={set("llamada_no_contestada")} />
+                <CampoNumero id="ll-nocont" label="No contestada" value={v.llamada_no_contestada} onChange={set("llamada_no_contestada")} disabled={auto} />
               </div>
             </Bloque>
 
@@ -274,11 +292,11 @@ export function NuevaJornada({
               tono="emerald"
               totales={[{ label: "Total de agendas", value: t.total_agendas, destacado: true }]}
             >
-              <CampoNumero id="ag-conf" label="Confirmada" value={v.agenda_confirmada} onChange={set("agenda_confirmada")} />
-              <CampoNumero id="ag-pos" label="Posible asistencia" value={v.agenda_posible} onChange={set("agenda_posible")} />
-              <CampoNumero id="ag-rep" label="Reprograma" value={v.agenda_reprograma} onChange={set("agenda_reprograma")} />
-              <CampoNumero id="ag-noc" label="No contesta" value={v.agenda_no_contesta} onChange={set("agenda_no_contesta")} />
-              <CampoNumero id="ag-can" label="Cancela" value={v.agenda_cancela} onChange={set("agenda_cancela")} />
+              <CampoNumero id="ag-conf" label="Confirmada" value={v.agenda_confirmada} onChange={set("agenda_confirmada")} disabled={auto} />
+              <CampoNumero id="ag-pos" label="Posible asistencia" value={v.agenda_posible} onChange={set("agenda_posible")} disabled={auto} />
+              <CampoNumero id="ag-rep" label="Reprograma" value={v.agenda_reprograma} onChange={set("agenda_reprograma")} disabled={auto} />
+              <CampoNumero id="ag-noc" label="No contesta" value={v.agenda_no_contesta} onChange={set("agenda_no_contesta")} disabled={auto} />
+              <CampoNumero id="ag-can" label="Cancela" value={v.agenda_cancela} onChange={set("agenda_cancela")} disabled={auto} />
             </Bloque>
           </div>
 
@@ -291,10 +309,10 @@ export function NuevaJornada({
                 { label: "Total atención presencial", value: t.total_atencion, destacado: true },
               ]}
             >
-              <CampoNumero id="at-venta" label="Venta exitosa" value={v.atencion_venta} onChange={set("atencion_venta")} />
-              <CampoNumero id="at-externa" label="Venta externa" value={v.atencion_venta_externa} onChange={set("atencion_venta_externa")} />
-              <CampoNumero id="at-seg" label="Seguimiento" value={v.atencion_seguimiento} onChange={set("atencion_seguimiento")} />
-              <CampoNumero id="at-dec" label="Declinado" value={v.atencion_declinado} onChange={set("atencion_declinado")} />
+              <CampoNumero id="at-venta" label="Venta exitosa" value={v.atencion_venta} onChange={set("atencion_venta")} disabled={auto} />
+              <CampoNumero id="at-externa" label="Venta externa" value={v.atencion_venta_externa} onChange={set("atencion_venta_externa")} disabled={auto} />
+              <CampoNumero id="at-seg" label="Seguimiento" value={v.atencion_seguimiento} onChange={set("atencion_seguimiento")} disabled={auto} />
+              <CampoNumero id="at-dec" label="Declinado" value={v.atencion_declinado} onChange={set("atencion_declinado")} disabled={auto} />
             </Bloque>
 
             <Bloque
@@ -302,7 +320,7 @@ export function NuevaJornada({
               nota="Cuántos de los agendados vinieron. No suma: ese cliente ya está contado arriba."
               tono="slate"
             >
-              <CampoNumero id="at-agen" label="Agenda atendida" value={v.atencion_agenda} onChange={set("atencion_agenda")} />
+              <CampoNumero id="at-agen" label="Agenda atendida" value={v.atencion_agenda} onChange={set("atencion_agenda")} disabled={auto} />
             </Bloque>
 
             <Bloque
@@ -313,10 +331,10 @@ export function NuevaJornada({
                 { label: "Total administrativa", value: t.total_administrativa, destacado: true },
               ]}
             >
-              <CampoNumero id="at-asoc" label="Asociado" value={v.atencion_asociado} onChange={set("atencion_asociado")} />
-              <CampoNumero id="at-enrol" label="Enrolamiento" value={v.atencion_enrolamiento} onChange={set("atencion_enrolamiento")} />
-              <CampoNumero id="at-cert" label="Certificados" value={v.atencion_certificados} onChange={set("atencion_certificados")} />
-              <CampoNumero id="at-ren" label="Renovaciones" value={v.atencion_renovacion} onChange={set("atencion_renovacion")} />
+              <CampoNumero id="at-asoc" label="Asociado" value={v.atencion_asociado} onChange={set("atencion_asociado")} disabled={auto} />
+              <CampoNumero id="at-enrol" label="Enrolamiento" value={v.atencion_enrolamiento} onChange={set("atencion_enrolamiento")} disabled={auto} />
+              <CampoNumero id="at-cert" label="Certificados" value={v.atencion_certificados} onChange={set("atencion_certificados")} disabled={auto} />
+              <CampoNumero id="at-ren" label="Renovaciones" value={v.atencion_renovacion} onChange={set("atencion_renovacion")} disabled={auto} />
             </Bloque>
           </div>
 

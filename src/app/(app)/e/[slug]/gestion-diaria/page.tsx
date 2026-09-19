@@ -1,4 +1,5 @@
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Timer } from "lucide-react"
+import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { NuevaJornada, type JornadaExistente } from "@/components/captura/nueva-jornada"
@@ -6,6 +7,7 @@ import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
 import { StatStrip } from "@/components/stat-strip"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
   Table,
@@ -49,7 +51,16 @@ export default async function GestionDiariaPage({
       title="Gestión Diaria"
       description={`Jornada, cola del CRM, agendas, llamadas y atenciones de ${company.name}. Se espera al equipo a las ${company.hora_entrada.slice(0, 5)}.`}
       actions={
-        <NuevaJornada
+        <>
+          {/* La jornada se registra mientras pasa; esta tabla es para mirarla
+              después. El enlace está acá porque es donde la gente llega. */}
+          <Button asChild variant="outline">
+            <Link href={`/e/${slug}/mi-jornada`}>
+              <Timer className="size-4" />
+              Mi jornada
+            </Link>
+          </Button>
+          <NuevaJornada
           companyId={company.id}
           branches={company.branches}
           staff={company.staff}
@@ -57,6 +68,7 @@ export default async function GestionDiariaPage({
           canManage={company.canManage}
           myStaffId={company.myStaffId}
         />
+        </>
       }
       filters={<RecordFilters sedes={company.branches} responsables={company.staff} buscar="Responsable…" />}
       summary={
