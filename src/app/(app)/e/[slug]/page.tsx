@@ -1,7 +1,9 @@
+import Link from "next/link"
 import { notFound } from "next/navigation"
 import { AlertCircle, CheckCircle2, Clock } from "lucide-react"
 
 import { Embudo, GraficaBarras, GraficaDiaria } from "@/components/graficas"
+import { RentabilidadPauta } from "@/components/indicadores/rentabilidad-pauta"
 import { PageHeader } from "@/components/page-header"
 import { SectionCard, SectionCardHeader } from "@/components/section-card"
 import { StatStrip } from "@/components/stat-strip"
@@ -57,6 +59,27 @@ export default async function DashboardPage({
           { label: "Recaudo", value: datos.totales.recaudo, unit: "moneda" },
         ]}
       />
+
+      <SectionCard className="mb-4">
+        <SectionCardHeader
+          title="Rentabilidad de la pauta"
+          description={`Cuánto devolvió cada peso invertido en publicidad en ${monthLabel(mes)}. ROAS = facturación ÷ inversión; costo por venta = inversión ÷ ventas.`}
+        />
+        <RentabilidadPauta
+          facturacion={datos.totales.facturacion}
+          ventas={datos.totales.ventas}
+          inversion={datos.inversionPauta}
+        />
+        {company.canManage && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            La inversión del mes se anota en{" "}
+            <Link href={`/e/${slug}/indicadores`} className="underline underline-offset-2">
+              Indicadores
+            </Link>
+            .
+          </p>
+        )}
+      </SectionCard>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <SectionCard className="lg:col-span-2">

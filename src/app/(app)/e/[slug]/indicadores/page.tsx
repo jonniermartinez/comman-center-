@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation"
 
 import { DiasHabiles } from "@/components/indicadores/dias-habiles"
+import { InversionPauta } from "@/components/indicadores/inversion-pauta"
+import { RentabilidadPauta } from "@/components/indicadores/rentabilidad-pauta"
 import { FiltrosIndicadores } from "@/components/indicadores/filtros"
 import { KpiCard } from "@/components/indicadores/kpi-card"
 import { PageHeader } from "@/components/page-header"
@@ -130,6 +132,37 @@ export default async function IndicadoresPage({
           { label: "Facturación total", value: facturacionTotal(total), unit: "moneda", hint: `Valor final ${formatCOP(total.valor_final)}` },
         ]}
       />
+
+      {/* ============ Rentabilidad de la pauta ============ */}
+      <SectionCard className="mb-4">
+        <SectionCardHeader
+          title="Rentabilidad de la pauta"
+          description={`ROAS = facturación ÷ inversión en pauta; costo por venta = inversión ÷ ventas. La facturación y las ventas salen de la base; la inversión la anota quien administra con el acumulado de cada mes.${
+            meses.length > 1 ? " En un rango de varios meses se suma la inversión de los meses que toca." : ""
+          }`}
+        />
+        <RentabilidadPauta
+          facturacion={facturacionTotal(total)}
+          ventas={total.ventas_total}
+          inversion={datos.inversion}
+        />
+        <div className="mt-4 flex flex-wrap items-end gap-3 border-t pt-4">
+          {meses.slice(0, 3).map((m) => (
+            <InversionPauta
+              key={m}
+              companyId={company.id}
+              mes={m}
+              valor={datos.inversionPorMes.find((p) => p.period_month === m)?.monto ?? null}
+              editable={company.canManage}
+            />
+          ))}
+          {!company.canManage && (
+            <p className="pb-2 text-xs text-muted-foreground">
+              La inversión la actualiza quien administra la empresa.
+            </p>
+          )}
+        </div>
+      </SectionCard>
 
       {/* ============ KPI 1 · Validación presencial / digital ============ */}
       <div className="grid gap-4 lg:grid-cols-3">

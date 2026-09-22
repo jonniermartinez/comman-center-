@@ -509,3 +509,46 @@ export async function setKpiTarget(
   refrescar()
   return { ok: true }
 }
+
+/**
+ * Cuánto se invirtió en pauta un mes. Es el único dato del ROAS que se digita:
+ * la facturación y las ventas ya están en la base. Cero lo borra y los
+ * indicadores de pauta vuelven a quedar vacíos.
+ */
+export async function setAdSpend(
+  companyId: string,
+  periodMonth: string,
+  monto: number,
+): Promise<Result> {
+  const session = await requireSession()
+  const supabase = await createClient()
+
+  if (!Number.isFinite(monto) || monto < 0) return { ok: false, error: "La inversión no es un número válido." }
+  if (!/^\d{4}-\d{2}-01$/.test(periodMonth)) return { ok: false, error: "El mes no es válido." }
+
+  if (monto === 0) {
+    const { error } = await supabase
+      .from("company_ad_spend")
+      .delete()
+      .eq("company_id", companyId)
+      .eq("period_month", periodMonth)
+    if (error) return { ok: false, error: error.message }
+  } else {
+    const { error } = await supabase.from("company_ad_spend").upsert(
+      { company_id: companyId, period_month: periodMonth, monto, updated_by: session.profile.id },
+      { onConflict: "company_id,period_month" },
+    )
+    if (error) return { ok: false, error: error.message }
+  }
+
+  await logAudit({
+    action: "update",
+    entity: "company_ad_spend",
+    entity_id: `${companyId}:${periodMonth}`,
+    company_id: companyId,
+    after: { monto },
+  })
+
+  refrescar()
+  return { ok: true }
+}

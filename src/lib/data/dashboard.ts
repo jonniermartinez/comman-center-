@@ -44,6 +44,8 @@ export interface DashboardData {
   serieDiaria: { dia: number; ventas: number; facturacion: number; recaudo: number }[]
   /** De las llamadas a la venta: dónde se cae la gestión. */
   embudo: { nombre: string; valor: number }[]
+  /** Pesos invertidos en pauta el mes, o null si nadie lo anotó. */
+  inversionPauta: number | null
 }
 
 /**
@@ -60,7 +62,7 @@ export async function loadDashboard(companyId: string, mes: string): Promise<Das
     .toISOString()
     .slice(0, 10)
 
-  const [totales, financiacion, medios, sedes, ranking, captura, ventasDia, pagosDia, nombresMedio] =
+  const [totales, financiacion, medios, sedes, ranking, captura, ventasDia, pagosDia, nombresMedio, pauta] =
     await Promise.all([
     supabase
       .from("v_monthly_totals")
@@ -106,6 +108,12 @@ export async function loadDashboard(companyId: string, mes: string): Promise<Das
       .lte("report_date", finDeMes)
       .limit(20000),
     supabase.from("payment_methods").select("code, name"),
+    supabase
+      .from("company_ad_spend")
+      .select("monto")
+      .eq("company_id", companyId)
+      .eq("period_month", mes)
+      .maybeSingle(),
   ])
 
   const numero = (v: unknown) => Number(v ?? 0)
@@ -170,6 +178,7 @@ export async function loadDashboard(companyId: string, mes: string): Promise<Das
   )
 
   return {
+    inversionPauta: pauta.data ? numero(pauta.data.monto) : null,
     totales: {
       ventas: numero(totales.data?.ventas_mes),
       licencias: numero(totales.data?.licencias_mes),

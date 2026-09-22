@@ -446,6 +446,21 @@ export function facturacionTotal(t: FilaIndicadores): number {
   return t.valor_final - (t.adicion + t.descuento)
 }
 
+/**
+ * Cuánto rinde la pauta: ROAS = facturación ÷ inversión y costo por venta =
+ * inversión ÷ ventas. Las fórmulas las dio la coordinación el 22 de septiembre
+ * (CARSS factura 120 millones con 1 millón de pauta y 100 ventas: ROAS 120,
+ * costo por venta 10.000). Sin inversión anotada los dos van en null, que la
+ * pantalla pinta como "—": un cero diría que la pauta no rindió.
+ */
+export function rentabilidadPauta(facturacion: number, ventas: number, inversion: number | null) {
+  if (inversion === null || inversion <= 0) return { roas: null, costoPorVenta: null }
+  return {
+    roas: facturacion / inversion,
+    costoPorVenta: safeRatio(inversion, ventas),
+  }
+}
+
 /** Días hábiles de lunes a sábado dentro de un rango, ambos inclusive. */
 export function diasHabilesEnRango(desde: string, hasta: string): number {
   const a = new Date(`${desde}T00:00:00Z`)
