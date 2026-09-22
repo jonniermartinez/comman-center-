@@ -19,6 +19,11 @@ import { formatCOP, formatCOPShort, formatNumber } from "@/lib/format"
  * Gráficas del dashboard.
  *
  * Colores: los tokens `--chart-*` de globals.css, validados para daltonismo.
+ * Se leen como `var(--chart-N)` (la variable base de `:root`) y no como
+ * `var(--color-chart-N)`: Tailwind v4 solo emite las variables de `@theme`
+ * que encuentra escritas tal cual en el código, y un nombre armado con una
+ * plantilla de JavaScript no lo ve. Con `--color-chart-2` la barra salía
+ * negra.
  * Los ejes de dinero van en millones abreviados —una cifra en pesos completa
  * ocupa más que la propia gráfica— y el detalle exacto se ve en el tooltip.
  */
@@ -71,12 +76,12 @@ export function GraficaDiaria({ datos }: { datos: PuntoDia[] }) {
       <AreaChart data={datos} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <defs>
           <linearGradient id="gFact" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-chart-1)" stopOpacity={0.35} />
-            <stop offset="100%" stopColor="var(--color-chart-1)" stopOpacity={0} />
+            <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.35} />
+            <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="gRec" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-chart-3)" stopOpacity={0.35} />
-            <stop offset="100%" stopColor="var(--color-chart-3)" stopOpacity={0} />
+            <stop offset="0%" stopColor="var(--chart-3)" stopOpacity={0.35} />
+            <stop offset="100%" stopColor="var(--chart-3)" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
@@ -96,9 +101,9 @@ export function GraficaDiaria({ datos }: { datos: PuntoDia[] }) {
             ) : null
           }
         />
-        <Area type="monotone" dataKey="facturacion" stroke="var(--color-chart-1)" strokeWidth={2}
+        <Area type="monotone" dataKey="facturacion" stroke="var(--chart-1)" strokeWidth={2}
               fill="url(#gFact)" />
-        <Area type="monotone" dataKey="recaudo" stroke="var(--color-chart-3)" strokeWidth={2}
+        <Area type="monotone" dataKey="recaudo" stroke="var(--chart-3)" strokeWidth={2}
               fill="url(#gRec)" />
       </AreaChart>
     </Marco>
@@ -157,7 +162,7 @@ export function GraficaBarras({
         />
         <Bar dataKey="valor" radius={[6, 6, 0, 0]}>
           {datos.map((_, i) => (
-            <Cell key={i} fill={`var(--color-chart-${(i % 5) + 1})`} />
+            <Cell key={i} fill={`var(--chart-${(i % 5) + 1})`} />
           ))}
         </Bar>
       </BarChart>
@@ -203,7 +208,7 @@ export function Embudo({ pasos }: { pasos: PasoEmbudo[] }) {
                 className="h-full rounded-full"
                 style={{
                   width: `${Math.max(2, (paso.valor / tope) * 100)}%`,
-                  backgroundColor: `var(--color-chart-${(i % 5) + 1})`,
+                  backgroundColor: `var(--chart-${(i % 5) + 1})`,
                 }}
               />
             </div>
