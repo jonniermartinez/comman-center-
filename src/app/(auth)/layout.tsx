@@ -6,7 +6,7 @@ import { APP_NAME, OPERATOR_NAME } from "@/lib/branding"
 /** Pantallas sin sesión: no llevan sidebar ni revelan nada del sistema. */
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-[radial-gradient(ellipse_at_top,_#e4dff2_0%,_var(--background)_55%)] p-6">
+    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-[radial-gradient(ellipse_at_top,_var(--auth-glow)_0%,_var(--background)_55%)] p-6">
       <div className="flex flex-col items-center gap-2 text-center">
         {/* El logo ya trae el nombre escrito; el texto queda para lectores de pantalla. */}
         <Image src={logo} alt={APP_NAME} width={190} height={121} priority className="rounded-md bg-white" />

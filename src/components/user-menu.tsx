@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronsUpDown, KeyRound, LogOut } from "lucide-react"
+import { ChevronsUpDown, KeyRound, LogOut, Moon, Sun, SunMoon } from "lucide-react"
 import Link from "next/link"
 
 import { signOut } from "@/lib/auth/actions"
@@ -10,16 +10,28 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { initials } from "@/lib/format"
 import { useCurrentUser } from "@/lib/store/hooks"
 import { ROLE_LABELS } from "@/lib/store/types"
+import { THEME_LABELS, type ThemePreference } from "@/lib/theme"
+import { useTheme } from "@/lib/use-theme"
 
-/** Pie del sidebar: quién está en sesión y cómo salir. */
+const THEME_ICONS = { claro: Sun, oscuro: Moon, sistema: SunMoon } as const
+const THEME_OPTIONS: ThemePreference[] = ["claro", "oscuro", "sistema"]
+
+/** Pie del sidebar: quién está en sesión, cómo se ve la app y cómo salir. */
 export function UserMenu() {
   const me = useCurrentUser()
+  const { preference, resolved, setPreference } = useTheme()
+  const ThemeIcon = resolved === "dark" ? Moon : Sun
 
   return (
     <DropdownMenu>
@@ -54,6 +66,29 @@ export function UserMenu() {
             Cambiar contraseña
           </Link>
         </DropdownMenuItem>
+
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <ThemeIcon className="size-4" />
+            Apariencia
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuRadioGroup
+              value={preference}
+              onValueChange={(value) => setPreference(value as ThemePreference)}
+            >
+              {THEME_OPTIONS.map((option) => {
+                const Icon = THEME_ICONS[option]
+                return (
+                  <DropdownMenuRadioItem key={option} value={option}>
+                    <Icon className="size-4" />
+                    {THEME_LABELS[option]}
+                  </DropdownMenuRadioItem>
+                )
+              })}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
 
         <DropdownMenuSeparator />
         <form action={signOut}>

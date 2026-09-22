@@ -2,13 +2,11 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* La aplicación es solo modo claro.
-   La variante `dark:` se deja apuntando a una clase `.dark` que nunca se aplica
-   en ningún lado: así las utilidades `dark:` que traen los componentes de
-   shadcn quedan inertes. Si se quitara esta línea, Tailwind volvería a su
-   comportamiento por defecto —`prefers-color-scheme`— y la app se pondría
-   oscura sola en cuanto el sistema del usuario lo estuviera. */
-@custom-variant dark (&:is(.dark *));
+/* El tema lo decide `data-theme` en <html>, que fija un script en línea en
+   app/layout.tsx a partir de la preferencia guardada (ver lib/theme.ts). La
+   variante `dark:` cuelga de ese atributo y no de `prefers-color-scheme`:
+   así quien eligió "claro" no se queda a oscuras porque su sistema lo esté. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme inline {
   --color-background: var(--background);
@@ -91,8 +89,8 @@
   --chart-4: #eda100;
   --chart-5: #e87ba4;
   --radius: 0.625rem;
-  /* Los controles nativos (fechas, scrollbars) también en claro, aunque el
-     sistema operativo esté en oscuro. */
+  /* Los controles nativos (fechas, scrollbars) siguen al tema elegido, no al
+     del sistema operativo. */
   color-scheme: light;
   --sidebar: #fbfafd;
   --sidebar-foreground: #1e1c36;
@@ -102,6 +100,46 @@
   --sidebar-accent-foreground: #4b3a71;
   --sidebar-border: #e4e1ee;
   --sidebar-ring: #7179a7;
+  /* Resplandor detrás de las pantallas sin sesión. */
+  --auth-glow: #e4dff2;
+}
+
+[data-theme="dark"] {
+  /* Misma familia del logo, invertida: fondos de morado muy oscuro casi
+     negro, y el primario se aclara para que siga leyéndose sobre ellos. Las
+     superficies suben de luminosidad por capas (fondo < tarjeta < menú
+     flotante) porque en oscuro la sombra no separa nada. */
+  --background: #15131d;
+  --foreground: #ebe8f4;
+  --card: #1d1a29;
+  --card-foreground: #ebe8f4;
+  --popover: #221f31;
+  --popover-foreground: #ebe8f4;
+  --primary: #b3a1dc;
+  --primary-foreground: #1c1533;
+  --secondary: #2a2740;
+  --secondary-foreground: #e2ddf0;
+  --muted: #252236;
+  --muted-foreground: #a29db9;
+  --accent: #2e2a45;
+  --accent-foreground: #e2ddf0;
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: #2f2b44;
+  --input: #36324d;
+  --ring: #8f84c0;
+  /* El morado de marca del slot 1 desaparece sobre fondo oscuro; se aclara.
+     Los demás slots tienen luminosidad media y se sostienen en ambos temas. */
+  --chart-1: #a98fd6;
+  color-scheme: dark;
+  --sidebar: #191624;
+  --sidebar-foreground: #ebe8f4;
+  --sidebar-primary: #b3a1dc;
+  --sidebar-primary-foreground: #1c1533;
+  --sidebar-accent: #2e2a45;
+  --sidebar-accent-foreground: #d8cdf2;
+  --sidebar-border: #2b2740;
+  --sidebar-ring: #8f84c0;
+  --auth-glow: #2b2448;
 }
 
 @layer base {

@@ -71,10 +71,10 @@ export function StatStrip({ items, className }: { items: StatItem[]; className?:
                   <span
                     className={
                       ratio! >= 1
-                        ? "text-emerald-600"
+                        ? "text-emerald-600 dark:text-emerald-400"
                         : ratio! >= 0.6
-                          ? "text-amber-600"
-                          : "text-red-600"
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-red-600 dark:text-red-400"
                     }
                   >
                     {formatPercent(ratio)}

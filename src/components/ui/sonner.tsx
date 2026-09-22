@@ -3,18 +3,21 @@
 import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon } from "lucide-react"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
+import { useTheme } from "@/lib/use-theme"
+
 /**
  * Avisos emergentes.
  *
- * El tema va fijo en claro: la aplicación no tiene modo oscuro. Los colores del
- * texto se declaran acá y no se dejan a los valores por defecto de sonner,
- * porque su descripción viene con una opacidad tan baja que sobre fondo blanco
- * apenas se lee.
+ * El tema sigue al de la aplicación (sonner no lee `data-theme` por su cuenta).
+ * Los colores del texto se declaran acá y no se dejan a los valores por
+ * defecto de sonner, porque su descripción viene con una opacidad tan baja
+ * que sobre fondo blanco apenas se lee.
  */
 const Toaster = ({ ...props }: ToasterProps) => {
+  const { resolved } = useTheme()
   return (
     <Sonner
-      theme="light"
+      theme={resolved}
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4 text-emerald-600" />,
