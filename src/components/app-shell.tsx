@@ -48,6 +48,7 @@ import {
   useVisibleCompanies,
 } from "@/lib/store/hooks"
 import type { ModuleCode } from "@/lib/store/types"
+import { cn } from "@/lib/utils"
 
 /**
  * Pantallas que resumen un mes y por tanto obedecen al filtro de la barra.
@@ -320,12 +321,17 @@ function NavLink({
 }) {
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={active} tooltip={label} className="h-[38px]">
+      <SidebarMenuButton
+        asChild
+        isActive={active}
+        tooltip={label}
+        className={cn("h-[38px]", active && "[&_svg]:text-primary")}
+      >
         <Link href={href}>
           <Icon className="size-[18px]" />
           <span className="text-sm">{label}</span>
           {active && (
-            <ChevronRight className="ml-auto size-4 text-muted-foreground opacity-60" />
+            <ChevronRight className="ml-auto size-4 text-primary opacity-60" />
           )}
         </Link>
       </SidebarMenuButton>

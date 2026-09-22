@@ -47,9 +47,9 @@ export function SectionCardHeader({
         {Icon && (
           <span
             aria-hidden
-            className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-card"
+            className="flex size-8 shrink-0 items-center justify-center rounded-md border border-primary/15 bg-primary/10"
           >
-            <Icon className="size-[18px] text-muted-foreground" />
+            <Icon className="size-[18px] text-primary" />
           </span>
         )}
         <div className="min-w-0">

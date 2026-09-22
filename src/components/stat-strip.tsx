@@ -58,7 +58,7 @@ export function StatStrip({ items, className }: { items: StatItem[]; className?:
           <div key={item.label} className="flex items-start">
             <div className="min-w-0 flex-1 space-y-2 sm:space-y-4">
               <div className="flex items-center gap-1.5 text-muted-foreground">
-                {item.icon && <item.icon className="size-[18px] shrink-0" />}
+                {item.icon && <item.icon className="size-[18px] shrink-0 text-primary" />}
                 <span className="truncate text-xs font-medium sm:text-sm">{item.label}</span>
               </div>
 

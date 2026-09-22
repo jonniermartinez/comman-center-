@@ -58,29 +58,34 @@
 }
 
 :root {
-  --background: oklch(0.985 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Paleta tomada del logo: morados y azules grisáceos sobre un fondo
+     lavanda casi blanco. El gris neutro anterior se veía plano; esto le da
+     identidad sin que el color compita con los datos. */
+  --background: #f6f5fa;
+  --foreground: #1e1c36;
+  --card: #ffffff;
+  --card-foreground: #1e1c36;
+  --popover: #ffffff;
+  --popover-foreground: #1e1c36;
+  --primary: #4b3a71;
+  --primary-foreground: #ffffff;
+  --secondary: #eeebf5;
+  --secondary-foreground: #302c58;
+  --muted: #f0eef5;
+  --muted-foreground: #66627f;
+  --accent: #ece8f5;
+  --accent-foreground: #302c58;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  /* Paleta categórica de gráficas. Validada con el validador de dataviz:
-     3 slots, modo claro sobre superficie blanca — separación CVD deutan ΔE 9.2,
-     visión normal ΔE 27.6. El slot 3 queda bajo 3:1 de contraste, así que las
-     gráficas que lo usan llevan leyenda y tabla de datos debajo. */
-  --chart-1: #2a78d6;
+  --border: #e4e1ee;
+  --input: #e4e1ee;
+  --ring: #7179a7;
+  /* Paleta categórica de gráficas. Los slots 2 a 5 son los que validó el
+     validador de dataviz (modo claro sobre superficie blanca). El slot 1 pasó
+     del azul #2a78d6 al morado de marca; frente al naranja del slot 2 sigue
+     siendo distinguible para visión deutan, pero no se volvió a correr el
+     validador. Las gráficas que usan el slot 3 llevan leyenda y tabla de
+     datos debajo. */
+  --chart-1: #5b3c80;
   --chart-2: #eb6834;
   --chart-3: #1baf7a;
   --chart-4: #eda100;
@@ -89,14 +94,14 @@
   /* Los controles nativos (fechas, scrollbars) también en claro, aunque el
      sistema operativo esté en oscuro. */
   color-scheme: light;
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #fbfafd;
+  --sidebar-foreground: #1e1c36;
+  --sidebar-primary: #4b3a71;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ece8f5;
+  --sidebar-accent-foreground: #4b3a71;
+  --sidebar-border: #e4e1ee;
+  --sidebar-ring: #7179a7;
 }
 
 @layer base {
