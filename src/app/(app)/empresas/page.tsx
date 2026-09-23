@@ -23,7 +23,6 @@ import { CompanyAvatar } from "@/components/company-avatar"
 import { DeleteCompanyDialog } from "@/components/delete-company-dialog"
 import { NoAccess } from "@/components/no-access"
 import { PageHeader } from "@/components/page-header"
-import { OPERATOR_NAME } from "@/lib/branding"
 import { StatStrip } from "@/components/stat-strip"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -86,7 +85,7 @@ export default function EmpresasPage() {
     <>
       <PageHeader
         title="Empresas"
-        description={`Clientes de ${OPERATOR_NAME} con sus sedes. Avance de ${monthLabel(month)} y estado de captura del ${today.slice(8, 10)}/${today.slice(5, 7)}.`}
+        description={`Empresas cliente con sus sedes. Avance de ${monthLabel(month)} y estado de captura del ${today.slice(8, 10)}/${today.slice(5, 7)}.`}
         actions={
           <>
             {isSuperAdmin && (

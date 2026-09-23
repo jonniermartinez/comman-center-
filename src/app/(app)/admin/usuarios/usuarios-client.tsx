@@ -418,7 +418,7 @@ function NuevoUsuarioDialog() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="juan.nunez@tramitesbuga.co"
+              placeholder="juan.nunez@empresa.com"
             />
           </div>
           <div className="space-y-2">

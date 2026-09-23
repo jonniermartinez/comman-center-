@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 
-import { APP_NAME, OPERATOR_NAME } from "@/lib/branding"
+import { APP_NAME } from "@/lib/branding"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { THEME_INIT_SCRIPT } from "@/lib/theme"
@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: `${APP_NAME} · ${OPERATOR_NAME}`,
+  title: APP_NAME,
   description:
     "Gestión comercial, formularios de captura diaria y dashboards de KPIs por empresa cliente.",
 }
