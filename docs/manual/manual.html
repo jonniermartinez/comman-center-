@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Manual de uso · Genelypse Command Center</title>
+<style>
+  @page { size: A4; }
+  :root { --ink:#1b1730; --muted:#5b5872; --line:#dcd9ea; --accent:#5b3d9c; --accent2:#7c3aed; --soft:#f4f1fb; --warn:#fff7e6; --warnb:#f0c36d; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.45; margin: 0; }
+  h1 { font-size: 22pt; margin: 0 0 4px; color: var(--accent); }
+  h2 { font-size: 16pt; margin: 0 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--accent); color: var(--accent); page-break-after: avoid; }
+  h3 { font-size: 12.5pt; margin: 18px 0 6px; color: var(--ink); page-break-after: avoid; }
+  h4 { font-size: 10.5pt; margin: 12px 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; page-break-after: avoid; }
+  p { margin: 0 0 8px; }
+  ol, ul { margin: 0 0 10px; padding-left: 20px; }
+  li { margin-bottom: 3px; }
+  ol li ol { margin-top: 3px; }
+  .chapter { page-break-before: always; }
+  .cover { height: 250mm; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+  .cover img { width: 240px; border-radius: 10px; background: #fff; padding: 10px; border: 1px solid var(--line); }
+  .cover .sub { color: var(--muted); font-size: 12pt; margin-top: 6px; }
+  .cover .meta { margin-top: 40px; color: var(--muted); font-size: 10pt; }
+  .video { background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 12px 0; }
+  .video a { color: var(--accent2); font-weight: 600; word-break: break-all; }
+  .box { background: var(--soft); border-left: 4px solid var(--accent); padding: 8px 12px; margin: 10px 0; border-radius: 4px; }
+  .warn { background: var(--warn); border-left: 4px solid var(--warnb); padding: 8px 12px; margin: 10px 0; border-radius: 4px; }
+  .roles { display: inline-block; font-size: 8.5pt; padding: 1px 8px; border-radius: 10px; background: #ece7f8; color: var(--accent); margin-left: 6px; vertical-align: middle; font-weight: 600; }
+  .ruta { font-family: Menlo, Consolas, monospace; font-size: 9pt; color: var(--muted); }
+  .btn { display: inline-block; border: 1px solid #b9b3d6; border-radius: 4px; padding: 0 5px; font-size: 9.5pt; background: #fff; white-space: nowrap; }
+  .menu { font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; margin: 6px 0 12px; font-size: 9.5pt; page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  th, td { border: 1px solid var(--line); padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); font-weight: 600; }
+  .toc ol { list-style: none; padding-left: 0; columns: 1; }
+  .toc li { padding: 3px 0; border-bottom: 1px dotted var(--line); }
+  .toc .n { display: inline-block; width: 28px; color: var(--accent); font-weight: 600; }
+  .fn { display: block; margin-top: 2px; }
+  code { font-family: Menlo, Consolas, monospace; font-size: 9pt; background: #f2f0f7; padding: 0 4px; border-radius: 3px; }
+  .small { font-size: 9pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ============ PORTADA ============ -->
+<section class="cover">
+  <img src="command-center.png" alt="Genelypse Command Center">
+  <h1 style="margin-top:28px">Manual de uso</h1>
+  <div class="sub">Instructivo paso a paso de todas las funciones del aplicativo</div>
+  <div class="video" style="margin-top:36px;max-width:520px">
+    <strong>Video guía completo (YouTube)</strong><br>
+    <a href="https://www.youtube.com/watch?v=f_lu5UzZgZo">https://www.youtube.com/watch?v=f_lu5UzZgZo</a><br>
+    <span class="small">Cuenta: commandcentergenelypse@gmail.com. Cada capítulo de este PDF corresponde a una parte del video; use el índice para ir directo a la función que necesita.</span>
+  </div>
+  <div class="meta">
+    Aplicativo: <strong>https://comman-center.commandcentergenelypse.workers.dev</strong><br>
+    Versión del documento: 23 de septiembre de 2026
+  </div>
+</section>
+
+<!-- ============ ÍNDICE ============ -->
+<section class="chapter toc">
+  <h2>Índice</h2>
+  <ol>
+    <li><span class="n">1</span> Cómo está organizada la aplicación (roles, menú, selector de empresa, mes)</li>
+    <li><span class="n">2</span> Entrar, cambiar contraseña, modo oscuro y salir</li>
+    <li><span class="n">3</span> Usuarios: crear cuentas, definir contraseña, editar, eliminar y restaurar</li>
+    <li><span class="n">4</span> Delimitar accesos: rol global, empresas, sedes y perfiles</li>
+    <li><span class="n">5</span> Empresas: crear con el asistente, configurar, módulos, archivar, eliminar</li>
+    <li><span class="n">6</span> Sedes: crear, sede principal, archivar</li>
+    <li><span class="n">7</span> Equipo de la empresa: comerciales, sedes, cuentas en bloque</li>
+    <li><span class="n">8</span> Productos y lista de precios</li>
+    <li><span class="n">9</span> Ventas: registrar una venta completa</li>
+    <li><span class="n">10</span> Pagos: registrar abonos con comprobante</li>
+    <li><span class="n">11</span> Mi jornada: registrar el día mientras pasa</li>
+    <li><span class="n">12</span> Gestión Diaria: registrar o corregir una jornada</li>
+    <li><span class="n">13</span> Agendas y conexión con Kommo</li>
+    <li><span class="n">14</span> Ingreso y Gasto (caja)</li>
+    <li><span class="n">15</span> Objetivos (metas del mes)</li>
+    <li><span class="n">16</span> Dashboard e Indicadores: inversión en pauta, ROAS y costo por venta</li>
+    <li><span class="n">17</span> Auditoría</li>
+    <li><span class="n">18</span> Cargue o actualización de la base de datos (histórico de Excel)</li>
+    <li><span class="n">19</span> Preguntas frecuentes y mensajes de la aplicación</li>
+    <li><span class="n">A</span> Documentación técnica: tecnologías, servicios, límites y cuentas</li>
+  </ol>
+  <div class="box" style="margin-top:20px">
+    <strong>Cómo leer este manual.</strong> Cada función trae: quién puede hacerla (etiqueta de rol), la ruta dentro de la aplicación y el paso a paso de clics con los textos exactos de los botones tal como aparecen en pantalla. Los nombres de botones van en recuadro, así: <span class="btn">Guardar</span>. Los nombres de menú van en negrita, así: <span class="menu">Administrar → Equipo</span>.
+  </div>
+</section>
+
+<!-- ============ 1 ============ -->
+<section class="chapter">
+  <h2>1. Cómo está organizada la aplicación</h2>
+
+  <h3>1.1 Los tres roles</h3>
+  <table>
+    <tr><th style="width:22%">Rol</th><th>Qué ve y qué puede hacer</th></tr>
+    <tr><td><strong>Super Admin</strong></td><td>Ve todas las empresas y todo el menú. Es el único que crea empresas, crea cuentas de usuario, define contraseñas, elimina o restaura usuarios, corrige ventas ya guardadas, conecta Kommo, y ve la sección <span class="menu">Plataforma</span> (Usuarios y Auditoría).</td></tr>
+    <tr><td><strong>Coordinador</strong></td><td>Administra una empresa concreta: ve la sección <span class="menu">Administrar</span> de esa empresa (Productos, Sedes, Equipo, Kommo, Configuración), edita metas e indicadores, registra caja y puede elegir el responsable al registrar ventas y jornadas.</td></tr>
+    <tr><td><strong>Asesor</strong></td><td>Ve solo las empresas donde está asignado. Registra ventas, pagos y su jornada, siempre a su propio nombre. No ve <span class="menu">Administrar</span> ni <span class="menu">Plataforma</span>.</td></tr>
+  </table>
+  <div class="warn"><strong>Importante.</strong> Una cuenta activa sin ninguna empresa asignada ve el mensaje “Todavía no tienes acceso a ninguna empresa”. Una cuenta inactiva ve “Tu acceso está suspendido”. En ambos casos lo resuelve el Super Admin (capítulos 3 y 4).</div>
+
+  <h3>1.2 El menú lateral</h3>
+  <p>De arriba hacia abajo:</p>
+  <ol>
+    <li><strong>Selector de empresa</strong> (tarjeta con logo y nombre). Al hacer clic se despliega la lista “Empresas cliente”, más <span class="btn">Ver todas las empresas</span> y, para el Super Admin, <span class="btn">Crear empresa</span>.</li>
+    <li><span class="menu">Empresas</span>: el listado general.</li>
+    <li>Con una empresa activa: <span class="menu">Dashboard</span>, <span class="menu">Indicadores</span>, <span class="menu">Objetivos</span>.</li>
+    <li><span class="menu">OPERACIÓN</span>: <span class="menu">Ventas</span>, <span class="menu">Pagos</span>, <span class="menu">Mi jornada</span>, <span class="menu">Gestión Diaria</span>, <span class="menu">Agendas</span>, <span class="menu">Ingreso y Gasto</span>. Cada uno aparece solo si su módulo está habilitado en la empresa (capítulo 5.3).</li>
+    <li><span class="menu">ADMINISTRAR</span> (Super Admin y Coordinador): <span class="menu">Productos</span>, <span class="menu">Sedes</span>, <span class="menu">Equipo</span>, <span class="menu">Kommo</span>, <span class="menu">Configuración</span>.</li>
+    <li><span class="menu">PLATAFORMA</span> (solo Super Admin): <span class="menu">Usuarios</span>, <span class="menu">Auditoría</span>.</li>
+    <li>Al pie, el <strong>menú de usuario</strong> con su nombre y rol.</li>
+  </ol>
+  <p>En el celular el menú sale como panel lateral con el botón de la esquina superior izquierda.</p>
+
+  <h3>1.3 El filtro de mes</h3>
+  <p>En la barra superior de <span class="menu">Empresas</span>, <span class="menu">Dashboard</span>, <span class="menu">Objetivos</span> y <span class="menu">Sedes</span> aparece el mes que se está mirando, con las flechas <span class="btn">Mes anterior</span> y <span class="btn">Mes siguiente</span>. Un clic sobre el nombre del mes abre un calendario para saltar a cualquier mes. El mes elegido se recuerda en el navegador y aplica a toda la aplicación.</p>
+  <p>Las pantallas de Ventas, Pagos, Gestión Diaria, Agendas e Ingreso y Gasto no usan ese mes: tienen sus propios filtros <strong>Desde</strong> y <strong>Hasta</strong>.</p>
+</section>
+
+<!-- ============ 2 ============ -->
+<section class="chapter">
+  <h2>2. Entrar, cambiar contraseña, modo oscuro y salir</h2>
+
+  <h3>2.1 Iniciar sesión <span class="roles">Todos</span></h3>
+  <p class="ruta">Ruta: /login</p>
+  <ol>
+    <li>Abra <strong>https://comman-center.commandcentergenelypse.workers.dev</strong>.</li>
+    <li>En la tarjeta “Entrar”, escriba su <strong>Correo</strong> y su <strong>Contraseña</strong>.</li>
+    <li>Clic en <span class="btn">Entrar</span>. La aplicación abre el listado de Empresas.</li>
+  </ol>
+  <div class="box">No existe registro público ni “olvidé mi contraseña”. Las cuentas las crea el administrador y, si se pierde la clave, el administrador define una nueva (capítulo 3.3). El mensaje “Correo o contraseña incorrectos” aparece en ambos casos, por seguridad.</div>
+
+  <h3>2.2 Cambiar mi contraseña <span class="roles">Todos</span></h3>
+  <p class="ruta">Ruta: /definir-clave</p>
+  <ol>
+    <li>Clic en el <strong>menú de usuario</strong> (abajo a la izquierda, con su nombre).</li>
+    <li>Clic en <span class="menu">Cambiar contraseña</span>.</li>
+    <li>Escriba la <strong>Contraseña nueva</strong> y repítala en <strong>Repítela</strong>. Mínimo 8 caracteres, deben coincidir.</li>
+    <li>Clic en <span class="btn">Guardar y entrar</span>.</li>
+  </ol>
+
+  <h3>2.3 Modo claro u oscuro <span class="roles">Todos</span></h3>
+  <ol>
+    <li>Menú de usuario → <span class="menu">Apariencia</span>.</li>
+    <li>Elija <span class="menu">Claro</span>, <span class="menu">Oscuro</span> o <span class="menu">Según el sistema</span>. Se guarda en ese navegador.</li>
+  </ol>
+
+  <h3>2.4 Cerrar sesión <span class="roles">Todos</span></h3>
+  <p>Menú de usuario → <span class="menu">Cerrar sesión</span>. Vuelve a la pantalla de entrada.</p>
+</section>
+
+<!-- ============ 3 ============ -->
+<section class="chapter">
+  <h2>3. Usuarios: crear cuentas, contraseñas, editar, eliminar y restaurar</h2>
+  <p class="ruta">Ruta: /admin/usuarios · Menú: <span class="menu">Plataforma → Usuarios</span></p>
+  <p>La pantalla tiene dos pestañas, <span class="btn">Activos</span> y <span class="btn">Eliminados (N)</span>, y el botón <span class="btn">Nuevo usuario</span>. Cada fila muestra Usuario, Rol global, Estado, Empresas, Registros y un menú <span class="btn">⋯</span>.</p>
+
+  <h3>3.1 Crear un usuario <span class="roles">Super Admin</span></h3>
+  <ol>
+    <li>Menú <span class="menu">Plataforma → Usuarios</span>.</li>
+    <li>Clic en <span class="btn">Nuevo usuario</span>.</li>
+    <li>Complete:
+      <ul>
+        <li><strong>Nombre completo</strong> (mínimo 3 caracteres).</li>
+        <li><strong>Correo</strong> (será su usuario para entrar).</li>
+        <li><strong>Teléfono (opcional)</strong>.</li>
+        <li><strong>Contraseña</strong>: mínimo 8 caracteres. Se ve en pantalla. Puede usar <span class="btn">Generar</span> para crear una segura.</li>
+        <li><strong>Rol global</strong>: Asesor (por defecto), Coordinador o Super Admin. Ver capítulo 4 para entender cada uno.</li>
+      </ul>
+    </li>
+    <li>Clic en <span class="btn">Crear usuario</span>.</li>
+    <li><strong>Anote la contraseña y dígasela a la persona.</strong> La aplicación no envía correos. La persona puede cambiarla después desde su menú (2.2).</li>
+    <li>Para que vea alguna empresa, agréguela al equipo de esa empresa (capítulo 4.2 y 7).</li>
+  </ol>
+  <div class="box">Si el correo ya tiene cuenta, no se crea una segunda: se actualizan nombre y teléfono, se le pone la contraseña nueva y, si estaba eliminada, se restaura.</div>
+
+  <h3>3.2 Editar nombre, correo, teléfono o rol <span class="roles">Super Admin</span></h3>
+  <ol>
+    <li>En la fila del usuario, clic en <span class="btn">⋯</span> → <span class="menu">Editar</span>.</li>
+    <li>Cambie Nombre, Correo, Teléfono o Rol global.</li>
+    <li>Clic en <span class="btn">Guardar cambios</span>.</li>
+  </ol>
+  <p>El <strong>Rol global</strong> también se cambia directamente desde el selector de la columna, sin abrir el diálogo. Nadie puede cambiar su propio rol.</p>
+
+  <h3>3.3 Definir una contraseña nueva (recuperar acceso) <span class="roles">Super Admin</span></h3>
+  <ol>
+    <li>Clic en <span class="btn">⋯</span> → <span class="menu">Definir contraseña</span>.</li>
+    <li>Escriba la <strong>Contraseña nueva</strong> o use <span class="btn">Generar</span>.</li>
+    <li>Clic en <span class="btn">Guardar contraseña</span> y dígasela a la persona.</li>
+  </ol>
+  <p>Esta es la única forma de recuperar una cuenta que olvidó su clave.</p>
+
+  <h3>3.4 Eliminar un usuario <span class="roles">Super Admin</span></h3>
+  <ol>
+    <li>Clic en <span class="btn">⋯</span> → <span class="menu">Eliminar usuario</span>.</li>
+    <li>Lea las consecuencias y confirme con <span class="btn">Eliminar usuario</span>.</li>
+  </ol>
+  <p>La eliminación es <strong>lógica</strong>: la persona ya no puede entrar y desaparece de las listas, pero todas sus ventas, pagos y jornadas siguen apareciendo a su nombre en los reportes históricos. No se puede eliminar a uno mismo.</p>
+
+  <h3>3.5 Restaurar un usuario eliminado <span class="roles">Super Admin</span></h3>
+  <ol>
+    <li>Pestaña <span class="btn">Eliminados (N)</span>.</li>
+    <li>Clic en <span class="btn">⋯</span> → <span class="menu">Restaurar con contraseña nueva</span> (le pide una clave) o <span class="menu">Restaurar con la que tenía</span>.</li>
+  </ol>
+
+  <h3>3.6 Activar una cuenta inactiva <span class="roles">Super Admin</span></h3>
+  <p>Si el Estado es “inactivo”, el menú <span class="btn">⋯</span> muestra <span class="menu">Activar</span>. Las cuentas provisionales creadas en bloque (7.4) o las que llegaron del histórico pueden estar en este estado.</p>
+</section>
+
+<!-- ============ 4 ============ -->
+<section class="chapter">
+  <h2>4. Delimitar accesos por usuario</h2>
+  <p>El acceso de una persona se decide en dos niveles: el <strong>rol global</strong> de su cuenta y las <strong>empresas y sedes</strong> donde está asignada. Un Asesor sin empresas no ve nada; un Super Admin ve todo sin necesidad de asignación.</p>
+
+  <h3>4.1 Elegir el rol global <span class="roles">Super Admin</span></h3>
+  <p>En <span class="menu">Plataforma → Usuarios</span>, columna <strong>Rol global</strong>, elija en el selector. Se guarda al instante.</p>
+  <table>
+    <tr><th>Quiero que la persona…</th><th>Rol global</th><th>Además</th></tr>
+    <tr><td>Solo registre ventas, pagos y su jornada en su empresa</td><td>Asesor</td><td>Agregarla al Equipo de la empresa (4.2) y enlazar su cuenta a su ficha (4.3)</td></tr>
+    <tr><td>Administre una empresa (productos, sedes, equipo, metas, caja)</td><td>Coordinador</td><td>Agregarla al Equipo de la empresa</td></tr>
+    <tr><td>Administre toda la plataforma</td><td>Super Admin</td><td>Nada más: ve todas las empresas</td></tr>
+  </table>
+
+  <h3>4.2 Dar acceso a una empresa <span class="roles">Super Admin · Coordinador</span></h3>
+  <ol>
+    <li>Entre a la empresa (selector de empresa o <span class="btn">Entrar</span> en su tarjeta).</li>
+    <li>Menú <span class="menu">Administrar → Equipo</span>.</li>
+    <li>Clic en <span class="btn">Agregar comercial</span>.</li>
+    <li>En <strong>Persona</strong>, elija “Alguien nuevo”, una persona que ya existe en otra empresa o (solo Super Admin) una cuenta que aún no tiene ficha.</li>
+    <li>Escriba el <strong>Nombre completo</strong> (formato “Apellido Nombre”) y elija la <strong>Sede</strong>.</li>
+    <li>Clic en <span class="btn">Agregar</span>. Si la ficha tiene cuenta enlazada, la persona ya puede entrar a esa empresa.</li>
+  </ol>
+
+  <h3>4.3 Enlazar una cuenta con su ficha del equipo <span class="roles">Super Admin</span></h3>
+  <p>En <span class="menu">Administrar → Equipo</span>, columna <strong>Cuenta de acceso</strong>, elija la cuenta de la persona (o “Sin cuenta”). Sin este enlace la persona ve “Tu cuenta no está enlazada a nadie del equipo” al abrir Mi jornada.</p>
+
+  <h3>4.4 Limitar a una sede <span class="roles">Super Admin · Coordinador</span></h3>
+  <p>En <span class="menu">Administrar → Equipo</span>, columna <strong>Sede</strong>, elija la sede o “Toda la empresa”. Se guarda al instante y define desde qué sede registra la persona.</p>
+
+  <h3>4.5 Quitar el acceso a una empresa <span class="roles">Super Admin · Coordinador</span></h3>
+  <p>En Equipo, clic en la papelera de la fila → “¿Quitar a X del equipo?” → <span class="btn">Quitar</span>. Sus registros se conservan a su nombre.</p>
+
+  <h3>4.6 Crear una nueva categoría de usuario o perfil</h3>
+  <div class="warn">
+    <strong>Los perfiles son fijos: Super Admin, Coordinador y Asesor.</strong> No hay una pantalla para inventar un cuarto perfil, porque los permisos están escritos en las reglas de seguridad de la base de datos (RLS) y no en una tabla editable. Lo que sí se puede combinar para obtener “perfiles” distintos:
+    <ul>
+      <li><strong>Qué módulos ve</strong>: se activan o desactivan por empresa en <span class="menu">Administrar → Configuración → Módulos habilitados</span> (5.3). Un asesor de una empresa sin módulo de Pagos nunca verá Pagos.</li>
+      <li><strong>Qué empresas y sedes ve</strong>: asignación en Equipo (4.2 y 4.4).</li>
+      <li><strong>Cuánto puede administrar</strong>: rol Coordinador frente a Asesor.</li>
+    </ul>
+    Si se necesita un perfil realmente nuevo (por ejemplo “solo lectura de reportes”), es un cambio de desarrollo: hay que agregar el rol en la base de datos y sus políticas.
+  </div>
+</section>
+
+<!-- ============ 5 ============ -->
+<section class="chapter">
+  <h2>5. Empresas</h2>
+  <p class="ruta">Ruta: /empresas · Menú: <span class="menu">Empresas</span></p>
+  <p>El listado muestra una franja con los totales del mes de todas las empresas (Ventas, Renovaciones, Licencias, Facturación, Recaudo) y una tarjeta por empresa con sus sedes, comerciales y cifras del mes, más el botón <span class="btn">Entrar</span>.</p>
+
+  <h3>5.1 Crear una empresa con el asistente <span class="roles">Super Admin</span></h3>
+  <p class="ruta">Ruta: /empresas/nueva</p>
+  <ol>
+    <li>En <span class="menu">Empresas</span>, clic en <span class="btn">Nueva empresa</span> (o en la tarjeta punteada <span class="btn">Crear empresa</span>, o en el selector de empresa → <span class="btn">Crear empresa</span>).</li>
+    <li><strong>Paso 1 · Datos</strong>: <strong>Nombre de la empresa</strong> (obligatorio y único; debajo se muestra la dirección que tendrá, /e/nombre), <strong>NIT</strong>, <strong>Ciudad</strong> (buscador de municipios de Colombia), <strong>Nombre del CRM que usa</strong> y <strong>Color de acento</strong>. Clic en <span class="btn">Siguiente</span>.</li>
+    <li><strong>Paso 2 · Sedes</strong>: la primera sede queda como “Principal”. Escriba <strong>Nombre de la sede</strong> y <strong>Municipio</strong>. Agregue más con <span class="btn">Agregar sede</span>. <span class="btn">Siguiente</span>.</li>
+    <li><strong>Paso 3 · Módulos</strong>: marque los módulos que usará la empresa: Ventas, Pagos, Gestión Diaria, Agendas, Ingreso y Gasto. Al menos uno. <span class="btn">Siguiente</span>.</li>
+    <li><strong>Paso 4 · Comercial</strong>: marque las <strong>Financiaciones activas</strong> (al menos una) y los <strong>Medios de recaudo</strong>. Revise el Resumen.</li>
+    <li>Clic en <span class="btn">Crear empresa</span>. La aplicación entra a la empresa nueva.</li>
+  </ol>
+  <p>Después de crearla: cargue el logo y el WhatsApp en Configuración (5.2), cree los productos (capítulo 8) y arme el equipo (capítulo 7).</p>
+
+  <h3>5.2 Configurar datos y logo <span class="roles">Super Admin · Coordinador</span></h3>
+  <p class="ruta">Ruta: /e/[empresa]/configuracion · Menú: <span class="menu">Administrar → Configuración</span></p>
+  <ol>
+    <li>En “Datos de la empresa”, clic en <span class="btn">Subir logo</span> (o <span class="btn">Cambiar logo</span>). Acepta PNG, JPG, WEBP o SVG hasta 2 MB. <span class="btn">Quitar</span> lo elimina.</li>
+    <li>Edite Nombre, NIT, Ciudad, Dominio, WhatsApp, Nombre del CRM y Color de acento.</li>
+    <li>Clic en <span class="btn">Guardar cambios</span>. La dirección /e/… no cambia aunque cambie el nombre.</li>
+  </ol>
+
+  <h3>5.3 Activar o desactivar módulos <span class="roles">Super Admin · Coordinador</span></h3>
+  <p>En Configuración, sección “Módulos habilitados”: cada casilla se guarda al instante. Al desactivar uno, su entrada desaparece del menú <span class="menu">Operación</span> para todos los usuarios de la empresa. Los datos no se borran; al reactivarlo vuelven a verse.</p>
+
+  <h3>5.4 Financiaciones y medios de recaudo <span class="roles">Super Admin · Coordinador</span></h3>
+  <p>En Configuración, secciones “Financiaciones” y “Medios de recaudo”: casillas que se guardan al instante. Son las opciones que aparecen al registrar ventas y pagos.</p>
+
+  <h3>5.5 Archivar y reactivar una empresa <span class="roles">Super Admin</span></h3>
+  <ol>
+    <li>En <span class="menu">Empresas</span>, en la tarjeta, clic en <span class="btn">⋯</span> → <span class="menu">Archivar empresa</span> (o en Configuración → Zona de riesgo → <span class="btn">Archivar</span>). Confirme.</li>
+    <li>La tarjeta queda atenuada con la etiqueta “Archivada”. Todo el histórico se conserva.</li>
+    <li>Para verla otra vez, active el interruptor <span class="btn">Ver archivadas</span>; para reactivarla, <span class="btn">⋯</span> → <span class="menu">Reactivar</span>.</li>
+  </ol>
+
+  <h3>5.6 Eliminar una empresa definitivamente <span class="roles">Super Admin</span></h3>
+  <div class="warn">Esta acción borra sedes, equipo, ventas, pagos, jornadas, caja, agendas y objetivos de la empresa y no se puede deshacer. Úsela solo para empresas creadas por error o de prueba. Para dejar de operar una empresa real, archívela (5.5).</div>
+  <ol>
+    <li><span class="btn">⋯</span> → <span class="menu">Eliminar definitivamente</span> (o Configuración → Zona de riesgo → <span class="btn">Eliminar empresa</span>).</li>
+    <li>Lea el conteo de lo que se perderá y <strong>escriba el nombre exacto de la empresa</strong>.</li>
+    <li>Clic en <span class="btn">Eliminar para siempre</span>. Queda registrado en Auditoría como borrado definitivo.</li>
+  </ol>
+</section>
+
+<!-- ============ 6 ============ -->
+<section class="chapter">
+  <h2>6. Sedes</h2>
+  <p class="ruta">Ruta: /e/[empresa]/sedes · Menú: <span class="menu">Administrar → Sedes</span> <span class="roles">Super Admin · Coordinador</span></p>
+  <p>Cada tarjeta de sede muestra sus comerciales, ventas del mes, facturación y contactabilidad.</p>
+
+  <h3>6.1 Crear una sede</h3>
+  <ol>
+    <li>Clic en <span class="btn">Nueva sede</span>.</li>
+    <li><strong>Nombre de la sede</strong> (mínimo 2 caracteres) y <strong>Municipio</strong>.</li>
+    <li>Clic en <span class="btn">Crear sede</span>.</li>
+  </ol>
+
+  <h3>6.2 Marcar la sede principal</h3>
+  <p>En la tarjeta, <span class="btn">⋯</span> → <span class="menu">Marcar como principal</span>. Solo hay una principal.</p>
+
+  <h3>6.3 Ver o mover el equipo de una sede</h3>
+  <p><span class="btn">⋯</span> → <span class="menu">Gestionar comerciales</span> lleva a Equipo, donde se cambia la sede de cada persona (4.4).</p>
+
+  <h3>6.4 Archivar y reactivar una sede</h3>
+  <ol>
+    <li><span class="btn">⋯</span> → <span class="menu">Archivar sede</span>.</li>
+    <li>No se puede archivar la última sede activa ni una con comerciales asignados. En ese caso aparece “Hay N comercial(es) asignados. Muévelos a otra sede primero”.</li>
+    <li>Para reactivar: interruptor <span class="btn">Ver archivadas</span> → <span class="btn">⋯</span> → <span class="menu">Reactivar</span>.</li>
+  </ol>
+  <p class="small">El nombre de una sede no se edita desde la aplicación. Si hay un error de escritura, cree la sede correcta, mueva al equipo y archive la equivocada.</p>
+</section>
+
+<!-- ============ 7 ============ -->
+<section class="chapter">
+  <h2>7. Equipo de la empresa</h2>
+  <p class="ruta">Ruta: /e/[empresa]/usuarios · Menú: <span class="menu">Administrar → Equipo</span> <span class="roles">Super Admin · Coordinador</span></p>
+  <p>El equipo son los <strong>comerciales</strong> de la empresa: las personas que aparecen como responsables de ventas y jornadas. Una ficha de comercial puede tener o no una cuenta de acceso. Mucha gente del histórico existe como ficha sin cuenta.</p>
+
+  <h3>7.1 Agregar un comercial</h3>
+  <p>Ver el paso a paso en 4.2.</p>
+
+  <h3>7.2 Cambiar la sede de un comercial</h3>
+  <p>Columna <strong>Sede</strong> → elija la sede o “Toda la empresa”. Se guarda al instante.</p>
+
+  <h3>7.3 Enlazar o desenlazar la cuenta de acceso <span class="roles">Super Admin</span></h3>
+  <p>Columna <strong>Cuenta de acceso</strong> → elija la cuenta o “Sin cuenta”.</p>
+
+  <h3>7.4 Crear cuentas en bloque para todo el equipo <span class="roles">Super Admin</span></h3>
+  <ol>
+    <li>Si hay comerciales sin cuenta, aparece el botón <span class="btn">Crear N cuentas</span>. Clic.</li>
+    <li>Confirme con <span class="btn">Crear N cuenta(s)</span>.</li>
+    <li>Se muestra una tabla con usuario y contraseña provisional de cada persona. <strong>Se muestra una sola vez.</strong> Use <span class="btn">Copiar la lista</span> y guárdela antes de dar clic en <span class="btn">Listo</span>.</li>
+    <li>Las cuentas nacen con un correo provisional que termina en <code>.invalid</code>. Cámbielo por el correo real desde <span class="menu">Plataforma → Usuarios → ⋯ → Editar</span> (3.2). La cuenta conserva su histórico.</li>
+  </ol>
+
+  <h3>7.5 Quitar a alguien del equipo</h3>
+  <p>Papelera → <span class="btn">Quitar</span>. Ver 4.5.</p>
+</section>
+
+<!-- ============ 8 ============ -->
+<section class="chapter">
+  <h2>8. Productos y lista de precios</h2>
+  <p class="ruta">Ruta: /e/[empresa]/productos · Menú: <span class="menu">Administrar → Productos</span> <span class="roles">Super Admin · Coordinador</span></p>
+  <p>Los productos son lo que el comercial elige al registrar una venta. Si la empresa no tiene productos, el valor de cada venta se digita a mano.</p>
+
+  <h3>8.1 Crear un producto</h3>
+  <ol>
+    <li>Clic en <span class="btn">Nuevo producto</span>.</li>
+    <li><strong>Nombre</strong> (único en la empresa) y <strong>Precio</strong>.</li>
+    <li>Interruptores <strong>Es una renovación</strong> (cuenta en el indicador de renovaciones) y <strong>Disponible</strong>.</li>
+    <li><strong>Bonos autorizados</strong>: clic en <span class="btn">Agregar bono</span>, escriba nombre y valor del descuento. La pantalla muestra “queda $X” con el precio resultante. Solo estos descuentos podrá aplicar el comercial.</li>
+    <li>Clic en <span class="btn">Guardar</span>.</li>
+  </ol>
+
+  <h3>8.2 Editar, archivar o eliminar</h3>
+  <ul>
+    <li><strong>Editar</strong>: ícono de lápiz en la fila.</li>
+    <li><strong>Archivar</strong>: <span class="btn">⋯</span> → <span class="menu">Archivar</span>. Deja de ofrecerse pero sus ventas siguen. Se revierte con <span class="menu">Volver a ofrecer</span>.</li>
+    <li><strong>Eliminar</strong>: <span class="btn">⋯</span> → <span class="menu">Eliminar</span>. Solo si el producto no tiene ventas; si las tiene, la aplicación pide archivarlo.</li>
+  </ul>
+</section>
+
+<!-- ============ 9 ============ -->
+<section class="chapter">
+  <h2>9. Ventas</h2>
+  <p class="ruta">Ruta: /e/[empresa]/ventas · Menú: <span class="menu">Operación → Ventas</span> <span class="roles">Todos los miembros de la empresa</span></p>
+  <p>Arriba, los totales del filtro: Ventas, Licencias, Facturación, Recaudado, Saldo y <strong>Por recontactar</strong> (ventas con 85 días o más sin certificar). La tabla muestra Fecha, Cliente, Producto, Financiación, Responsable, Estado, Valor, Recaudo y Saldo. Un ícono ⚠ avisa “Lleva N días sin certificarse”.</p>
+
+  <h3>9.1 Buscar y filtrar</h3>
+  <p>Campos <strong>Buscar</strong>, <strong>Desde</strong>, <strong>Hasta</strong>, <strong>Sede</strong> (si hay más de una), <strong>Responsable</strong> y botón <span class="btn">Limpiar</span>. La lista pagina de 25 en 25 con <span class="btn">Anterior</span> y <span class="btn">Siguiente</span>. Estos mismos filtros están en Pagos, Gestión Diaria, Agendas e Ingreso y Gasto.</p>
+
+  <h3>9.2 Registrar una venta</h3>
+  <ol>
+    <li>Clic en <span class="btn">Nueva venta</span>. Se abre el formulario a pantalla completa.</li>
+    <li><strong>La venta</strong>: Fecha (no puede ser futura), Sede, Tipo de venta, Canal y Responsable (el asesor queda fijo como responsable; quien administra puede elegir a otro).</li>
+    <li><strong>Titular de la licencia</strong>: Nombre completo (obligatorio), Tipo y número de documento, Celular. El ícono junto al celular abre WhatsApp.</li>
+    <li><strong>Titular del crédito</strong>: deje encendido “Es el mismo titular de la licencia” o apáguelo y llene los datos del otro titular.</li>
+    <li><strong>Qué compró</strong>: elija el <strong>Producto</strong> (trae el precio de la lista) o digite el <strong>Valor</strong> si no hay producto. Indique <strong>Licencias</strong>, Tráfico, Categoría del anuncio, Escuela y Estado.</li>
+    <li><strong>Bonos y adiciones</strong>: clic en un bono autorizado para aplicarlo; clic en <span class="btn">Adición</span> para sumar un concepto con valor.</li>
+    <li><strong>Documentos del trámite</strong>: Pagaré, Voucher, Contrato, Examen médico, Consecutivo del examen.</li>
+    <li><strong>Financiación</strong>: elija en “Cómo la pagó”. Si es mixta, use <span class="btn">Línea</span> por cada entidad: Entidad, Valor financiado, Abono, Cuota, Quién la firma y Documento. La pantalla avisa si la suma no cuadra con el valor.</li>
+    <li><strong>Comprobantes de pago</strong>: <span class="btn">Adjuntar</span> una o varias fotos o PDF (hasta 5 MB cada uno).</li>
+    <li><strong>Observación</strong> libre.</li>
+    <li>Revise el pie: Valor de lista, Bonos, Adiciones y <strong>Valor final</strong>. Clic en <span class="btn">Guardar venta</span>.</li>
+  </ol>
+  <div class="warn"><strong>La venta queda firmada.</strong> Una vez guardada, solo el Super Admin puede corregirla (ícono de lápiz en la fila). Revise bien antes de guardar. La facturación de los reportes sale de las ventas; el recaudo sale de los pagos (capítulo 10), no se digita aquí.</div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section class="chapter">
+  <h2>10. Pagos</h2>
+  <p class="ruta">Ruta: /e/[empresa]/pagos · Menú: <span class="menu">Operación → Pagos</span> <span class="roles">Todos los miembros de la empresa</span></p>
+
+  <h3>10.1 Registrar un abono</h3>
+  <ol>
+    <li>Clic en <span class="btn">Registrar pago</span>.</li>
+    <li>En “Buscar la venta”, escriba nombre o documento del cliente (mínimo 3 letras) y clic en <span class="btn">Buscar</span>. Elija la venta; se muestran su valor y su saldo. <span class="btn">Cambiar</span> permite elegir otra.</li>
+    <li>Complete <strong>Fecha del pago</strong>, <strong>Valor</strong> (mayor que 0), <strong>Medio de pago</strong>, <strong>Número de recibo o voucher</strong> y <strong>Número de contrato</strong>.</li>
+    <li><strong>Comprobante (foto o PDF)</strong>: clic en <span class="btn">Adjuntar archivo</span>. Es <strong>obligatorio si la venta es a crédito</strong>, opcional de contado. Hasta 5 MB.</li>
+    <li>Si el abono supera el saldo sale una advertencia, pero deja guardar.</li>
+    <li>Clic en <span class="btn">Guardar pago</span>.</li>
+  </ol>
+  <p>En la lista, la etiqueta “aprox.” marca una fecha estimada (datos importados del Excel) y “sin venta” un pago que no se pudo asociar. El comprobante se abre con un enlace seguro que vence en una hora.</p>
+</section>
+
+<!-- ============ 11 ============ -->
+<section class="chapter">
+  <h2>11. Mi jornada</h2>
+  <p class="ruta">Ruta: /e/[empresa]/mi-jornada · Menú: <span class="menu">Operación → Mi jornada</span> <span class="roles">Quien tenga cuenta enlazada a su ficha del equipo</span></p>
+  <p>Mi jornada registra el día <strong>mientras pasa</strong>: hora de llegada, cada llamada, cada atención y cada pausa. Al cerrar, los contadores de Gestión Diaria se llenan solos.</p>
+
+  <h3>11.1 Iniciar la jornada</h3>
+  <ol>
+    <li>Entre a <span class="menu">Mi jornada</span>. Si la empresa tiene varias sedes, responda “¿Desde qué sede trabajas hoy?”.</li>
+    <li>Clic en <span class="btn">Iniciar jornada</span>. La hora de llegada queda registrada.</li>
+  </ol>
+
+  <h3>11.2 Registrar una llamada</h3>
+  <ol>
+    <li>En “Llamada actual”, clic en <span class="btn">Contestada</span> o <span class="btn">No contestada</span>.</li>
+    <li>Si fue contestada, responda “¿En qué quedó?”: <span class="btn">Venta</span>, <span class="btn">No interesado</span>, <span class="btn">Seguimiento</span> o <span class="btn">Agendó cita</span>.</li>
+    <li>Si la llamada era para confirmar una cita ya agendada, clic en <span class="btn">Era para confirmar una cita ya agendada</span> y elija: Confirma que viene, Posible asistencia, Reprograma, No contesta o Cancela.</li>
+  </ol>
+
+  <h3>11.3 Otras gestiones</h3>
+  <ul>
+    <li><span class="btn">Llamada administrativa</span>: Asociados, Enrolamiento, Certificado, Renovaciones o No contestó.</li>
+    <li><span class="btn">Atención presencial</span>: Comercial (Venta, Venta externa, Seguimiento, Declinó, Vino por su cita) o Administrativa.</li>
+  </ul>
+
+  <h3>11.4 Pausas</h3>
+  <p>Clic en <span class="btn">Baño</span>, <span class="btn">Capacitación</span> o <span class="btn">Almuerzo</span>. Durante la pausa no se puede registrar nada. Se termina con <span class="btn">Volver al trabajo</span>.</p>
+
+  <h3>11.5 Cola del CRM</h3>
+  <p>Tres tarjetas: <strong>Inicial</strong>, <strong>Medio día</strong> y <strong>Final</strong>. Cada una pide Chats por responder, Tareas del día y Tareas caducadas → <span class="btn">Guardar</span>.</p>
+
+  <h3>11.6 Cerrar la jornada</h3>
+  <ol>
+    <li>Clic en <span class="btn">Cerrar jornada</span> y confirme.</li>
+    <li>Se muestra el reporte del día: Tiempo laborado, Tiempo efectivo, En pausas, Llamadas, Promedio por llamada y Atenciones presenciales.</li>
+    <li>Si faltó algo, <span class="btn">Seguir registrando</span> reabre la jornada.</li>
+  </ol>
+</section>
+
+<!-- ============ 12 ============ -->
+<section class="chapter">
+  <h2>12. Gestión Diaria</h2>
+  <p class="ruta">Ruta: /e/[empresa]/gestion-diaria · Menú: <span class="menu">Operación → Gestión Diaria</span> <span class="roles">Todos los miembros de la empresa</span></p>
+  <p>Es la vista tipo Excel de las jornadas: Llegada (en rojo si llegó tarde), Llamadas, Contestadas, Ventas, Agendas, Atención, Cola del CRM y Contactabilidad. Sirve para registrar un día de memoria o corregir uno.</p>
+
+  <h3>12.1 Registrar o corregir una jornada</h3>
+  <ol>
+    <li>Clic en <span class="btn">Registrar jornada</span>.</li>
+    <li><strong>Fecha</strong>, <strong>Comercial</strong> (solo quien administra puede elegir a otro), <strong>Sede</strong> y <strong>Hora de llegada</strong> (muestra la hora esperada).</li>
+    <li><strong>Llamadas</strong>: Efectiva (venta digital), Seguimiento, Agenda, No interesado, Postventa, No contestada. Contestadas y Total se calculan solos.</li>
+    <li><strong>Agendas</strong>: Confirmada, Posible asistencia, Reprograma, No contesta, Cancela.</li>
+    <li><strong>Atención venta presencial</strong>: Venta exitosa, Venta externa, Seguimiento, Declinado. <strong>Atención agenda</strong>: Agenda atendida. <strong>Atención administrativa</strong>: Asociado, Enrolamiento, Certificados, Renovaciones.</li>
+    <li><strong>Cola del CRM</strong>: Chats, Tareas del día y Tareas caducadas, cada uno en Inicial, Medio y Final.</li>
+    <li><strong>Hora de salida</strong> y <strong>Notas</strong>.</li>
+    <li>Clic en <span class="btn">Guardar jornada</span>.</li>
+  </ol>
+  <div class="box">Hay una sola fila por persona y día: volver a guardar la misma fecha corrige en lugar de duplicar. Si el día se registró desde Mi jornada, los contadores salen bloqueados y solo se editan horas, cola del CRM y notas. Nadie puede registrar fechas futuras.</div>
+</section>
+
+<!-- ============ 13 ============ -->
+<section class="chapter">
+  <h2>13. Agendas y conexión con Kommo</h2>
+
+  <h3>13.1 Ver las agendas <span class="roles">Todos los miembros de la empresa</span></h3>
+  <p class="ruta">Ruta: /e/[empresa]/agendas · Menú: <span class="menu">Operación → Agendas</span></p>
+  <p>Las agendas son las tareas del calendario de Kommo. Aquí solo se consultan: Fecha, Hora, Cliente, Celular, Responsable, Resultado, Observación y Origen (Kommo con enlace al lead, Excel o App). Se crean y corrigen en Kommo.</p>
+  <p>Quien administra la empresa, si Kommo está conectado, puede traer un rango a mano: <span class="btn">Traer de Kommo</span> → Desde y Hasta → <span class="btn">Traer</span>.</p>
+
+  <h3>13.2 Conectar la empresa con Kommo <span class="roles">Super Admin</span></h3>
+  <p class="ruta">Ruta: /e/[empresa]/kommo · Menú: <span class="menu">Administrar → Kommo</span></p>
+  <ol>
+    <li>En Kommo, cree un token de larga duración (Ajustes → Integraciones → su integración → Token).</li>
+    <li>En Command Center, en “Conexión”, escriba el <strong>Subdominio</strong> (lo que va antes de .kommo.com) y pegue el <strong>Token de larga duración</strong>.</li>
+    <li>Clic en <span class="btn">Conectar</span>. La aplicación prueba la conexión y lee la estructura de la cuenta.</li>
+  </ol>
+
+  <h3>13.3 Configurar qué se trae <span class="roles">Super Admin · Coordinador</span></h3>
+  <ol>
+    <li><strong>Tipo de tarea</strong> que cuenta como agenda (“Todas las tareas” por defecto).</li>
+    <li><strong>Sede si el responsable no tiene una</strong>.</li>
+    <li>Relacione cada usuario de Kommo con un comercial del equipo.</li>
+    <li>Clic en <span class="btn">Guardar configuración</span>. <span class="btn">Releer</span> vuelve a cargar usuarios y tipos desde Kommo.</li>
+  </ol>
+
+  <h3>13.4 Activar el aviso automático (webhook) <span class="roles">Super Admin</span></h3>
+  <p>Con el webhook, cada tarea creada o cambiada en Kommo llega sola a Command Center.</p>
+  <ul>
+    <li><strong>Opción A</strong>: clic en <span class="btn">Instalar en Kommo</span>. La aplicación lo registra por usted.</li>
+    <li><strong>Opción B</strong>: clic en <span class="btn">Generar dirección</span>, copie la dirección en Kommo (Ajustes → Integraciones → Webhooks) siguiendo los pasos de la pantalla, y verifique con <span class="btn">Comprobar</span>. “Últimos avisos” muestra lo que va llegando.</li>
+  </ul>
+  <p><span class="btn">Cambiar token</span> y <span class="btn">Desconectar</span> están en la misma pantalla.</p>
+</section>
+
+<!-- ============ 14 ============ -->
+<section class="chapter">
+  <h2>14. Ingreso y Gasto (caja)</h2>
+  <p class="ruta">Ruta: /e/[empresa]/caja · Menú: <span class="menu">Operación → Ingreso y Gasto</span> <span class="roles">Super Admin · Coordinador</span></p>
+  <ol>
+    <li>Clic en <span class="btn">Nuevo movimiento</span>.</li>
+    <li>Elija la pestaña <span class="btn">Salida</span> o <span class="btn">Entrada</span>.</li>
+    <li>Complete Fecha, Sede, <strong>Valor</strong> (siempre en positivo; la pestaña decide el signo), Concepto, Medio de pago, Responsable, <strong>A nombre de</strong>, <strong>Factura o soporte</strong> y Observación.</li>
+    <li>Clic en <span class="btn">Guardar</span>.</li>
+  </ol>
+  <p>Arriba se ven Movimientos, Entradas, Salidas y Neto del filtro actual.</p>
+</section>
+
+<!-- ============ 15 ============ -->
+<section class="chapter">
+  <h2>15. Objetivos (metas del mes)</h2>
+  <p class="ruta">Ruta: /e/[empresa]/objetivos · Menú: <span class="menu">Objetivos</span> <span class="roles">Ven todos · Editan Super Admin y Coordinador</span></p>
+  <ol>
+    <li>Elija el mes con el filtro de la barra superior.</li>
+    <li><strong>Metas de empresa</strong>: escriba la meta de Ventas mensuales, Licencias mensuales, Facturación y Recaudo. Cada meta se guarda al salir del campo. Las columnas Real, Cumplimiento y Proyección a fin de mes se calculan solas.</li>
+    <li><strong>Metas por responsable</strong>: ventas efectivas, contactabilidad y conversión por llamada, por cada comercial con cuenta.</li>
+    <li>Para arrancar un mes rápido: <span class="btn">Copiar del mes anterior</span>. No sobrescribe metas ya escritas.</li>
+  </ol>
+  <p>Una meta en 0 se borra y aparece “sin meta”. Si la suma de las metas individuales no coincide con la de empresa, sale una advertencia ámbar que no bloquea. Quien no puede editar ve “Estás viendo las metas en modo lectura”.</p>
+</section>
+
+<!-- ============ 16 ============ -->
+<section class="chapter">
+  <h2>16. Dashboard e Indicadores</h2>
+
+  <h3>16.1 Dashboard <span class="roles">Todos los miembros de la empresa</span></h3>
+  <p class="ruta">Ruta: /e/[empresa] · Menú: <span class="menu">Dashboard</span></p>
+  <p>Resume el mes elegido: Ventas, Licencias, Renovaciones, Facturación y Recaudo; la placa <strong>Rentabilidad de la pauta</strong> (Facturación, Ventas, Inversión en pauta, ROAS, Costo por venta); Evolución diaria; Embudo de la gestión; Ventas por financiación; Recaudo por medio de pago; comparativo Por sede; Ranking de comerciales; y <strong>Registro de hoy</strong>, con quién ya registró su jornada.</p>
+
+  <h3>16.2 Indicadores <span class="roles">Ven todos · Editan Super Admin y Coordinador</span></h3>
+  <p class="ruta">Ruta: /e/[empresa]/indicadores · Menú: <span class="menu">Indicadores</span></p>
+  <ol>
+    <li>Elija el período: <span class="btn">Mes</span>, <span class="btn">Día</span> o <span class="btn">Rango</span>, y opcionalmente uno o varios comerciales.</li>
+    <li>Revise las secciones: jornadas registradas, validación de ventas presenciales y digitales, distribución por canal, promedios por jornada, tarjetas de <strong>Indicadores con meta</strong> (semáforo verde, ámbar o rojo), totales por comercial y cantidad de ventas.</li>
+  </ol>
+
+  <h3>16.3 Digitar la inversión en pauta: ROAS y costo por venta <span class="roles">Super Admin · Coordinador</span></h3>
+  <ol>
+    <li>En Indicadores, sección <strong>Rentabilidad de la pauta</strong>.</li>
+    <li>En el campo <strong>Inversión en pauta · (mes)</strong>, escriba el acumulado del mes en pesos. Se guarda al salir del campo o con Enter. Vacío borra el dato.</li>
+    <li>La aplicación calcula: <strong>ROAS</strong> = facturación ÷ inversión; <strong>Costo por venta</strong> = inversión ÷ número de ventas. Sin inversión anotada muestran “—”.</li>
+  </ol>
+  <p>Actualice la inversión cada vez que cambie (cada dos días, según la coordinación). En un rango de varios meses se suma la inversión de cada mes.</p>
+
+  <h3>16.4 Días hábiles y metas de cada indicador <span class="roles">Super Admin · Coordinador</span></h3>
+  <ul>
+    <li><strong>Días hábiles · (mes)</strong>: escriba de 1 a 31. Contra eso se mide el absentismo y la proyección. Vacío vuelve al cálculo por defecto (lunes a sábado).</li>
+    <li>En cada tarjeta de indicador, la meta se edita en el sitio. Vacío vuelve a la meta por defecto: Contactabilidad 70 %, Conversión de agenda 60 %, Confirmación de agenda 40 %, Venta presencial 70 %, Volumen de agendas 25 %, Seguimiento 55 %, Agenda a venta 30 %, Llamadas contestadas al día 45, Agendas efectivas al día 6, Días laborados 80 %.</li>
+  </ul>
+</section>
+
+<!-- ============ 17 ============ -->
+<section class="chapter">
+  <h2>17. Auditoría</h2>
+  <p class="ruta">Ruta: /admin/auditoria · Menú: <span class="menu">Plataforma → Auditoría</span> <span class="roles">Super Admin</span></p>
+  <p>Lista de solo lectura, 50 filas por página, con Cuándo, Quién, Acción (Creación, Cambio, Eliminación, Restauración, Archivado, Asignación, Desasignación, Borrado definitivo) y Entidad.</p>
+  <p><strong>Qué queda registrado</strong>: creación, edición, logo, módulos, catálogos y archivado de empresas; sedes; creación, contraseña, correo, rol, estado y nombre de usuarios; asignaciones del equipo; productos; días hábiles, metas de indicadores e inversión en pauta; apertura y cierre de jornadas; borrado definitivo de empresas.</p>
+  <p><strong>Qué no queda registrado</strong>: el guardado de ventas, pagos, jornadas, caja y objetivos. Esos registros llevan su propio responsable y fecha, que es la trazabilidad que tienen.</p>
+</section>
+
+<!-- ============ 18 ============ -->
+<section class="chapter">
+  <h2>18. Cargue o actualización de la base de datos</h2>
+  <p>La carga masiva del histórico <strong>no se hace desde la aplicación</strong>: se hace con un programa de importación que corre el equipo técnico contra los archivos de Excel originales (formato <code>.xlsb</code>, uno por oficina).</p>
+
+  <h3>18.1 Cómo funciona</h3>
+  <ul>
+    <li>Cada archivo de Excel es una oficina y cada oficina es una empresa en Command Center. El nombre del archivo define la empresa.</li>
+    <li>Carga ventas, pagos, jornadas y agendas del histórico, y crea las fichas de comerciales que aparezcan como responsables.</li>
+    <li>Es <strong>idempotente</strong>: volver a correrlo con el mismo archivo reemplaza lo que ese archivo había dejado, en vez de duplicar. Nunca toca lo capturado desde la aplicación.</li>
+    <li>Corre con la clave de servicio de la base de datos, por eso no está al alcance de los usuarios.</li>
+  </ul>
+
+  <h3>18.2 Cómo pedir una carga o actualización</h3>
+  <ol>
+    <li>Envíe al equipo técnico el archivo <code>.xlsb</code> de la oficina con la misma estructura de hojas del Excel original.</li>
+    <li>Indique si es carga nueva o actualización de un archivo ya cargado.</li>
+    <li>El equipo técnico corre primero una simulación (sin escribir) para revisar filas rechazadas, y luego la carga real.</li>
+    <li>Verifique en la aplicación: en Ventas y Pagos las filas importadas muestran la etiqueta “aprox.” cuando la fecha venía incompleta.</li>
+  </ol>
+  <p>Para las <strong>cuentas de acceso</strong> del equipo importado, use “Crear N cuentas” (7.4) y luego corrija los correos (3.2).</p>
+</section>
+
+<!-- ============ 19 ============ -->
+<section class="chapter">
+  <h2>19. Preguntas frecuentes y mensajes de la aplicación</h2>
+  <table>
+    <tr><th style="width:38%">Mensaje o situación</th><th>Qué significa y qué hacer</th></tr>
+    <tr><td>“Correo o contraseña incorrectos.”</td><td>Revise el correo. Si olvidó la clave, pida al Super Admin que le defina una nueva (3.3).</td></tr>
+    <tr><td>“Todavía no tienes acceso a ninguna empresa”</td><td>La cuenta existe pero no está en el equipo de ninguna empresa. Un administrador debe agregarla (4.2).</td></tr>
+    <tr><td>“Tu acceso está suspendido”</td><td>La cuenta está inactiva. El Super Admin la activa (3.6).</td></tr>
+    <tr><td>“Tu cuenta no está enlazada a nadie del equipo”</td><td>Falta el enlace entre cuenta y ficha de comercial (4.3).</td></tr>
+    <tr><td>“Módulo no habilitado”</td><td>Ese módulo está apagado en la empresa. Se activa en Configuración (5.3).</td></tr>
+    <tr><td>“Sin acceso a X” / “Empresa no encontrada”</td><td>Está entrando a una empresa que no le fue asignada o cuya dirección cambió. Use “Ver mis empresas”.</td></tr>
+    <tr><td>“No se puede registrar una fecha futura.”</td><td>Ningún registro admite fechas posteriores a hoy.</td></tr>
+    <tr><td>No veo el botón para corregir una venta</td><td>Solo el Super Admin corrige ventas guardadas (9.2).</td></tr>
+    <tr><td>El pago no deja guardar sin comprobante</td><td>La venta es a crédito: el comprobante es obligatorio (10.1).</td></tr>
+    <tr><td>“Hay N comercial(es) asignados. Muévelos a otra sede primero.”</td><td>No se archiva una sede con equipo. Cambie la sede de cada persona en Equipo (7.2).</td></tr>
+    <tr><td>ROAS y costo por venta salen en “—”</td><td>Falta digitar la inversión en pauta del mes (16.3).</td></tr>
+    <tr><td>Cerré la pestaña y al volver me pidió entrar</td><td>Normal después de más de una hora sin actividad. Si el navegador guardó la sesión, entra solo.</td></tr>
+    <tr><td>Error 1102 o página en blanco al cargar</td><td>Límite del servidor (ver Anexo A). Recargue la página. Si se repite con frecuencia, avise al equipo técnico.</td></tr>
+  </table>
+</section>
+
+<!-- ============ ANEXO TÉCNICO ============ -->
+<section class="chapter">
+  <h2>Anexo A. Documentación técnica</h2>
+
+  <h3>A.1 Tecnologías usadas</h3>
+  <table>
+    <tr><th style="width:30%">Capa</th><th>Tecnología</th></tr>
+    <tr><td>Aplicación web</td><td>Next.js 16 (App Router) con React 19 y TypeScript. Interfaz con Tailwind CSS 4 y componentes shadcn/ui (Radix UI). Gráficas con Recharts. Iconos Lucide.</td></tr>
+    <tr><td>Base de datos y autenticación</td><td>Supabase: PostgreSQL con seguridad por filas (RLS), Supabase Auth para las cuentas, Supabase Storage para comprobantes, Vault para el token de Kommo. 53 migraciones versionadas en el repositorio.</td></tr>
+    <tr><td>Servidor y despliegue</td><td>Cloudflare Workers con el adaptador OpenNext (@opennextjs/cloudflare). Despliegue automático en cada push a la rama <code>main</code> mediante Workers Builds.</td></tr>
+    <tr><td>Código fuente</td><td>GitHub, repositorio privado <code>jonniermartinez/comman-center-</code>. Rama de producción: <code>main</code>.</td></tr>
+    <tr><td>Integraciones</td><td>Kommo CRM (API v4 y webhooks) para las agendas.</td></tr>
+    <tr><td>Pruebas</td><td>Playwright (pruebas de seguridad y de funcionalidades, punta a punta).</td></tr>
+    <tr><td>Importación del histórico</td><td>Scripts en Python (<code>tools/importar_excel.py</code>, <code>crear_cuentas.py</code>, <code>actualizar_correos.py</code>).</td></tr>
+  </table>
+
+  <h3>A.2 Servicios, cuentas y direcciones</h3>
+  <table>
+    <tr><th style="width:22%">Servicio</th><th style="width:38%">Identificación</th><th>Cuenta / correo</th></tr>
+    <tr><td>Aplicación en producción</td><td>https://comman-center.commandcentergenelypse.workers.dev</td><td>—</td></tr>
+    <tr><td>Cloudflare</td><td>Cuenta “Command center”, ID <code>1f5451cb956ae09fe7a1d8074cef2912</code>. Worker <code>comman-center</code> (sin la “d”). Subdominio <code>commandcentergenelypse.workers.dev</code>.</td><td>commandcentergenelypse@gmail.com</td></tr>
+    <tr><td>Supabase</td><td>Proyecto <code>yooqgcqdssvtkkschkku</code> · https://yooqgcqdssvtkkschkku.supabase.co</td><td>commandcentergenelypse@gmail.com</td></tr>
+    <tr><td>Dominio</td><td>Registrado en <strong>Namecheap</strong>. Se conecta al Worker desde Cloudflare → Workers & Pages → comman-center → Settings → Domains & Routes → Add custom domain. Al cambiarlo hay que actualizar <code>NEXT_PUBLIC_SITE_URL</code> y las Redirect URLs en Supabase → Authentication → URL Configuration.</td><td>commandcentergenelypse@gmail.com</td></tr>
+    <tr><td>YouTube (video guía)</td><td>https://www.youtube.com/watch?v=f_lu5UzZgZo</td><td>commandcentergenelypse@gmail.com</td></tr>
+    <tr><td>GitHub</td><td>github.com/jonniermartinez/comman-center- (privado)</td><td>Cuenta del desarrollador (jonniermartinez)</td></tr>
+    <tr><td>Kommo</td><td>Una integración por empresa; token de larga duración guardado en Vault de Supabase</td><td>La cuenta Kommo de cada empresa</td></tr>
+  </table>
+
+  <h3>A.3 Límites de cada servicio</h3>
+  <table>
+    <tr><th style="width:22%">Servicio</th><th style="width:16%">Plan</th><th>Límites que aplican</th></tr>
+    <tr><td>Cloudflare Workers</td><td>Gratuito</td><td>100.000 peticiones al día. <strong>10 ms de CPU por petición</strong>: es el límite que hoy produce el “Error 1102 · Worker exceeded resource limits” en algunas cargas (medido entre 16 % y 20 % de fallos sin carga, más bajo carga sostenida). Tamaño del worker 3 MB comprimido (hoy usa 1,37 MB). Recomendación: pasar a Workers Paid (USD 5 al mes) que da 10 millones de peticiones y 30 segundos de CPU por petición. Es un cambio de plan, no de código.</td></tr>
+    <tr><td>Supabase</td><td>Gratuito</td><td>500 MB de base de datos, 1 GB de almacenamiento de archivos (comprobantes), 5 GB de transferencia al mes, 50.000 usuarios activos al mes, 2 proyectos activos. <strong>El proyecto se pausa tras 7 días sin actividad</strong> y hay que reanudarlo desde el panel. Sin copias de seguridad automáticas. El plan Pro (USD 25 al mes) da 8 GB de base, 100 GB de archivos, 250 GB de transferencia, copias diarias de 7 días y no se pausa.</td></tr>
+    <tr><td>Supabase Storage (comprobantes)</td><td>—</td><td>Bucket privado <code>comprobantes-pago</code>. Imágenes o PDF de hasta 5 MB por archivo. Enlaces firmados que vencen en una hora.</td></tr>
+    <tr><td>Supabase Auth</td><td>—</td><td>Sin correos: no se usa SMTP, no hay invitaciones ni recuperación por correo. Registro público apagado. Sesión de una hora renovada por el navegador.</td></tr>
+    <tr><td>Logos de empresa</td><td>—</td><td>PNG, JPG, WEBP o SVG hasta 2 MB.</td></tr>
+    <tr><td>Kommo API</td><td>Según plan de Kommo</td><td>Kommo limita a 7 peticiones por segundo por cuenta. El webhook evita consultas repetidas.</td></tr>
+    <tr><td>Namecheap (dominio)</td><td>Registro anual</td><td>Renovación anual del dominio. El DNS se administra en Cloudflare una vez apuntado.</td></tr>
+    <tr><td>GitHub</td><td>Gratuito</td><td>Repositorio privado ilimitado. Workers Builds de Cloudflare: 3.000 minutos de build al mes y 1 build concurrente en plan gratuito.</td></tr>
+  </table>
+  <p class="small">Los límites de los planes gratuitos son los publicados por cada proveedor a la fecha de este documento y pueden cambiar; verifíquelos en los paneles de cada servicio antes de tomar decisiones de plan.</p>
+
+  <h3>A.4 Variables de entorno</h3>
+  <table>
+    <tr><th>Variable</th><th>Uso</th></tr>
+    <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td><td>Dirección del proyecto de Supabase.</td></tr>
+    <tr><td><code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code></td><td>Clave publicable. Es la única clave que usa la aplicación; todo lo que alcanza está acotado por RLS. No se usa la clave de servicio en la aplicación.</td></tr>
+    <tr><td><code>NEXT_PUBLIC_SITE_URL</code></td><td>Dirección pública del sitio. Cambiarla al poner el dominio propio.</td></tr>
+  </table>
+
+  <h3>A.5 Modelo de seguridad</h3>
+  <ul>
+    <li>Toda tabla tiene RLS activo. Las pantallas ocultan lo que no corresponde, pero la defensa real está en la base de datos: aunque alguien fuerce una petición, Postgres devuelve vacío.</li>
+    <li>Nada se borra físicamente salvo el “Eliminar para siempre” de una empresa: usuarios, empresas, sedes y productos se dan de baja de forma lógica para conservar el histórico.</li>
+    <li>La administración de cuentas (crear, cambiar correo, definir contraseña) la hacen funciones de Postgres que verifican que quien llama es Super Admin.</li>
+    <li>Cada registro guarda el nombre del responsable como copia fija, así los reportes históricos no cambian aunque se renombre o elimine a la persona.</li>
+    <li>Las vistas de reportes se ejecutan con los permisos de quien consulta (security invoker), no del dueño.</li>
+  </ul>
+
+  <h3>A.6 Operación y mantenimiento</h3>
+  <ul>
+    <li><strong>Despliegue</strong>: cada push a <code>main</code> publica en producción. Se puede publicar a mano con <code>npm run deploy</code>.</li>
+    <li><strong>Logs</strong>: Cloudflare → Workers → comman-center → Logs. En terminal: <code>npx wrangler tail comman-center --format pretty</code>.</li>
+    <li><strong>Base de datos</strong>: migraciones en <code>supabase/migrations/</code>, aplicadas en orden. Panel de Supabase para SQL, usuarios y archivos.</li>
+    <li><strong>Primer Super Admin</strong>: el primer usuario creado en Supabase → Authentication → Users nace Super Admin. Los siguientes se crean desde la aplicación.</li>
+    <li><strong>Documentos en el repositorio</strong>: <code>docs/ARQUITECTURA.md</code>, <code>docs/SUPABASE.md</code>, <code>docs/DESPLIEGUE.md</code> y <code>docs/feedback/</code> con los requerimientos recibidos por fecha.</li>
+  </ul>
+
+  <div class="video" style="margin-top:24px">
+    <strong>Video guía completo</strong><br>
+    <a href="https://www.youtube.com/watch?v=f_lu5UzZgZo">https://www.youtube.com/watch?v=f_lu5UzZgZo</a><br>
+    <span class="small">Cuenta de YouTube: commandcentergenelypse@gmail.com</span>
+  </div>
+</section>
+
+</body>
+</html>
