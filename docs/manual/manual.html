@@ -61,7 +61,7 @@
     <span class="small">Cuenta: commandcentergenelypse@gmail.com. Cada capítulo de este PDF corresponde a una parte del video; use el índice para ir directo a la función que necesita.</span>
   </div>
   <div class="meta">
-    Aplicativo: <strong>https://comman-center.commandcentergenelypse.workers.dev</strong><br>
+    Aplicativo: <strong>https://commandcenter.genelypsepartner.com</strong><br>
     Versión del documento: 23 de septiembre de 2026 · con capturas de pantalla y enlaces al video
   </div>
 </section>
@@ -148,7 +148,7 @@
   <h3>2.1 Iniciar sesión <span class="roles">Todos</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=29s">▶ 0:29</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=755s">▶ 12:35</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1181s">▶ 19:41</a></p>
   <p class="ruta">Ruta: /login</p>
   <ol>
-    <li>Abra <strong>https://comman-center.commandcentergenelypse.workers.dev</strong>.</li>
+    <li>Abra <strong>https://commandcenter.genelypsepartner.com</strong>.</li>
     <li>En la tarjeta “Entrar”, escriba su <strong>Correo</strong> y su <strong>Contraseña</strong>.</li>
     <li>Clic en <span class="btn">Entrar</span>. La aplicación abre el listado de Empresas.</li>
   </ol>
@@ -666,10 +666,10 @@
   <h3>A.2 Servicios, cuentas y direcciones</h3>
   <table>
     <tr><th style="width:22%">Servicio</th><th style="width:38%">Identificación</th><th>Cuenta / correo</th></tr>
-    <tr><td>Aplicación en producción</td><td>https://comman-center.commandcentergenelypse.workers.dev</td><td>—</td></tr>
+    <tr><td>Aplicación en producción</td><td>https://commandcenter.genelypsepartner.com (la dirección técnica https://comman-center.commandcentergenelypse.workers.dev sigue respondiendo)</td><td>—</td></tr>
     <tr><td>Cloudflare</td><td>Cuenta “Command center”, ID <code>1f5451cb956ae09fe7a1d8074cef2912</code>. Worker <code>comman-center</code> (sin la “d”). Subdominio <code>commandcentergenelypse.workers.dev</code>.</td><td>commandcentergenelypse@gmail.com</td></tr>
     <tr><td>Supabase</td><td>Proyecto <code>yooqgcqdssvtkkschkku</code> · https://yooqgcqdssvtkkschkku.supabase.co</td><td>commandcentergenelypse@gmail.com</td></tr>
-    <tr><td>Dominio</td><td>Registrado en <strong>Namecheap</strong>. Se conecta al Worker desde Cloudflare → Workers & Pages → comman-center → Settings → Domains & Routes → Add custom domain. Al cambiarlo hay que actualizar <code>NEXT_PUBLIC_SITE_URL</code> y las Redirect URLs en Supabase → Authentication → URL Configuration.</td><td>commandcentergenelypse@gmail.com</td></tr>
+    <tr><td>Dominio</td><td><strong>genelypsepartner.com</strong>, registrado en <strong>Namecheap</strong> el 22 de septiembre de 2026; vence el 22 de septiembre de 2027 y se renueva cada año. El subdominio commandcenter apunta al Worker por Cloudflare. Se conecta al Worker desde Cloudflare → Workers & Pages → comman-center → Settings → Domains & Routes → Add custom domain. Al cambiarlo hay que actualizar <code>NEXT_PUBLIC_SITE_URL</code> y las Redirect URLs en Supabase → Authentication → URL Configuration.</td><td>commandcentergenelypse@gmail.com</td></tr>
     <tr><td>YouTube (video guía)</td><td>https://www.youtube.com/watch?v=f_lu5UzZgZo</td><td>commandcentergenelypse@gmail.com</td></tr>
     <tr><td>GitHub</td><td>github.com/jonniermartinez/comman-center- (privado)</td><td>Cuenta del desarrollador (jonniermartinez)</td></tr>
     <tr><td>Kommo</td><td>Una integración por empresa; token de larga duración guardado en Vault de Supabase</td><td>La cuenta Kommo de cada empresa</td></tr>
@@ -684,7 +684,7 @@
     <tr><td>Supabase Auth</td><td>—</td><td>Sin correos: no se usa SMTP, no hay invitaciones ni recuperación por correo. Registro público apagado. Sesión de una hora renovada por el navegador.</td></tr>
     <tr><td>Logos de empresa</td><td>—</td><td>PNG, JPG, WEBP o SVG hasta 2 MB.</td></tr>
     <tr><td>Kommo API</td><td>Según plan de Kommo</td><td>Kommo limita a 7 peticiones por segundo por cuenta. El webhook evita consultas repetidas.</td></tr>
-    <tr><td>Namecheap (dominio)</td><td>Registro anual</td><td>Renovación anual del dominio. El DNS se administra en Cloudflare una vez apuntado.</td></tr>
+    <tr><td>Namecheap (dominio)</td><td>Registro anual</td><td>genelypsepartner.com vence el 22 de septiembre de 2027; renovarlo antes de esa fecha o la aplicación deja de abrir por esa dirección. El DNS se administra en Cloudflare una vez apuntado.</td></tr>
     <tr><td>GitHub</td><td>Gratuito</td><td>Repositorio privado ilimitado. Workers Builds de Cloudflare: 3.000 minutos de build al mes y 1 build concurrente en plan gratuito.</td></tr>
   </table>
   <p class="small">Los límites de los planes gratuitos son los publicados por cada proveedor a la fecha de este documento y pueden cambiar; verifíquelos en los paneles de cada servicio antes de tomar decisiones de plan.</p>
