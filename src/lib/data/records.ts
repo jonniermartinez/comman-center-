@@ -82,6 +82,8 @@ async function consultar<T>(
     campoFecha: string
     orden?: string
     busqueda?: string[]
+    /** Condición extra en sintaxis de `.or()` de PostgREST. */
+    condicion?: string
   },
 ): Promise<Pagina<T>> {
   // El cliente se usa sin tipar para poder armar la consulta una sola vez para
@@ -102,10 +104,16 @@ async function consultar<T>(
   if (filtros.hasta) query = query.lte(opciones.campoFecha, filtros.hasta)
   if (filtros.branchId) query = query.eq("branch_id", filtros.branchId)
   if (filtros.staffId) query = query.eq("staff_id", filtros.staffId)
+  // PostgREST solo atiende un `or` por consulta: si hay condición y búsqueda,
+  // van anidadas en uno solo.
+  const grupos: string[] = []
+  if (opciones.condicion) grupos.push(opciones.condicion)
   if (filtros.q && opciones.busqueda?.length) {
     const patron = `%${filtros.q}%`
-    query = query.or(opciones.busqueda.map((c) => `${c}.ilike.${patron}`).join(","))
+    grupos.push(opciones.busqueda.map((c) => `${c}.ilike.${patron}`).join(","))
   }
+  if (grupos.length === 1) query = query.or(grupos[0])
+  if (grupos.length === 2) query = query.or(`and(or(${grupos[0]}),or(${grupos[1]}))`)
 
   const { data, count, error } = await query
   if (error) throw new Error(`${tabla}: ${error.message}`)
@@ -150,6 +158,9 @@ export function listAppointments(companyId: string, filtros: Filtros) {
   return consultar<AppointmentRow>("appointments", companyId, filtros, {
     campoFecha: "scheduled_at",
     busqueda: ["nombre", "celular"],
+    // Una tarea de Kommo sin lead llega sin nadie detrás: no es una cita y en
+    // la lista solo sale como una fila de guiones.
+    condicion: "nombre.not.is.null,celular.not.is.null,responsable_nombre.not.is.null,resultado.not.is.null",
   })
 }
 
