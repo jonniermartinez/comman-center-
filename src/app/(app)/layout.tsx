@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
 import { AppShell } from "@/components/app-shell"
@@ -19,10 +18,6 @@ import { BASE_VACIA, RemoteProvider } from "@/lib/store/remote"
  */
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const session = await requireSession()
-
-  // Un invitado que aún no definió contraseña no tiene nada que hacer adentro:
-  // RLS le negaría hasta los catálogos. Se le manda a completar el alta.
-  if (session.profile.status === "invitado") redirect("/definir-clave")
 
   // Suspendido o eliminado: no se consulta nada, no se muestran ceros.
   const snapshot = session.isActive ? await loadSnapshot() : BASE_VACIA

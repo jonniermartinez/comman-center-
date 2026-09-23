@@ -1,7 +1,6 @@
 "use client"
 
-import { ChevronsUpDown, KeyRound, LogOut, Moon, Sun, SunMoon } from "lucide-react"
-import Link from "next/link"
+import { ChevronsUpDown, LogOut, Moon, Sun, SunMoon } from "lucide-react"
 
 import { signOut } from "@/lib/auth/actions"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -59,13 +58,6 @@ export function UserMenu() {
           <p className="truncate text-xs text-muted-foreground">{me.email}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-
-        <DropdownMenuItem asChild>
-          <Link href="/definir-clave">
-            <KeyRound className="size-4" />
-            Cambiar contraseña
-          </Link>
-        </DropdownMenuItem>
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>

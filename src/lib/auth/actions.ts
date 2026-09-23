@@ -43,27 +43,3 @@ export async function signOut() {
   revalidatePath("/", "layout")
   redirect("/login")
 }
-
-/** Define o cambia la contraseña del usuario en sesión. */
-export async function updatePassword(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const password = String(formData.get("password") ?? "")
-  const confirm = String(formData.get("confirm") ?? "")
-
-  if (password.length < 8) return { error: "La contraseña debe tener al menos 8 caracteres." }
-  if (password !== confirm) return { error: "Las dos contraseñas no coinciden." }
-
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: "La sesión expiró. Vuelve a entrar." }
-
-  const { error } = await supabase.auth.updateUser({ password })
-  if (error) return { error: error.message }
-
-  revalidatePath("/", "layout")
-  redirect("/empresas")
-}

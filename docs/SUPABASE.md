@@ -59,8 +59,8 @@ contraseña. No hace falta SMTP.
 Las cuentas las crea el super admin en Admin → Usuarios con nombre, correo,
 teléfono, contraseña y rol, y se la dicta a la persona. Desde el menú de cada
 usuario, "Definir contraseña" le pone una nueva: es la única recuperación que
-hay (`admin_set_password`, migración 035). La persona la cambia después desde
-su propio menú.
+hay (`admin_set_password`, migración 035). Nadie cambia su propia
+contraseña: la clave la administra el super admin.
 
 Las cuentas del equipo que nacieron con un correo provisional `.invalid` se
 arreglan desde Editar: se les pone el correo real (`admin_change_email`,
