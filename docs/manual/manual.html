@@ -26,7 +26,8 @@
   .box { background: var(--soft); border-left: 4px solid var(--accent); padding: 8px 12px; margin: 10px 0; border-radius: 4px; }
   .warn { background: var(--warn); border-left: 4px solid var(--warnb); padding: 8px 12px; margin: 10px 0; border-radius: 4px; }
   .roles { display: inline-block; font-size: 8.5pt; padding: 1px 8px; border-radius: 10px; background: #ece7f8; color: var(--accent); margin-left: 6px; vertical-align: middle; font-weight: 600; }
-  .ruta { font-family: Menlo, Consolas, monospace; font-size: 9pt; color: var(--muted); }
+  .ruta { font-size: 9.5pt; color: var(--muted); }
+  .ruta a { color: var(--accent2); text-decoration: none; word-break: break-all; }
   .btn { display: inline-block; border: 1px solid #b9b3d6; border-radius: 4px; padding: 0 5px; font-size: 9.5pt; background: #fff; white-space: nowrap; }
   .menu { font-weight: 600; }
   table { border-collapse: collapse; width: 100%; margin: 6px 0 12px; font-size: 9.5pt; page-break-inside: auto; }
@@ -39,7 +40,9 @@
   .fn { display: block; margin-top: 2px; }
   code { font-family: Menlo, Consolas, monospace; font-size: 9pt; background: #f2f0f7; padding: 0 4px; border-radius: 3px; }
   .small { font-size: 9pt; color: var(--muted); }
-  .ytline { margin: -2px 0 8px; font-size: 9.5pt; color: var(--muted); }
+  .ytline { margin: 0 0 10px; }
+  a.ytbtn { display: inline-block; background: #e8261f; color: #fff; text-decoration: none; font-weight: 700; font-size: 9.5pt; padding: 4px 12px 4px 9px; border-radius: 999px; margin: 2px 4px 2px 0; box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+  a.ytbtn .play { display: inline-block; background: #fff; color: #e8261f; border-radius: 50%; width: 15px; height: 15px; line-height: 15px; text-align: center; font-size: 7.5pt; margin-right: 6px; vertical-align: -1px; }
   a.yt { color: #c4302b; font-weight: 600; text-decoration: none; white-space: nowrap; }
   figure { margin: 8px 0 12px; page-break-inside: avoid; }
   figure img { width: 100%; border: 1px solid var(--line); border-radius: 6px; display: block; }
@@ -72,7 +75,7 @@
   <ol>
     <li><span class="n">▶</span> Índice del video con enlaces al segundo exacto</li>
     <li><span class="n">1</span> Cómo está organizada la aplicación (roles, menú, selector de empresa, mes)</li>
-    <li><span class="n">2</span> Entrar, cambiar contraseña, modo oscuro y salir</li>
+    <li><span class="n">2</span> Entrar, modo oscuro y salir</li>
     <li><span class="n">3</span> Usuarios: crear cuentas, definir contraseña, editar, eliminar y restaurar</li>
     <li><span class="n">4</span> Delimitar accesos: rol global, empresas, sedes y perfiles</li>
     <li><span class="n">5</span> Empresas: crear con el asistente, configurar, módulos, archivar, eliminar</li>
@@ -118,7 +121,7 @@
   </table>
   <div class="warn"><strong>Importante.</strong> Una cuenta activa sin ninguna empresa asignada ve el mensaje “Todavía no tienes acceso a ninguna empresa”. Una cuenta inactiva ve “Tu acceso está suspendido”. En ambos casos lo resuelve el Super Admin (capítulos 3 y 4).</div>
 
-  <h3>1.2 El menú lateral</h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=181s">▶ 3:01</a></p>
+  <h3>1.2 El menú lateral</h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=181s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 3:01</a></p>
   <p>De arriba hacia abajo:</p>
   <ol>
     <li><strong>Selector de empresa</strong> (tarjeta con logo y nombre). Al hacer clic se despliega la lista “Empresas cliente”, más <span class="btn">Ver todas las empresas</span> y, para el Super Admin, <span class="btn">Crear empresa</span>.</li>
@@ -131,22 +134,22 @@
   </ol>
   <p>En el celular el menú sale como panel lateral con el botón de la esquina superior izquierda.</p>
 
-  <figure><img src="img/04-selector-empresa.png" alt=""></figure><h3>1.3 El filtro de mes</h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=71s">▶ 1:11</a></p>
+  <figure><img src="img/04-selector-empresa.png" alt=""></figure><h3>1.3 El filtro de mes</h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=71s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 1:11</a></p>
   <p>En la barra superior de <span class="menu">Empresas</span>, <span class="menu">Dashboard</span>, <span class="menu">Objetivos</span> y <span class="menu">Sedes</span> aparece el mes que se está mirando, con las flechas <span class="btn">Mes anterior</span> y <span class="btn">Mes siguiente</span>. Un clic sobre el nombre del mes abre un calendario para saltar a cualquier mes. El mes elegido se recuerda en el navegador y aplica a toda la aplicación.</p>
   <p>Las pantallas de Ventas, Pagos, Gestión Diaria, Agendas e Ingreso y Gasto no usan ese mes: tienen sus propios filtros <strong>Desde</strong> y <strong>Hasta</strong>.</p>
 
   <figure><img src="img/02-empresas.png" alt=""></figure><h3>1.4 Desde el celular</h3>
-  <p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1458s">▶ 24:18</a></p>
+  <p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1458s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 24:18</a></p>
   <p>La aplicación funciona en el navegador del celular con la misma dirección. El menú se abre con el botón de la esquina superior izquierda y los formularios ocupan toda la pantalla.</p>
   <figure class="movil"><img src="img/36-movil.png" alt=""></figure>
 </section>
 
 <!-- ============ 2 ============ -->
 <section class="chapter">
-  <h2>2. Entrar, cambiar contraseña, modo oscuro y salir</h2>
+  <h2>2. Entrar, modo oscuro y salir</h2>
 
-  <h3>2.1 Iniciar sesión <span class="roles">Todos</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=29s">▶ 0:29</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=755s">▶ 12:35</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1181s">▶ 19:41</a></p>
-  <p class="ruta">Ruta: /login</p>
+  <h3>2.1 Iniciar sesión <span class="roles">Todos</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=29s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 0:29</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=755s"><span class="play">▶</span>12:35</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1181s"><span class="play">▶</span>19:41</a></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/login">https://commandcenter.genelypsepartner.com/login</a></p>
   <ol>
     <li>Abra <strong>https://commandcenter.genelypsepartner.com</strong>.</li>
     <li>En la tarjeta “Entrar”, escriba su <strong>Correo</strong> y su <strong>Contraseña</strong>.</li>
@@ -154,32 +157,23 @@
   </ol>
   <div class="box">No existe registro público ni “olvidé mi contraseña”. Las cuentas las crea el administrador y, si se pierde la clave, el administrador define una nueva (capítulo 3.3). El mensaje “Correo o contraseña incorrectos” aparece en ambos casos, por seguridad.</div>
 
-  <figure><img src="img/01-login.png" alt=""></figure><h3>2.2 Cambiar mi contraseña <span class="roles">Todos</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1181s">▶ 19:41</a></p>
-  <p class="ruta">Ruta: /definir-clave</p>
-  <ol>
-    <li>Clic en el <strong>menú de usuario</strong> (abajo a la izquierda, con su nombre).</li>
-    <li>Clic en <span class="menu">Cambiar contraseña</span>.</li>
-    <li>Escriba la <strong>Contraseña nueva</strong> y repítala en <strong>Repítela</strong>. Mínimo 8 caracteres, deben coincidir.</li>
-    <li>Clic en <span class="btn">Guardar y entrar</span>.</li>
-  </ol>
-
-  <figure><img src="img/35-cambiar-contrasena.png" alt=""></figure><h3>2.3 Modo claro u oscuro <span class="roles">Todos</span></h3>
+  <figure><img src="img/01-login.png" alt=""></figure><h3>2.2 Modo claro u oscuro <span class="roles">Todos</span></h3>
   <ol>
     <li>Menú de usuario → <span class="menu">Apariencia</span>.</li>
     <li>Elija <span class="menu">Claro</span>, <span class="menu">Oscuro</span> o <span class="menu">Según el sistema</span>. Se guarda en ese navegador.</li>
   </ol>
 
-  <figure><img src="img/03-menu-usuario.png" alt=""></figure><h3>2.4 Cerrar sesión <span class="roles">Todos</span></h3>
+  <figure><img src="img/03-menu-usuario.png" alt=""></figure><h3>2.3 Cerrar sesión <span class="roles">Todos</span></h3>
   <p>Menú de usuario → <span class="menu">Cerrar sesión</span>. Vuelve a la pantalla de entrada.</p>
 </section>
 
 <!-- ============ 3 ============ -->
 <section class="chapter">
   <h2>3. Usuarios: crear cuentas, contraseñas, editar, eliminar y restaurar</h2>
-  <p class="ruta">Ruta: /admin/usuarios · Menú: <span class="menu">Plataforma → Usuarios</span></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/admin/usuarios">https://commandcenter.genelypsepartner.com/admin/usuarios</a> · Menú: <span class="menu">Plataforma → Usuarios</span></p>
   <p>La pantalla tiene dos pestañas, <span class="btn">Activos</span> y <span class="btn">Eliminados (N)</span>, y el botón <span class="btn">Nuevo usuario</span>. Cada fila muestra Usuario, Rol global, Estado, Empresas, Registros y un menú <span class="btn">⋯</span>.</p>
 
-  <h3>3.1 Crear un usuario <span class="roles">Super Admin</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=365s">▶ 6:05</a></p>
+  <h3>3.1 Crear un usuario <span class="roles">Super Admin</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=365s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 6:05</a></p>
   <ol>
     <li>Menú <span class="menu">Plataforma → Usuarios</span>.</li>
     <li>Clic en <span class="btn">Nuevo usuario</span>.</li>
@@ -193,12 +187,12 @@
       </ul>
     </li>
     <li>Clic en <span class="btn">Crear usuario</span>.</li>
-    <li><strong>Anote la contraseña y dígasela a la persona.</strong> La aplicación no envía correos. La persona puede cambiarla después desde su menú (2.2).</li>
+    <li><strong>Anote la contraseña y dígasela a la persona.</strong> La aplicación no envía correos. Nadie cambia su propia contraseña: si hay que cambiarla, lo hace el Super Admin (3.3).</li>
     <li>Para que vea alguna empresa, agréguela al equipo de esa empresa (capítulo 4.2 y 7).</li>
   </ol>
   <div class="box">Si el correo ya tiene cuenta, no se crea una segunda: se actualizan nombre y teléfono, se le pone la contraseña nueva y, si estaba eliminada, se restaura.</div>
 
-  <figure><img src="img/31-usuarios.png" alt=""></figure><figure><img src="img/32-nuevo-usuario.png" alt=""></figure><h3>3.2 Editar nombre, correo, teléfono o rol <span class="roles">Super Admin</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=389s">▶ 6:29</a></p>
+  <figure><img src="img/31-usuarios.png" alt=""></figure><figure><img src="img/32-nuevo-usuario.png" alt=""></figure><h3>3.2 Editar nombre, correo, teléfono o rol <span class="roles">Super Admin</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=389s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 6:29</a></p>
   <ol>
     <li>En la fila del usuario, clic en <span class="btn">⋯</span> → <span class="menu">Editar</span>.</li>
     <li>Cambie Nombre, Correo, Teléfono o Rol global.</li>
@@ -206,7 +200,7 @@
   </ol>
   <p>El <strong>Rol global</strong> también se cambia directamente desde el selector de la columna, sin abrir el diálogo. Nadie puede cambiar su propio rol.</p>
 
-  <figure><img src="img/33-menu-usuario-fila.png" alt=""></figure><h3>3.3 Definir una contraseña nueva (recuperar acceso) <span class="roles">Super Admin</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=389s">▶ 6:29</a></p>
+  <figure><img src="img/33-menu-usuario-fila.png" alt=""></figure><h3>3.3 Definir una contraseña nueva (recuperar acceso) <span class="roles">Super Admin</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=389s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 6:29</a></p>
   <ol>
     <li>Clic en <span class="btn">⋯</span> → <span class="menu">Definir contraseña</span>.</li>
     <li>Escriba la <strong>Contraseña nueva</strong> o use <span class="btn">Generar</span>.</li>
@@ -214,14 +208,14 @@
   </ol>
   <p>Esta es la única forma de recuperar una cuenta que olvidó su clave.</p>
 
-  <h3>3.4 Eliminar un usuario <span class="roles">Super Admin</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=424s">▶ 7:04</a></p>
+  <h3>3.4 Eliminar un usuario <span class="roles">Super Admin</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=424s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 7:04</a></p>
   <ol>
     <li>Clic en <span class="btn">⋯</span> → <span class="menu">Eliminar usuario</span>.</li>
     <li>Lea las consecuencias y confirme con <span class="btn">Eliminar usuario</span>.</li>
   </ol>
   <p>La eliminación es <strong>lógica</strong>: la persona ya no puede entrar y desaparece de las listas, pero todas sus ventas, pagos y jornadas siguen apareciendo a su nombre en los reportes históricos. No se puede eliminar a uno mismo.</p>
 
-  <h3>3.5 Restaurar un usuario eliminado <span class="roles">Super Admin</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=448s">▶ 7:28</a></p>
+  <h3>3.5 Restaurar un usuario eliminado <span class="roles">Super Admin</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=448s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 7:28</a></p>
   <ol>
     <li>Pestaña <span class="btn">Eliminados (N)</span>.</li>
     <li>Clic en <span class="btn">⋯</span> → <span class="menu">Restaurar con contraseña nueva</span> (le pide una clave) o <span class="menu">Restaurar con la que tenía</span>.</li>
@@ -236,7 +230,7 @@
   <h2>4. Delimitar accesos por usuario</h2>
   <p>El acceso de una persona se decide en dos niveles: el <strong>rol global</strong> de su cuenta y las <strong>empresas y sedes</strong> donde está asignada. Un Asesor sin empresas no ve nada; un Super Admin ve todo sin necesidad de asignación.</p>
 
-  <h3>4.1 Elegir el rol global <span class="roles">Super Admin</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=389s">▶ 6:29</a></p>
+  <h3>4.1 Elegir el rol global <span class="roles">Super Admin</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=389s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 6:29</a></p>
   <p>En <span class="menu">Plataforma → Usuarios</span>, columna <strong>Rol global</strong>, elija en el selector. Se guarda al instante.</p>
   <table>
     <tr><th>Quiero que la persona…</th><th>Rol global</th><th>Además</th></tr>
@@ -245,7 +239,7 @@
     <tr><td>Administre toda la plataforma</td><td>Super Admin</td><td>Nada más: ve todas las empresas</td></tr>
   </table>
 
-  <h3>4.2 Dar acceso a una empresa <span class="roles">Super Admin · Coordinador</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=265s">▶ 4:25</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1049s">▶ 17:29</a></p>
+  <h3>4.2 Dar acceso a una empresa <span class="roles">Super Admin · Coordinador</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=265s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 4:25</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1049s"><span class="play">▶</span>17:29</a></p>
   <ol>
     <li>Entre a la empresa (selector de empresa o <span class="btn">Entrar</span> en su tarjeta).</li>
     <li>Menú <span class="menu">Administrar → Equipo</span>.</li>
@@ -255,16 +249,16 @@
     <li>Clic en <span class="btn">Agregar</span>. Si la ficha tiene cuenta enlazada, la persona ya puede entrar a esa empresa.</li>
   </ol>
 
-  <figure><img src="img/28-agregar-comercial.png" alt=""></figure><h3>4.3 Enlazar una cuenta con su ficha del equipo <span class="roles">Super Admin</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=292s">▶ 4:52</a></p>
+  <figure><img src="img/28-agregar-comercial.png" alt=""></figure><h3>4.3 Enlazar una cuenta con su ficha del equipo <span class="roles">Super Admin</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=292s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 4:52</a></p>
   <p>En <span class="menu">Administrar → Equipo</span>, columna <strong>Cuenta de acceso</strong>, elija la cuenta de la persona (o “Sin cuenta”). Sin este enlace la persona ve “Tu cuenta no está enlazada a nadie del equipo” al abrir Mi jornada.</p>
 
-  <figure><img src="img/19-mi-jornada.png" alt=""></figure><h3>4.4 Limitar a una sede <span class="roles">Super Admin · Coordinador</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=292s">▶ 4:52</a></p>
+  <figure><img src="img/19-mi-jornada.png" alt=""></figure><h3>4.4 Limitar a una sede <span class="roles">Super Admin · Coordinador</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=292s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 4:52</a></p>
   <p>En <span class="menu">Administrar → Equipo</span>, columna <strong>Sede</strong>, elija la sede o “Toda la empresa”. Se guarda al instante y define desde qué sede registra la persona.</p>
 
-  <h3>4.5 Quitar el acceso a una empresa <span class="roles">Super Admin · Coordinador</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=345s">▶ 5:45</a></p>
+  <h3>4.5 Quitar el acceso a una empresa <span class="roles">Super Admin · Coordinador</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=345s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 5:45</a></p>
   <p>En Equipo, clic en la papelera de la fila → “¿Quitar a X del equipo?” → <span class="btn">Quitar</span>. Sus registros se conservan a su nombre.</p>
 
-  <h3>4.6 Crear una nueva categoría de usuario o perfil</h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1092s">▶ 18:12</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=686s">▶ 11:26</a></p>
+  <h3>4.6 Crear una nueva categoría de usuario o perfil</h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1092s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 18:12</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=686s"><span class="play">▶</span>11:26</a></p>
   <div class="warn">
     <strong>Los perfiles son fijos: Super Admin, Coordinador y Asesor.</strong> No hay una pantalla para inventar un cuarto perfil, porque los permisos están escritos en las reglas de seguridad de la base de datos (RLS) y no en una tabla editable. Lo que sí se puede combinar para obtener “perfiles” distintos:
     <ul>
@@ -279,11 +273,11 @@
 <!-- ============ 5 ============ -->
 <section class="chapter">
   <h2>5. Empresas</h2>
-  <p class="ruta">Ruta: /empresas · Menú: <span class="menu">Empresas</span></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/empresas">https://commandcenter.genelypsepartner.com/empresas</a> · Menú: <span class="menu">Empresas</span></p>
   <p>El listado muestra una franja con los totales del mes de todas las empresas (Ventas, Renovaciones, Licencias, Facturación, Recaudo) y una tarjeta por empresa con sus sedes, comerciales y cifras del mes, más el botón <span class="btn">Entrar</span>.</p>
 
-  <h3>5.1 Crear una empresa con el asistente <span class="roles">Super Admin</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=88s">▶ 1:28</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=111s">▶ 1:51</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=131s">▶ 2:11</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=152s">▶ 2:32</a></p>
-  <p class="ruta">Ruta: /empresas/nueva</p>
+  <h3>5.1 Crear una empresa con el asistente <span class="roles">Super Admin</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=88s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 1:28</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=111s"><span class="play">▶</span>1:51</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=131s"><span class="play">▶</span>2:11</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=152s"><span class="play">▶</span>2:32</a></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/empresas/nueva">https://commandcenter.genelypsepartner.com/empresas/nueva</a></p>
   <ol>
     <li>En <span class="menu">Empresas</span>, clic en <span class="btn">Nueva empresa</span> (o en la tarjeta punteada <span class="btn">Crear empresa</span>, o en el selector de empresa → <span class="btn">Crear empresa</span>).</li>
     <li><strong>Paso 1 · Datos</strong>: <strong>Nombre de la empresa</strong> (obligatorio y único; debajo se muestra la dirección que tendrá, /e/nombre), <strong>NIT</strong>, <strong>Ciudad</strong> (buscador de municipios de Colombia), <strong>Nombre del CRM que usa</strong> y <strong>Color de acento</strong>. Clic en <span class="btn">Siguiente</span>.</li>
@@ -294,28 +288,28 @@
   </ol>
   <p>Después de crearla: cargue el logo y el WhatsApp en Configuración (5.2), cree los productos (capítulo 8) y arme el equipo (capítulo 7).</p>
 
-  <figure><img src="img/05-nueva-empresa-paso1.png" alt=""></figure><figure><img src="img/06-nueva-empresa-paso2.png" alt=""></figure><figure><img src="img/07-nueva-empresa-paso3.png" alt=""></figure><figure><img src="img/08-nueva-empresa-paso4.png" alt=""></figure><h3>5.2 Configurar datos y logo <span class="roles">Super Admin · Coordinador</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=593s">▶ 9:53</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1074s">▶ 17:54</a></p>
-  <p class="ruta">Ruta: /e/[empresa]/configuracion · Menú: <span class="menu">Administrar → Configuración</span></p>
+  <figure><img src="img/05-nueva-empresa-paso1.png" alt=""></figure><figure><img src="img/06-nueva-empresa-paso2.png" alt=""></figure><figure><img src="img/07-nueva-empresa-paso3.png" alt=""></figure><figure><img src="img/08-nueva-empresa-paso4.png" alt=""></figure><h3>5.2 Configurar datos y logo <span class="roles">Super Admin · Coordinador</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=593s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 9:53</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1074s"><span class="play">▶</span>17:54</a></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]/configuracion">https://commandcenter.genelypsepartner.com/e/[empresa]/configuracion</a> · Menú: <span class="menu">Administrar → Configuración</span></p>
   <ol>
     <li>En “Datos de la empresa”, clic en <span class="btn">Subir logo</span> (o <span class="btn">Cambiar logo</span>). Acepta PNG, JPG, WEBP o SVG hasta 2 MB. <span class="btn">Quitar</span> lo elimina.</li>
     <li>Edite Nombre, NIT, Ciudad, Dominio, WhatsApp, Nombre del CRM y Color de acento.</li>
     <li>Clic en <span class="btn">Guardar cambios</span>. La dirección /e/… no cambia aunque cambie el nombre.</li>
   </ol>
 
-  <figure><img src="img/30-configuracion.png" alt=""></figure><h3>5.3 Activar o desactivar módulos <span class="roles">Super Admin · Coordinador</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=131s">▶ 2:11</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=593s">▶ 9:53</a></p>
+  <figure><img src="img/30-configuracion.png" alt=""></figure><h3>5.3 Activar o desactivar módulos <span class="roles">Super Admin · Coordinador</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=131s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 2:11</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=593s"><span class="play">▶</span>9:53</a></p>
   <p>En Configuración, sección “Módulos habilitados”: cada casilla se guarda al instante. Al desactivar uno, su entrada desaparece del menú <span class="menu">Operación</span> para todos los usuarios de la empresa. Los datos no se borran; al reactivarlo vuelven a verse.</p>
 
-  <h3>5.4 Financiaciones y medios de recaudo <span class="roles">Super Admin · Coordinador</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=152s">▶ 2:32</a></p>
+  <h3>5.4 Financiaciones y medios de recaudo <span class="roles">Super Admin · Coordinador</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=152s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 2:32</a></p>
   <p>En Configuración, secciones “Financiaciones” y “Medios de recaudo”: casillas que se guardan al instante. Son las opciones que aparecen al registrar ventas y pagos.</p>
 
-  <h3>5.5 Archivar y reactivar una empresa <span class="roles">Super Admin</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=622s">▶ 10:22</a></p>
+  <h3>5.5 Archivar y reactivar una empresa <span class="roles">Super Admin</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=622s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 10:22</a></p>
   <ol>
     <li>En <span class="menu">Empresas</span>, en la tarjeta, clic en <span class="btn">⋯</span> → <span class="menu">Archivar empresa</span> (o en Configuración → Zona de riesgo → <span class="btn">Archivar</span>). Confirme.</li>
     <li>La tarjeta queda atenuada con la etiqueta “Archivada”. Todo el histórico se conserva.</li>
     <li>Para verla otra vez, active el interruptor <span class="btn">Ver archivadas</span>; para reactivarla, <span class="btn">⋯</span> → <span class="menu">Reactivar</span>.</li>
   </ol>
 
-  <h3>5.6 Eliminar una empresa definitivamente <span class="roles">Super Admin</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=622s">▶ 10:22</a></p>
+  <h3>5.6 Eliminar una empresa definitivamente <span class="roles">Super Admin</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=622s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 10:22</a></p>
   <div class="warn">Esta acción borra sedes, equipo, ventas, pagos, jornadas, caja, agendas y objetivos de la empresa y no se puede deshacer. Úsela solo para empresas creadas por error o de prueba. Para dejar de operar una empresa real, archívela (5.5).</div>
   <ol>
     <li><span class="btn">⋯</span> → <span class="menu">Eliminar definitivamente</span> (o Configuración → Zona de riesgo → <span class="btn">Eliminar empresa</span>).</li>
@@ -327,10 +321,10 @@
 <!-- ============ 6 ============ -->
 <section class="chapter">
   <h2>6. Sedes</h2>
-  <p class="ruta">Ruta: /e/[empresa]/sedes · Menú: <span class="menu">Administrar → Sedes</span> <span class="roles">Super Admin · Coordinador</span></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]/sedes">https://commandcenter.genelypsepartner.com/e/[empresa]/sedes</a> · Menú: <span class="menu">Administrar → Sedes</span> <span class="roles">Super Admin · Coordinador</span></p>
   <p>Cada tarjeta de sede muestra sus comerciales, ventas del mes, facturación y contactabilidad.</p>
 
-  <h3>6.1 Crear una sede</h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=240s">▶ 4:00</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1036s">▶ 17:16</a></p>
+  <h3>6.1 Crear una sede</h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=240s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 4:00</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1036s"><span class="play">▶</span>17:16</a></p>
   <ol>
     <li>Clic en <span class="btn">Nueva sede</span>.</li>
     <li><strong>Nombre de la sede</strong> (mínimo 2 caracteres) y <strong>Municipio</strong>.</li>
@@ -355,19 +349,19 @@
 <!-- ============ 7 ============ -->
 <section class="chapter">
   <h2>7. Equipo de la empresa</h2>
-  <p class="ruta">Ruta: /e/[empresa]/usuarios · Menú: <span class="menu">Administrar → Equipo</span> <span class="roles">Super Admin · Coordinador</span></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]/usuarios">https://commandcenter.genelypsepartner.com/e/[empresa]/usuarios</a> · Menú: <span class="menu">Administrar → Equipo</span> <span class="roles">Super Admin · Coordinador</span></p>
   <p>El equipo son los <strong>comerciales</strong> de la empresa: las personas que aparecen como responsables de ventas y jornadas. Una ficha de comercial puede tener o no una cuenta de acceso. Mucha gente del histórico existe como ficha sin cuenta.</p>
 
   <h3>7.1 Agregar un comercial</h3>
   <p>Ver el paso a paso en 4.2.</p>
 
-  <h3>7.2 Cambiar la sede de un comercial</h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=292s">▶ 4:52</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1049s">▶ 17:29</a></p>
+  <h3>7.2 Cambiar la sede de un comercial</h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=292s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 4:52</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1049s"><span class="play">▶</span>17:29</a></p>
   <p>Columna <strong>Sede</strong> → elija la sede o “Toda la empresa”. Se guarda al instante.</p>
 
   <figure><img src="img/27-equipo.png" alt=""></figure><h3>7.3 Enlazar o desenlazar la cuenta de acceso <span class="roles">Super Admin</span></h3>
   <p>Columna <strong>Cuenta de acceso</strong> → elija la cuenta o “Sin cuenta”.</p>
 
-  <h3>7.4 Crear cuentas en bloque para todo el equipo <span class="roles">Super Admin</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=322s">▶ 5:22</a></p>
+  <h3>7.4 Crear cuentas en bloque para todo el equipo <span class="roles">Super Admin</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=322s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 5:22</a></p>
   <ol>
     <li>Si hay comerciales sin cuenta, aparece el botón <span class="btn">Crear N cuentas</span>. Clic.</li>
     <li>Confirme con <span class="btn">Crear N cuenta(s)</span>.</li>
@@ -375,17 +369,17 @@
     <li>Las cuentas nacen con un correo provisional que termina en <code>.invalid</code>. Cámbielo por el correo real desde <span class="menu">Plataforma → Usuarios → ⋯ → Editar</span> (3.2). La cuenta conserva su histórico.</li>
   </ol>
 
-  <h3>7.5 Quitar a alguien del equipo</h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=345s">▶ 5:45</a></p>
+  <h3>7.5 Quitar a alguien del equipo</h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=345s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 5:45</a></p>
   <p>Papelera → <span class="btn">Quitar</span>. Ver 4.5.</p>
 </section>
 
 <!-- ============ 8 ============ -->
 <section class="chapter">
   <h2>8. Productos y lista de precios</h2>
-  <p class="ruta">Ruta: /e/[empresa]/productos · Menú: <span class="menu">Administrar → Productos</span> <span class="roles">Super Admin · Coordinador</span></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]/productos">https://commandcenter.genelypsepartner.com/e/[empresa]/productos</a> · Menú: <span class="menu">Administrar → Productos</span> <span class="roles">Super Admin · Coordinador</span></p>
   <p>Los productos son lo que el comercial elige al registrar una venta. Si la empresa no tiene productos, el valor de cada venta se digita a mano.</p>
 
-  <h3>8.1 Crear un producto</h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=215s">▶ 3:35</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1015s">▶ 16:55</a></p>
+  <h3>8.1 Crear un producto</h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=215s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 3:35</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1015s"><span class="play">▶</span>16:55</a></p>
   <ol>
     <li>Clic en <span class="btn">Nuevo producto</span>.</li>
     <li><strong>Nombre</strong> (único en la empresa) y <strong>Precio</strong>.</li>
@@ -405,13 +399,13 @@
 <!-- ============ 9 ============ -->
 <section class="chapter">
   <h2>9. Ventas</h2>
-  <p class="ruta">Ruta: /e/[empresa]/ventas · Menú: <span class="menu">Operación → Ventas</span> <span class="roles">Todos los miembros de la empresa</span></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]/ventas">https://commandcenter.genelypsepartner.com/e/[empresa]/ventas</a> · Menú: <span class="menu">Operación → Ventas</span> <span class="roles">Todos los miembros de la empresa</span></p>
   <p>Arriba, los totales del filtro: Ventas, Licencias, Facturación, Recaudado, Saldo y <strong>Por recontactar</strong> (ventas con 85 días o más sin certificar). La tabla muestra Fecha, Cliente, Producto, Financiación, Responsable, Estado, Valor, Recaudo y Saldo. Un ícono ⚠ avisa “Lleva N días sin certificarse”.</p>
 
-  <h3>9.1 Buscar y filtrar</h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=875s">▶ 14:35</a></p>
+  <h3>9.1 Buscar y filtrar</h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=875s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 14:35</a></p>
   <p>Campos <strong>Buscar</strong>, <strong>Desde</strong>, <strong>Hasta</strong>, <strong>Sede</strong> (si hay más de una), <strong>Responsable</strong> y botón <span class="btn">Limpiar</span>. La lista pagina de 25 en 25 con <span class="btn">Anterior</span> y <span class="btn">Siguiente</span>. Estos mismos filtros están en Pagos, Gestión Diaria, Agendas e Ingreso y Gasto.</p>
 
-  <figure><img src="img/13-ventas.png" alt=""></figure><h3>9.2 Registrar una venta</h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1226s">▶ 20:26</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1256s">▶ 20:56</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1285s">▶ 21:25</a></p>
+  <figure><img src="img/13-ventas.png" alt=""></figure><h3>9.2 Registrar una venta</h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1226s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 20:26</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1256s"><span class="play">▶</span>20:56</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1285s"><span class="play">▶</span>21:25</a></p>
   <ol>
     <li>Clic en <span class="btn">Nueva venta</span>. Se abre el formulario a pantalla completa.</li>
     <li><strong>La venta</strong>: Fecha (no puede ser futura), Sede, Tipo de venta, Canal y Responsable (el asesor queda fijo como responsable; quien administra puede elegir a otro).</li>
@@ -431,9 +425,9 @@
 <!-- ============ 10 ============ -->
 <section class="chapter">
   <h2>10. Pagos</h2>
-  <p class="ruta">Ruta: /e/[empresa]/pagos · Menú: <span class="menu">Operación → Pagos</span> <span class="roles">Todos los miembros de la empresa</span></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]/pagos">https://commandcenter.genelypsepartner.com/e/[empresa]/pagos</a> · Menú: <span class="menu">Operación → Pagos</span> <span class="roles">Todos los miembros de la empresa</span></p>
 
-  <h3>10.1 Registrar un abono</h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=927s">▶ 15:27</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1331s">▶ 22:11</a></p>
+  <h3>10.1 Registrar un abono</h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=927s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 15:27</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1331s"><span class="play">▶</span>22:11</a></p>
   <ol>
     <li>Clic en <span class="btn">Registrar pago</span>.</li>
     <li>En “Buscar la venta”, escriba nombre o documento del cliente (mínimo 3 letras) y clic en <span class="btn">Buscar</span>. Elija la venta; se muestran su valor y su saldo. <span class="btn">Cambiar</span> permite elegir otra.</li>
@@ -448,10 +442,10 @@
 <!-- ============ 11 ============ -->
 <section class="chapter">
   <h2>11. Mi jornada</h2>
-  <p class="ruta">Ruta: /e/[empresa]/mi-jornada · Menú: <span class="menu">Operación → Mi jornada</span> <span class="roles">Quien tenga cuenta enlazada a su ficha del equipo</span></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]/mi-jornada">https://commandcenter.genelypsepartner.com/e/[empresa]/mi-jornada</a> · Menú: <span class="menu">Operación → Mi jornada</span> <span class="roles">Quien tenga cuenta enlazada a su ficha del equipo</span></p>
   <p>Mi jornada registra el día <strong>mientras pasa</strong>: hora de llegada, cada llamada, cada atención y cada pausa. Al cerrar, los contadores de Gestión Diaria se llenan solos.</p>
 
-  <h3>11.1 Iniciar la jornada</h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1353s">▶ 22:33</a></p>
+  <h3>11.1 Iniciar la jornada</h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1353s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 22:33</a></p>
   <ol>
     <li>Entre a <span class="menu">Mi jornada</span>. Si la empresa tiene varias sedes, responda “¿Desde qué sede trabajas hoy?”.</li>
     <li>Clic en <span class="btn">Iniciar jornada</span>. La hora de llegada queda registrada.</li>
@@ -487,10 +481,10 @@
 <!-- ============ 12 ============ -->
 <section class="chapter">
   <h2>12. Gestión Diaria</h2>
-  <p class="ruta">Ruta: /e/[empresa]/gestion-diaria · Menú: <span class="menu">Operación → Gestión Diaria</span> <span class="roles">Todos los miembros de la empresa</span></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]/gestion-diaria">https://commandcenter.genelypsepartner.com/e/[empresa]/gestion-diaria</a> · Menú: <span class="menu">Operación → Gestión Diaria</span> <span class="roles">Todos los miembros de la empresa</span></p>
   <p>Es la vista tipo Excel de las jornadas: Llegada (en rojo si llegó tarde), Llamadas, Contestadas, Ventas, Agendas, Atención, Cola del CRM y Contactabilidad. Sirve para registrar un día de memoria o corregir uno.</p>
 
-  <h3>12.1 Registrar o corregir una jornada</h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=950s">▶ 15:50</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1353s">▶ 22:33</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1384s">▶ 23:04</a></p>
+  <h3>12.1 Registrar o corregir una jornada</h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=950s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 15:50</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1353s"><span class="play">▶</span>22:33</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1384s"><span class="play">▶</span>23:04</a></p>
   <ol>
     <li>Clic en <span class="btn">Registrar jornada</span>.</li>
     <li><strong>Fecha</strong>, <strong>Comercial</strong> (solo quien administra puede elegir a otro), <strong>Sede</strong> y <strong>Hora de llegada</strong> (muestra la hora esperada).</li>
@@ -508,13 +502,13 @@
 <section class="chapter">
   <h2>13. Agendas y conexión con Kommo</h2>
 
-  <h3>13.1 Ver las agendas <span class="roles">Todos los miembros de la empresa</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=975s">▶ 16:15</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1418s">▶ 23:38</a></p>
-  <p class="ruta">Ruta: /e/[empresa]/agendas · Menú: <span class="menu">Operación → Agendas</span></p>
+  <h3>13.1 Ver las agendas <span class="roles">Todos los miembros de la empresa</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=975s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 16:15</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1418s"><span class="play">▶</span>23:38</a></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]/agendas">https://commandcenter.genelypsepartner.com/e/[empresa]/agendas</a> · Menú: <span class="menu">Operación → Agendas</span></p>
   <p>Las agendas son las tareas del calendario de Kommo. Aquí solo se consultan: Fecha, Hora, Cliente, Celular, Responsable, Resultado, Observación y Origen (Kommo con enlace al lead, Excel o App). Se crean y corrigen en Kommo.</p>
   <p>Quien administra la empresa, si Kommo está conectado, puede traer un rango a mano: <span class="btn">Traer de Kommo</span> → Desde y Hasta → <span class="btn">Traer</span>.</p>
 
   <figure><img src="img/20-agendas.png" alt=""></figure><h3>13.2 Conectar la empresa con Kommo <span class="roles">Super Admin</span></h3>
-  <p class="ruta">Ruta: /e/[empresa]/kommo · Menú: <span class="menu">Administrar → Kommo</span></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]/kommo">https://commandcenter.genelypsepartner.com/e/[empresa]/kommo</a> · Menú: <span class="menu">Administrar → Kommo</span></p>
   <ol>
     <li>En Kommo, cree un token de larga duración (Ajustes → Integraciones → su integración → Token).</li>
     <li>En Command Center, en “Conexión”, escriba el <strong>Subdominio</strong> (lo que va antes de .kommo.com) y pegue el <strong>Token de larga duración</strong>.</li>
@@ -540,8 +534,8 @@
 
 <!-- ============ 14 ============ -->
 <section class="chapter">
-  <h2>14. Ingreso y Gasto (caja)</h2><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=991s">▶ 16:31</a></p>
-  <p class="ruta">Ruta: /e/[empresa]/caja · Menú: <span class="menu">Operación → Ingreso y Gasto</span> <span class="roles">Super Admin · Coordinador</span></p>
+  <h2>14. Ingreso y Gasto (caja)</h2><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=991s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 16:31</a></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]/caja">https://commandcenter.genelypsepartner.com/e/[empresa]/caja</a> · Menú: <span class="menu">Operación → Ingreso y Gasto</span> <span class="roles">Super Admin · Coordinador</span></p>
   <ol>
     <li>Clic en <span class="btn">Nuevo movimiento</span>.</li>
     <li>Elija la pestaña <span class="btn">Salida</span> o <span class="btn">Entrada</span>.</li>
@@ -553,8 +547,8 @@
 
 <!-- ============ 15 ============ -->
 <section class="chapter">
-  <h2>15. Objetivos (metas del mes)</h2><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=471s">▶ 7:51</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=847s">▶ 14:07</a></p>
-  <p class="ruta">Ruta: /e/[empresa]/objetivos · Menú: <span class="menu">Objetivos</span> <span class="roles">Ven todos · Editan Super Admin y Coordinador</span></p>
+  <h2>15. Objetivos (metas del mes)</h2><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=471s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 7:51</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=847s"><span class="play">▶</span>14:07</a></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]/objetivos">https://commandcenter.genelypsepartner.com/e/[empresa]/objetivos</a> · Menú: <span class="menu">Objetivos</span> <span class="roles">Ven todos · Editan Super Admin y Coordinador</span></p>
   <ol>
     <li>Elija el mes con el filtro de la barra superior.</li>
     <li><strong>Metas de empresa</strong>: escriba la meta de Ventas mensuales, Licencias mensuales, Facturación y Recaudo. Cada meta se guarda al salir del campo. Las columnas Real, Cumplimiento y Proyección a fin de mes se calculan solas.</li>
@@ -568,12 +562,12 @@
 <section class="chapter">
   <h2>16. Dashboard e Indicadores</h2>
 
-  <h3>16.1 Dashboard <span class="roles">Todos los miembros de la empresa</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=503s">▶ 8:23</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=531s">▶ 8:51</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=777s">▶ 12:57</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=798s">▶ 13:18</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1439s">▶ 23:59</a></p>
-  <p class="ruta">Ruta: /e/[empresa] · Menú: <span class="menu">Dashboard</span></p>
+  <h3>16.1 Dashboard <span class="roles">Todos los miembros de la empresa</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=503s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 8:23</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=531s"><span class="play">▶</span>8:51</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=777s"><span class="play">▶</span>12:57</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=798s"><span class="play">▶</span>13:18</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=1439s"><span class="play">▶</span>23:59</a></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]">https://commandcenter.genelypsepartner.com/e/[empresa]</a> · Menú: <span class="menu">Dashboard</span></p>
   <p>Resume el mes elegido: Ventas, Licencias, Renovaciones, Facturación y Recaudo; la placa <strong>Rentabilidad de la pauta</strong> (Facturación, Ventas, Inversión en pauta, ROAS, Costo por venta); Evolución diaria; Embudo de la gestión; Ventas por financiación; Recaudo por medio de pago; comparativo Por sede; Ranking de comerciales; y <strong>Registro de hoy</strong>, con quién ya registró su jornada.</p>
 
-  <figure><img src="img/10-dashboard.png" alt=""></figure><h3>16.2 Indicadores <span class="roles">Ven todos · Editan Super Admin y Coordinador</span></h3><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=564s">▶ 9:24</a> · <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=822s">▶ 13:42</a></p>
-  <p class="ruta">Ruta: /e/[empresa]/indicadores · Menú: <span class="menu">Indicadores</span></p>
+  <figure><img src="img/10-dashboard.png" alt=""></figure><h3>16.2 Indicadores <span class="roles">Ven todos · Editan Super Admin y Coordinador</span></h3><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=564s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 9:24</a> <a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=822s"><span class="play">▶</span>13:42</a></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/e/[empresa]/indicadores">https://commandcenter.genelypsepartner.com/e/[empresa]/indicadores</a> · Menú: <span class="menu">Indicadores</span></p>
   <ol>
     <li>Elija el período: <span class="btn">Mes</span>, <span class="btn">Día</span> o <span class="btn">Rango</span>, y opcionalmente uno o varios comerciales.</li>
     <li>Revise las secciones: jornadas registradas, validación de ventas presenciales y digitales, distribución por canal, promedios por jornada, tarjetas de <strong>Indicadores con meta</strong> (semáforo verde, ámbar o rojo), totales por comercial y cantidad de ventas.</li>
@@ -596,8 +590,8 @@
 
 <!-- ============ 17 ============ -->
 <section class="chapter">
-  <h2>17. Auditoría</h2><p class="ytline">Ver en el video: <a class="yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=657s">▶ 10:57</a></p>
-  <p class="ruta">Ruta: /admin/auditoria · Menú: <span class="menu">Plataforma → Auditoría</span> <span class="roles">Super Admin</span></p>
+  <h2>17. Auditoría</h2><p class="ytline"><a class="ytbtn" href="https://www.youtube.com/watch?v=f_lu5UzZgZo&t=657s"><span class="play">▶</span>Ver en el video &nbsp;·&nbsp; 10:57</a></p>
+  <p class="ruta">Dirección: <a href="https://commandcenter.genelypsepartner.com/admin/auditoria">https://commandcenter.genelypsepartner.com/admin/auditoria</a> · Menú: <span class="menu">Plataforma → Auditoría</span> <span class="roles">Super Admin</span></p>
   <p>Lista de solo lectura, 50 filas por página, con Cuándo, Quién, Acción (Creación, Cambio, Eliminación, Restauración, Archivado, Asignación, Desasignación, Borrado definitivo) y Entidad.</p>
   <p><strong>Qué queda registrado</strong>: creación, edición, logo, módulos, catálogos y archivado de empresas; sedes; creación, contraseña, correo, rol, estado y nombre de usuarios; asignaciones del equipo; productos; días hábiles, metas de indicadores e inversión en pauta; apertura y cierre de jornadas; borrado definitivo de empresas.</p>
   <p><strong>Qué no queda registrado</strong>: el guardado de ventas, pagos, jornadas, caja y objetivos. Esos registros llevan su propio responsable y fecha, que es la trazabilidad que tienen.</p>
