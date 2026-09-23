@@ -158,9 +158,10 @@ export function listAppointments(companyId: string, filtros: Filtros) {
   return consultar<AppointmentRow>("appointments", companyId, filtros, {
     campoFecha: "scheduled_at",
     busqueda: ["nombre", "celular"],
-    // Una tarea de Kommo sin lead llega sin nadie detrás: no es una cita y en
-    // la lista solo sale como una fila de guiones.
-    condicion: "nombre.not.is.null,celular.not.is.null,responsable_nombre.not.is.null,resultado.not.is.null",
+    // Una tarea de Kommo sin lead llega sin cliente, celular ni responsable:
+    // no se sabe con quién es la cita y en la lista solo sale como una fila
+    // de guiones. Se muestra solo lo que tiene a alguien detrás.
+    condicion: "nombre.not.is.null,celular.not.is.null,responsable_nombre.not.is.null",
   })
 }
 
