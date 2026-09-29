@@ -105,39 +105,39 @@
 }
 
 [data-theme="dark"] {
-  /* Misma familia del logo, invertida: fondos de morado muy oscuro casi
-     negro, y el primario se aclara para que siga leyéndose sobre ellos. Las
+  /* Fondos gris azulado casi negro, neutros para que no compitan con los
+     datos; el morado del logo queda solo en el primario y en lo activo. Las
      superficies suben de luminosidad por capas (fondo < tarjeta < menú
      flotante) porque en oscuro la sombra no separa nada. */
   --background: #10141e;
-  --foreground: #ebe8f4;
-  --card: #1d1a29;
-  --card-foreground: #ebe8f4;
-  --popover: #221f31;
-  --popover-foreground: #ebe8f4;
+  --foreground: #e8eaf0;
+  --card: #161b26;
+  --card-foreground: #e8eaf0;
+  --popover: #1b212e;
+  --popover-foreground: #e8eaf0;
   --primary: #b3a1dc;
   --primary-foreground: #1c1533;
-  --secondary: #2a2740;
-  --secondary-foreground: #e2ddf0;
-  --muted: #252236;
-  --muted-foreground: #a29db9;
-  --accent: #2e2a45;
-  --accent-foreground: #e2ddf0;
+  --secondary: #232a38;
+  --secondary-foreground: #e0e4ec;
+  --muted: #1f2531;
+  --muted-foreground: #9aa2b3;
+  --accent: #252c3b;
+  --accent-foreground: #e0e4ec;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: #2f2b44;
-  --input: #36324d;
+  --border: #262d3b;
+  --input: #2e3645;
   --ring: #8f84c0;
   /* El morado de marca del slot 1 desaparece sobre fondo oscuro; se aclara.
      Los demás slots tienen luminosidad media y se sostienen en ambos temas. */
   --chart-1: #a98fd6;
   color-scheme: dark;
-  --sidebar: #191624;
-  --sidebar-foreground: #ebe8f4;
+  --sidebar: #131823;
+  --sidebar-foreground: #e8eaf0;
   --sidebar-primary: #b3a1dc;
   --sidebar-primary-foreground: #1c1533;
-  --sidebar-accent: #2e2a45;
+  --sidebar-accent: #222938;
   --sidebar-accent-foreground: #d8cdf2;
-  --sidebar-border: #2b2740;
+  --sidebar-border: #222836;
   --sidebar-ring: #8f84c0;
   --auth-glow: #2b2448;
 }
