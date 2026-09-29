@@ -109,7 +109,7 @@
      datos; el morado del logo queda solo en el primario y en lo activo. Las
      superficies suben de luminosidad por capas (fondo < tarjeta < menú
      flotante) porque en oscuro la sombra no separa nada. */
-  --background: #10141e;
+  --background: #0b0e16;
   --foreground: #e8eaf0;
   --card: #161b26;
   --card-foreground: #e8eaf0;
