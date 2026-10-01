@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 
 import { NuevaVenta, type VentaExistente } from "@/components/captura/nueva-venta"
 import { AlertaSeguimiento } from "@/components/ventas/alerta-seguimiento"
+import { ExportarExcel } from "@/components/exportar-excel"
 import { ModuleMissing } from "@/components/module-missing"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
@@ -55,24 +56,27 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
       title="Ventas"
       description={`Créditos vendidos por ${company.name}. Cada fila es una licencia financiada, con su cliente, su valor y su saldo.`}
       actions={
-        <NuevaVenta
-          companyId={company.id}
-          branches={company.branches}
-          staff={company.staff}
-          financiaciones={company.financiaciones}
-          productosEmpresa={company.productosEmpresa}
-          traficos={company.traficos}
-          canales={company.canales}
-          categorias={company.categorias}
-          tiposVenta={company.tiposVenta}
-          centrosMedicos={company.centrosMedicos}
-          tiposId={company.tiposId}
-          escuelas={company.escuelas}
-          estados={company.estados}
-          canManage={company.canManage}
-          isSuperAdmin={company.isSuperAdmin}
-          myStaffId={company.myStaffId}
-        />
+        <>
+          <ExportarExcel />
+          <NuevaVenta
+            companyId={company.id}
+            branches={company.branches}
+            staff={company.staff}
+            financiaciones={company.financiaciones}
+            productosEmpresa={company.productosEmpresa}
+            traficos={company.traficos}
+            canales={company.canales}
+            categorias={company.categorias}
+            tiposVenta={company.tiposVenta}
+            centrosMedicos={company.centrosMedicos}
+            tiposId={company.tiposId}
+            escuelas={company.escuelas}
+            estados={company.estados}
+            canManage={company.canManage}
+            isSuperAdmin={company.isSuperAdmin}
+            myStaffId={company.myStaffId}
+          />
+        </>
       }
       filters={
         <RecordFilters

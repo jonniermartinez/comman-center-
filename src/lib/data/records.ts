@@ -74,32 +74,18 @@ export function leerFiltros(params: Record<string, string | string[] | undefined
  * tablas tienen decenas de miles de filas: traerlas todas para cortarlas en el
  * navegador es justo lo que hay que evitar.
  */
-async function consultar<T>(
-  tabla: "sales" | "payments" | "v_daily_activity" | "cash_movements" | "appointments",
-  companyId: string,
-  filtros: Filtros,
-  opciones: {
-    campoFecha: string
-    orden?: string
-    busqueda?: string[]
-    /** Condición extra en sintaxis de `.or()` de PostgREST. */
-    condicion?: string
-  },
-): Promise<Pagina<T>> {
-  // El cliente se usa sin tipar para poder armar la consulta una sola vez para
-  // las cinco tablas: con el tipo generado, cada `.eq` exige la tabla concreta.
-  // El tipo de las filas se recupera al devolverlas como `T`.
-  const supabase = (await createClient()) as unknown as SupabaseSinTipar
-  const page = filtros.page ?? 0
-  const desde = page * POR_PAGINA
+type TablaRegistros = "sales" | "payments" | "v_daily_activity" | "cash_movements" | "appointments"
 
-  let query = supabase
-    .from(tabla)
-    .select("*", { count: "exact" })
-    .eq("company_id", companyId)
-    .order(opciones.orden ?? opciones.campoFecha, { ascending: false })
-    .range(desde, desde + POR_PAGINA - 1)
+interface OpcionesConsulta {
+  campoFecha: string
+  orden?: string
+  busqueda?: string[]
+  /** Condición extra en sintaxis de `.or()` de PostgREST. */
+  condicion?: string
+}
 
+/** Los filtros del listado sobre una consulta: los mismos al paginar y al exportar. */
+function filtrar(query: ConsultaSinTipar, filtros: Filtros, opciones: OpcionesConsulta) {
   if (filtros.desde) query = query.gte(opciones.campoFecha, filtros.desde)
   if (filtros.hasta) query = query.lte(opciones.campoFecha, filtros.hasta)
   if (filtros.branchId) query = query.eq("branch_id", filtros.branchId)
@@ -114,6 +100,89 @@ async function consultar<T>(
   }
   if (grupos.length === 1) query = query.or(grupos[0])
   if (grupos.length === 2) query = query.or(`and(or(${grupos[0]}),or(${grupos[1]}))`)
+  return query
+}
+
+/** Tope de filas de una exportación: más que eso no es un rango, es la base entera. */
+export const MAX_EXPORTAR = 50_000
+
+/**
+ * Todas las filas que alcanza el filtro, no solo una página: lo que se exporta
+ * a Excel. Se piden de a mil, que es lo que PostgREST entrega por consulta.
+ * `truncado` avisa si el filtro alcanzaba más filas que el tope.
+ */
+async function todas<T>(
+  tabla: TablaRegistros,
+  companyId: string,
+  filtros: Filtros,
+  opciones: OpcionesConsulta,
+): Promise<{ rows: T[]; truncado: boolean }> {
+  const supabase = (await createClient()) as unknown as SupabaseSinTipar
+  const LOTE = 1000
+  const rows: T[] = []
+
+  for (let desde = 0; desde < MAX_EXPORTAR; desde += LOTE) {
+    const query = filtrar(
+      supabase
+        .from(tabla)
+        .select("*")
+        .eq("company_id", companyId)
+        .order(opciones.orden ?? opciones.campoFecha, { ascending: false })
+        // Sin un segundo criterio, dos filas del mismo día pueden cambiar de
+        // lote entre una consulta y la siguiente y salir repetidas o faltar.
+        .order("id", { ascending: true })
+        .range(desde, desde + LOTE - 1),
+      filtros,
+      opciones,
+    )
+    const { data, error } = await query
+    if (error) throw new Error(`${tabla}: ${error.message}`)
+    rows.push(...((data ?? []) as T[]))
+    if ((data ?? []).length < LOTE) return { rows, truncado: false }
+  }
+  return { rows, truncado: true }
+}
+
+const OPCIONES_VENTAS: OpcionesConsulta = {
+  campoFecha: "report_date",
+  busqueda: ["licencia_nombre", "credito_nombre", "licencia_id", "credito_id", "ref_credito"],
+}
+const OPCIONES_PAGOS: OpcionesConsulta = {
+  campoFecha: "report_date",
+  busqueda: ["titular_nombre", "titular_id", "ref_credito"],
+}
+
+export function allSales(companyId: string, filtros: Filtros) {
+  return todas<SaleRow>("sales", companyId, filtros, OPCIONES_VENTAS)
+}
+
+export function allPayments(companyId: string, filtros: Filtros) {
+  return todas<PaymentRow>("payments", companyId, filtros, OPCIONES_PAGOS)
+}
+
+async function consultar<T>(
+  tabla: TablaRegistros,
+  companyId: string,
+  filtros: Filtros,
+  opciones: OpcionesConsulta,
+): Promise<Pagina<T>> {
+  // El cliente se usa sin tipar para poder armar la consulta una sola vez para
+  // las cinco tablas: con el tipo generado, cada `.eq` exige la tabla concreta.
+  // El tipo de las filas se recupera al devolverlas como `T`.
+  const supabase = (await createClient()) as unknown as SupabaseSinTipar
+  const page = filtros.page ?? 0
+  const desde = page * POR_PAGINA
+
+  const query = filtrar(
+    supabase
+      .from(tabla)
+      .select("*", { count: "exact" })
+      .eq("company_id", companyId)
+      .order(opciones.orden ?? opciones.campoFecha, { ascending: false })
+      .range(desde, desde + POR_PAGINA - 1),
+    filtros,
+    opciones,
+  )
 
   const { data, count, error } = await query
   if (error) throw new Error(`${tabla}: ${error.message}`)
@@ -127,17 +196,11 @@ async function consultar<T>(
 }
 
 export function listSales(companyId: string, filtros: Filtros) {
-  return consultar<SaleRow>("sales", companyId, filtros, {
-    campoFecha: "report_date",
-    busqueda: ["licencia_nombre", "credito_nombre", "licencia_id", "credito_id", "ref_credito"],
-  })
+  return consultar<SaleRow>("sales", companyId, filtros, OPCIONES_VENTAS)
 }
 
 export function listPayments(companyId: string, filtros: Filtros) {
-  return consultar<PaymentRow>("payments", companyId, filtros, {
-    campoFecha: "report_date",
-    busqueda: ["titular_nombre", "titular_id", "ref_credito"],
-  })
+  return consultar<PaymentRow>("payments", companyId, filtros, OPCIONES_PAGOS)
 }
 
 export function listActivity(companyId: string, filtros: Filtros) {
