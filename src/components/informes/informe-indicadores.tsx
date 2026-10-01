@@ -247,6 +247,12 @@ export function InformeIndicadores({
             { titulo: "Estado", celda: (k) => <Pildora tono={leerKpi(k).tono}>{leerKpi(k).etiqueta}</Pildora> },
           ]}
         />
+        <p className="inf-nota inf-aclaracion">
+          Días laborados: {formatNumber(total.dias_laborados)} jornadas registradas contra {diasHabiles} días
+          hábiles por comercial. Facturación total = valor final − (adición + descuento), como la definió la
+          gerencia: valor final {formatCOP(total.valor_final)}, adiciones {formatCOP(total.adicion)}, bonos{" "}
+          {formatCOP(total.descuento)}.
+        </p>
       </Seccion>
 
       <div className="inf-dos inf-junto">
@@ -284,6 +290,7 @@ export function InformeIndicadores({
             filas={[
               { label: "Ventas presenciales", valor: `${formatNumber(reparto.presencial.cantidad)} · ${formatPercent(reparto.presencial.ratio)}` },
               { label: "Ventas digitales", valor: `${formatNumber(reparto.digital.cantidad)} · ${formatPercent(reparto.digital.ratio)}` },
+              { label: "Ventas sin tipo (fuera del reparto)", valor: formatNumber(reparto.sinTipo) },
               { label: "Agendas por jornada", valor: uno(promedios.agendas) },
               { label: "Llamadas contestadas por jornada", valor: uno(promedios.contestadas) },
               { label: "Atención presencial por jornada", valor: uno(promedios.atencion_presencial) },

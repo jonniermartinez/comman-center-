@@ -1,4 +1,4 @@
-import { Barra, Cifras, Informe, Seccion, Tabla } from "@/components/informes/informe"
+import { Barra, Cifras, Informe, Pildora, Seccion, Tabla } from "@/components/informes/informe"
 import type { DashboardData } from "@/lib/data/dashboard"
 import { formatCOP, formatCOPShort, formatNumber, formatPercent } from "@/lib/format"
 import { rentabilidadPauta } from "@/lib/indicadores"
@@ -78,6 +78,8 @@ export function InformeDashboard({
     const anterior = i > 0 ? datos.embudo[i - 1].valor : null
     return { ...p, i, paso: anterior && anterior > 0 ? p.valor / anterior : null }
   })
+
+  const registraron = datos.capturaHoy.filter((c) => c.registrado).length
 
   return (
     <Informe
@@ -167,8 +169,7 @@ export function InformeDashboard({
         </Seccion>
       </div>
 
-      {datos.porSede.length > 1 && (
-        <Seccion titulo="Por sede">
+      <Seccion titulo="Por sede" nota="El mes de cada sede de la empresa.">
           <Tabla
             filas={datos.porSede}
             clave={(s) => s.branch_id}
@@ -180,9 +181,9 @@ export function InformeDashboard({
               { titulo: "Recaudo", num: true, celda: (s) => formatCOP(s.recaudo_mes) },
               { titulo: "Contactabilidad", num: true, celda: (s) => formatPercent(s.ratio_contactabilidad) },
             ]}
+            vacio="La empresa no tiene sedes activas."
           />
-        </Seccion>
-      )}
+      </Seccion>
 
       <Seccion titulo="Ranking de comerciales" nota="La gestión del mes por persona, de más a menos llamadas." junto={datos.ranking.length <= 14}>
         <Tabla
@@ -199,6 +200,30 @@ export function InformeDashboard({
             { titulo: "Atenciones", num: true, celda: (r) => formatNumber(r.total_atencion) },
             { titulo: "Contactab.", num: true, celda: (r) => formatPercent(r.ratio_contactabilidad) },
             { titulo: "Conversión", num: true, celda: (r) => formatPercent(r.ratio_conversion_llamada) },
+          ]}
+        />
+      </Seccion>
+
+      <Seccion
+        titulo="Registro de hoy"
+        nota={`Quién ya registró su jornada al momento de exportar: ${registraron} de ${datos.capturaHoy.length}.`}
+        junto={datos.capturaHoy.length <= 14}
+      >
+        <Tabla
+          filas={datos.capturaHoy}
+          clave={(c) => c.staff_id}
+          vacio="La empresa no tiene comerciales activos."
+          columnas={[
+            { titulo: "Comercial", celda: (c) => c.responsable_nombre },
+            {
+              titulo: "Jornada de hoy",
+              num: true,
+              celda: (c) => (
+                <Pildora tono={c.registrado ? "verde" : "ambar"}>
+                  {c.registrado ? "Registrada" : "Pendiente"}
+                </Pildora>
+              ),
+            },
           ]}
         />
       </Seccion>

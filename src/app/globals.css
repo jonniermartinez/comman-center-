@@ -242,6 +242,9 @@
     color: var(--muted-foreground);
     font-size: 7.6pt;
   }
+  .inf-aclaracion {
+    margin-top: 1.5mm !important;
+  }
   .inf-sobre {
     color: var(--muted-foreground);
     font-size: 6.8pt;
