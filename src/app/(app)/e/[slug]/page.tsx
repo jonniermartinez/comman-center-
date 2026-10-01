@@ -4,7 +4,8 @@ import { AlertCircle, CheckCircle2, Clock } from "lucide-react"
 
 import { Embudo, GraficaBarras, GraficaDiaria } from "@/components/graficas"
 import { RentabilidadPauta } from "@/components/indicadores/rentabilidad-pauta"
-import { EncabezadoPdf, ExportarPdf } from "@/components/exportar-pdf"
+import { ExportarPdf } from "@/components/exportar-pdf"
+import { InformeDashboard } from "@/components/informes/informe-dashboard"
 import { PageHeader } from "@/components/page-header"
 import { SectionCard, SectionCardHeader } from "@/components/section-card"
 import { StatStrip } from "@/components/stat-strip"
@@ -44,15 +45,10 @@ export default async function DashboardPage({
   const datos = await loadDashboard(company.id, mes)
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <EncabezadoPdf
-        titulo="Dashboard"
-        empresa={company.name}
-        periodo={monthLabel(mes)}
-        detalle="Resultados del mes, a partir de las ventas y los pagos registrados."
-      />
+    <>
+    <InformeDashboard empresa={company.name} periodo={monthLabel(mes)} datos={datos} />
+    <div className="mx-auto max-w-7xl print:hidden">
       <PageHeader
-        className="print:hidden"
         title={company.name}
         description={`Resultados de ${monthLabel(mes)}. Todo sale de las ventas y los pagos registrados: nada se digita aparte.`}
         actions={<ExportarPdf titulo="Dashboard" empresa={company.name} periodo={monthLabel(mes)} />}
@@ -91,8 +87,8 @@ export default async function DashboardPage({
         )}
       </SectionCard>
 
-      <div className="grid gap-4 lg:grid-cols-3 print:grid-cols-3">
-        <SectionCard className="lg:col-span-2 print:col-span-2">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <SectionCard className="lg:col-span-2">
           <SectionCardHeader
             title={`Evolución de ${monthLabel(mes)}`}
             description="Lo facturado y lo efectivamente recaudado, día por día."
@@ -109,7 +105,7 @@ export default async function DashboardPage({
         </SectionCard>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2 print:grid-cols-2">
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <SectionCard>
           <SectionCardHeader
             title="Ventas por financiación"
@@ -342,5 +338,6 @@ export default async function DashboardPage({
         recaudo en {monthLabel(mes)}.
       </p>
     </div>
+    </>
   )
 }

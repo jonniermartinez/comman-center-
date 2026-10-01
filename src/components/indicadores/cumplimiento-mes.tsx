@@ -130,8 +130,8 @@ export function CumplimientoMes({
 
   return (
     <div className="space-y-4">
-      <Placas celdas={facturacionCeldas} className="lg:grid-cols-4 print:grid-cols-4" />
-      <Placas celdas={pautaCeldas} className="lg:grid-cols-4 print:grid-cols-4" />
+      <Placas celdas={facturacionCeldas} className="lg:grid-cols-4" />
+      <Placas celdas={pautaCeldas} className="lg:grid-cols-4" />
     </div>
   )
 }

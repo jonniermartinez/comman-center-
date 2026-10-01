@@ -155,19 +155,29 @@
 }
 
 /*
- * Impresión: el "Descargar PDF" de Indicadores y Dashboard es la pantalla
- * impresa, en el tema que esté activo. Sale solo el contenido —sin menú
- * lateral ni barra superior—, en horizontal para que quepan las rejillas de
- * escritorio.
+ * Impresión.
  *
- * La hoja va sin margen y el margen lo pone el contenido: el margen de @page
+ * "Descargar PDF" no imprime la pantalla: imprime un informe aparte
+ * (`components/informes`), que en pantalla está oculto. La pantalla lleva
+ * `print:hidden`, así que en papel solo queda el documento.
+ *
+ * La hoja va sin margen y el margen lo pone el informe: el margen de @page
  * queda siempre blanco, y en tema oscuro eso es un marco blanco alrededor de
- * un informe negro. Con el fondo en el body y el relleno clonado en cada
- * fragmento, el color llega hasta el borde del papel en todas las hojas.
+ * un documento negro. Con el fondo en el body y el relleno clonado en cada
+ * fragmento, el color llega hasta el borde del papel en todas las hojas. De
+ * paso, con margen cero el navegador no puede estampar su fecha y su URL.
  */
+.informe {
+  display: none;
+}
+
 @media print {
   @page {
     size: A4 landscape;
+    margin: 0;
+  }
+  @page informe {
+    size: A4 portrait;
     margin: 0;
   }
   html,
@@ -188,31 +198,354 @@
     min-height: 0 !important;
     background: transparent !important;
   }
-  /* Un poco más pequeño que en pantalla: caben dos o tres bloques por hoja
-     en vez de uno, y se lee como un informe y no como una captura. */
+  /* Las pantallas sin informe propio se imprimen tal cual, con algo de aire. */
   .pdf-hoja {
-    zoom: 0.8;
-    padding: 12mm 12mm 16mm !important;
+    padding: 10mm !important;
+  }
+  .pdf-hoja:has(.informe) {
+    padding: 0 !important;
+  }
+  /* La hoja vertical se pide desde el body y no desde el informe: una página
+     con nombre puesta en un bloque interior fuerza un salto al terminar y
+     deja una hoja en blanco al final. */
+  body:has(.informe) {
+    page: informe;
+  }
+
+  /* ------------------------------------------------------------ el informe */
+  .informe {
+    --inf-verde: #15803d;
+    --inf-ambar: #b45309;
+    --inf-rojo: #b91c1c;
+    display: block;
+    padding: 13mm 13mm 16mm;
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
+    color: var(--foreground);
+    font-size: 8.4pt;
+    line-height: 1.4;
   }
-  /* El pie se repite en cada hoja: un elemento fijo se imprime en todas. */
-  .pdf-pie {
-    position: fixed;
-    right: 12mm;
-    bottom: 6mm;
-    left: 12mm;
+  [data-theme="dark"] .informe {
+    --inf-verde: #4ade80;
+    --inf-ambar: #fbbf24;
+    --inf-rojo: #f87171;
+  }
+  .informe h1,
+  .informe h2,
+  .informe p,
+  .informe dl,
+  .informe dd,
+  .informe figure {
+    margin: 0;
+  }
+  .inf-nota {
+    color: var(--muted-foreground);
+    font-size: 7.6pt;
+  }
+  .inf-sobre {
+    color: var(--muted-foreground);
+    font-size: 6.8pt;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .inf-fuerte {
+    font-size: 10pt;
+    font-weight: 600;
+  }
+
+  /* Cabecera */
+  .inf-cab {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
+    gap: 10mm;
+    margin-bottom: 6mm;
+    padding: 5mm 6mm;
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--primary);
+    border-radius: 3mm;
+    background: var(--card);
   }
-  /* Una placa o una tarjeta partida entre dos hojas no se puede leer. */
-  section,
-  dl > div,
-  tr {
+  .inf-cab-marca {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 4mm;
+    min-width: 0;
+  }
+  .inf-cab-marca > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .inf-cab-marca img {
+    flex: none;
+    width: 11mm;
+    height: 11mm;
+    padding: 1.5mm;
+    border-radius: 2.5mm;
+    background: #fff;
+  }
+  .inf-cab h1 {
+    font-size: 17pt;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+  .inf-cab-datos {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    gap: 1.5mm;
+    text-align: right;
+  }
+  .inf-cab-datos dt {
+    color: var(--muted-foreground);
+    font-size: 6.8pt;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Secciones */
+  .inf-sec {
+    margin-bottom: 5.5mm;
+  }
+  .inf-junto {
     break-inside: avoid;
   }
-  /* Las gráficas se midieron con el ancho de la pantalla: que no se salgan. */
-  .recharts-wrapper,
-  .recharts-surface {
-    max-width: 100% !important;
+  .inf-sec-titulo {
+    display: flex;
+    align-items: baseline;
+    gap: 3mm;
+    margin-bottom: 2mm;
+    padding-left: 2.5mm;
+    border-left: 3px solid var(--primary);
+    break-after: avoid;
+  }
+  .inf-sec-titulo h2 {
+    flex: none;
+    font-size: 10.5pt;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .inf-dos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6mm;
+    align-items: start;
+  }
+  .inf-dos .inf-sec-titulo {
+    display: block;
+  }
+
+  /* Cifras */
+  .inf-cifras {
+    display: grid;
+    gap: 2.5mm;
+  }
+  .inf-cifra {
+    padding: 2.6mm 3mm;
+    border: 1px solid var(--border);
+    border-radius: 2.2mm;
+    background: var(--card);
+    break-inside: avoid;
+  }
+  .inf-cifra-destacada {
+    border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
+    background: color-mix(in oklab, var(--primary) 9%, var(--card));
+  }
+  .inf-cifra dt {
+    color: var(--muted-foreground);
+    font-size: 7.2pt;
+    font-weight: 500;
+    line-height: 1.25;
+  }
+  .inf-cifra dd {
+    margin-top: 0.8mm;
+    font-size: 13.5pt;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .inf-cifra p {
+    margin-top: 0.6mm;
+    color: var(--muted-foreground);
+    font-size: 6.8pt;
+    line-height: 1.25;
+  }
+
+  /* Tablas */
+  .inf-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+    border-radius: 2.2mm;
+    background: var(--card);
+    font-size: 7.8pt;
+  }
+  .inf-tabla thead {
+    display: table-header-group;
+  }
+  .inf-tabla tr {
+    break-inside: avoid;
+  }
+  .inf-tabla th {
+    padding: 1.6mm 2mm;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in oklab, var(--primary) 12%, var(--card));
+    color: var(--foreground);
+    font-size: 6.6pt;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-align: left;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+  .inf-tabla td {
+    padding: 1.5mm 2mm;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .inf-tabla tbody tr:nth-child(even) td {
+    background: color-mix(in oklab, var(--muted) 45%, transparent);
+  }
+  .inf-tabla tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .inf-tabla tfoot td {
+    border-top: 1.5px solid var(--primary);
+    border-bottom: 0;
+    background: color-mix(in oklab, var(--primary) 9%, var(--card));
+    font-weight: 700;
+  }
+  .inf-tabla .inf-num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Los títulos sí pueden partirse en dos líneas; las cifras y el nombre no. */
+  .inf-tabla th.inf-num {
+    white-space: normal;
+  }
+  .inf-tabla td:first-child:not(:has(small)) {
+    white-space: nowrap;
+  }
+  .inf-tabla td.inf-total {
+    font-weight: 700;
+  }
+  .inf-tabla small {
+    display: block;
+    color: var(--muted-foreground);
+    font-size: 6.6pt;
+    line-height: 1.25;
+  }
+  .inf-vacio {
+    padding: 4mm !important;
+    color: var(--muted-foreground);
+    text-align: center;
+  }
+
+  /* Semáforo */
+  .inf-pildora {
+    display: inline-block;
+    padding: 0.4mm 2.2mm;
+    border-radius: 99px;
+    font-size: 6.8pt;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .inf-pildora.inf-verde {
+    background: color-mix(in oklab, var(--inf-verde) 16%, transparent);
+    color: var(--inf-verde);
+  }
+  .inf-pildora.inf-ambar {
+    background: color-mix(in oklab, var(--inf-ambar) 18%, transparent);
+    color: var(--inf-ambar);
+  }
+  .inf-pildora.inf-rojo {
+    background: color-mix(in oklab, var(--inf-rojo) 16%, transparent);
+    color: var(--inf-rojo);
+  }
+  .inf-pildora.inf-neutro {
+    background: var(--muted);
+    color: var(--muted-foreground);
+  }
+  .inf-barra {
+    display: block;
+    height: 2mm;
+    overflow: hidden;
+    border-radius: 99px;
+    background: var(--muted);
+  }
+  .inf-barra i {
+    display: block;
+    height: 100%;
+    border-radius: 99px;
+    background: var(--primary);
+  }
+  .inf-barra i.inf-verde {
+    background: var(--inf-verde);
+  }
+  .inf-barra i.inf-ambar {
+    background: var(--inf-ambar);
+  }
+  .inf-barra i.inf-rojo {
+    background: var(--inf-rojo);
+  }
+  .inf-barra i.inf-neutro {
+    background: var(--muted-foreground);
+  }
+
+  /* Gráfica */
+  .inf-grafica {
+    padding: 3mm 3mm 2mm;
+    border: 1px solid var(--border);
+    border-radius: 2.2mm;
+    background: var(--card);
+  }
+  .inf-grafica svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .inf-guia {
+    stroke: var(--border);
+    stroke-width: 1;
+  }
+  .inf-eje {
+    fill: var(--muted-foreground);
+    font-size: 8px;
+  }
+  .inf-grafica figcaption {
+    display: flex;
+    justify-content: center;
+    gap: 6mm;
+    margin-top: 1mm;
+    color: var(--muted-foreground);
+    font-size: 7.2pt;
+  }
+  .inf-grafica figcaption i {
+    display: inline-block;
+    width: 2.4mm;
+    height: 2.4mm;
+    margin-right: 1mm;
+    border-radius: 0.6mm;
+    vertical-align: -0.2mm;
+  }
+
+  /* El pie se repite en cada hoja: un elemento fijo se imprime en todas. */
+  .inf-pie {
+    position: fixed;
+    right: 13mm;
+    bottom: 6.5mm;
+    left: 13mm;
+    display: flex;
+    justify-content: space-between;
+    padding-top: 1.5mm;
+    border-top: 1px solid var(--border);
+    color: var(--muted-foreground);
+    font-size: 6.6pt;
   }
 }

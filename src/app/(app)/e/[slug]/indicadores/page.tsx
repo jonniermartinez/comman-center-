@@ -4,7 +4,8 @@ import { CumplimientoMes } from "@/components/indicadores/cumplimiento-mes"
 import { DiasHabiles } from "@/components/indicadores/dias-habiles"
 import { InversionPauta } from "@/components/indicadores/inversion-pauta"
 import { RentabilidadPauta } from "@/components/indicadores/rentabilidad-pauta"
-import { EncabezadoPdf, ExportarPdf } from "@/components/exportar-pdf"
+import { ExportarPdf } from "@/components/exportar-pdf"
+import { InformeIndicadores } from "@/components/informes/informe-indicadores"
 import { FiltrosIndicadores } from "@/components/indicadores/filtros"
 import { KpiCard } from "@/components/indicadores/kpi-card"
 import { PageHeader } from "@/components/page-header"
@@ -94,18 +95,30 @@ export default async function IndicadoresPage({
 
   const pct = (n: number, d: number) => formatPercent(d ? n / d : null)
 
+  const metaFacturacion = datos.metaFacturacionPorMes.find((o) => o.period_month === meses[0])?.meta ?? null
+  const equipo = seleccionados.length ? `${filas.length} comercial(es)` : "todo el equipo"
+
   return (
-    <div className="mx-auto max-w-7xl">
-      <EncabezadoPdf
-        titulo="Indicadores"
-        empresa={company.name}
-        periodo={periodo}
-        detalle={`Gestión y ventas de ${
-          seleccionados.length ? `${filas.length} comercial(es)` : "todo el equipo"
-        }, con la meta y la efectividad de cada indicador.`}
-      />
+    <>
+    <InformeIndicadores
+      empresa={company.name}
+      periodo={periodo}
+      equipo={equipo}
+      filas={filas}
+      total={total}
+      kpis={kpis}
+      diasHabiles={datos.diasHabiles}
+      comerciales={conJornada}
+      inversion={datos.inversion}
+      presupuesto={datos.presupuesto}
+      cumplimiento={
+        mesEntero
+          ? { mes: meses[0], hoy: todayISO(), facturacion: facturacionEmpresa, meta: metaFacturacion }
+          : null
+      }
+    />
+    <div className="mx-auto max-w-7xl print:hidden">
       <PageHeader
-        className="print:hidden"
         title="Indicadores"
         description={`${company.name} · ${periodo}. Gestión y ventas de ${
           seleccionados.length ? `${filas.length} comercial(es)` : "todo el equipo"
@@ -114,15 +127,12 @@ export default async function IndicadoresPage({
       />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
-        {/* En el PDF el período ya va escrito arriba: los controles sobran. */}
-        <div className="print:hidden">
-          <FiltrosIndicadores
-            comerciales={company.staff}
-            desde={desde}
-            hasta={hasta}
-            seleccionados={seleccionados}
-          />
-        </div>
+        <FiltrosIndicadores
+          comerciales={company.staff}
+          desde={desde}
+          hasta={hasta}
+          seleccionados={seleccionados}
+        />
         <div className="mb-4 flex flex-wrap items-end gap-3">
           {meses.slice(0, 3).map((m) => (
             <DiasHabiles
@@ -167,7 +177,7 @@ export default async function IndicadoresPage({
           presupuesto={datos.presupuesto}
           inversion={datos.inversion}
         />
-        <div className="mt-4 flex flex-wrap items-end gap-3 border-t pt-4 print:hidden">
+        <div className="mt-4 flex flex-wrap items-end gap-3 border-t pt-4">
           {meses.slice(0, 3).flatMap((m) => {
             const anotado = datos.inversionPorMes.find((p) => p.period_month === m)
             return (["presupuesto", "monto"] as const).map((campo) => (
@@ -202,7 +212,7 @@ export default async function IndicadoresPage({
             mes={meses[0]}
             hoy={todayISO()}
             facturacion={facturacionEmpresa}
-            meta={datos.metaFacturacionPorMes.find((o) => o.period_month === meses[0])?.meta ?? null}
+            meta={metaFacturacion}
             presupuesto={datos.presupuesto}
             invertido={datos.inversion}
           />
@@ -210,8 +220,8 @@ export default async function IndicadoresPage({
       )}
 
       {/* ============ KPI 1 · Validación presencial / digital ============ */}
-      <div className="grid gap-4 lg:grid-cols-3 print:grid-cols-3">
-        <SectionCard className="lg:col-span-2 print:col-span-2">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <SectionCard className="lg:col-span-2">
           <SectionCardHeader
             title="Validación de ventas presenciales y digitales"
             description="Lo que dice la base de ventas contra lo que tipificó el equipo en gestión diaria. Deberían coincidir."
@@ -308,7 +318,7 @@ export default async function IndicadoresPage({
             company.canManage ? " La meta de cada indicador se cambia en su tarjeta; vacía vuelve a la de por defecto." : ""
           }`}
         />
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {kpis.map((k) => (
             <KpiCard key={k.code} kpi={k} companyId={company.id} editable={company.canManage} />
           ))}
@@ -388,6 +398,7 @@ export default async function IndicadoresPage({
         </p>
       </SectionCard>
     </div>
+    </>
   )
 }
 
