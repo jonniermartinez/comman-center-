@@ -4,6 +4,7 @@ import { AlertCircle, CheckCircle2, Clock } from "lucide-react"
 
 import { Embudo, GraficaBarras, GraficaDiaria } from "@/components/graficas"
 import { RentabilidadPauta } from "@/components/indicadores/rentabilidad-pauta"
+import { ExportarPdf } from "@/components/exportar-pdf"
 import { PageHeader } from "@/components/page-header"
 import { SectionCard, SectionCardHeader } from "@/components/section-card"
 import { StatStrip } from "@/components/stat-strip"
@@ -47,6 +48,7 @@ export default async function DashboardPage({
       <PageHeader
         title={company.name}
         description={`Resultados de ${monthLabel(mes)}. Todo sale de las ventas y los pagos registrados: nada se digita aparte.`}
+        actions={<ExportarPdf titulo="Dashboard" empresa={company.name} periodo={monthLabel(mes)} />}
       />
 
       <StatStrip
@@ -63,16 +65,17 @@ export default async function DashboardPage({
       <SectionCard className="mb-4">
         <SectionCardHeader
           title="Rentabilidad de la pauta"
-          description={`Cuánto devolvió cada peso invertido en publicidad en ${monthLabel(mes)}. ROAS = facturación ÷ inversión; costo por venta = inversión ÷ ventas.`}
+          description={`Cuánto devolvió cada peso invertido en publicidad en ${monthLabel(mes)}. ROAS = facturación ÷ invertido; costo por venta = invertido ÷ ventas.`}
         />
         <RentabilidadPauta
           facturacion={datos.totales.facturacion}
           ventas={datos.totales.ventas}
+          presupuesto={datos.presupuestoPauta}
           inversion={datos.inversionPauta}
         />
         {company.canManage && (
           <p className="mt-3 text-xs text-muted-foreground">
-            La inversión del mes se anota en{" "}
+            El presupuesto y lo invertido del mes se anotan en{" "}
             <Link href={`/e/${slug}/indicadores`} className="underline underline-offset-2">
               Indicadores
             </Link>

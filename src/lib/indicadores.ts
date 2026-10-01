@@ -461,6 +461,63 @@ export function rentabilidadPauta(facturacion: number, ventas: number, inversion
   }
 }
 
+/** Días calendario del mes y cuántos van corridos a `hoy` (hoy incluido). */
+export function diasCorridos(mes: string, hoy: string) {
+  const delMes = Number(finDeMes(mes).slice(8, 10))
+  const mesDeHoy = `${hoy.slice(0, 7)}-01`
+  const corridos = mesDeHoy < mes ? 0 : mesDeHoy > mes ? delMes : Number(hoy.slice(8, 10))
+  return { delMes, corridos, faltantes: delMes - corridos }
+}
+
+/**
+ * El cumplimiento del mes, como lo llevaba la coordinación en su Excel (30 de
+ * septiembre). Las fórmulas son las de ese Excel, sobre días calendario:
+ *
+ * - promedio diario para la meta = (meta − facturación) ÷ días faltantes
+ * - proyección lineal = promedio diario de lo facturado × días faltantes + facturación
+ * - presupuesto que se debía haber gastado = presupuesto ÷ días del mes × días corridos
+ * - falta por invertir = presupuesto − invertido
+ * - proyección faltante = ROAS × falta por invertir
+ * - proyección total = proyección faltante + facturación
+ *
+ * Lo que no se puede calcular va en null y la pantalla lo pinta como "—": sin
+ * meta no hay promedio para la meta, sin presupuesto no hay nada que falte por
+ * invertir, y un mes que ya cerró no tiene días para alcanzar nada.
+ */
+export function cumplimientoDelMes(d: {
+  facturacion: number
+  meta: number | null
+  presupuesto: number | null
+  invertido: number | null
+  diasDelMes: number
+  diasCorridos: number
+}) {
+  const faltantes = d.diasDelMes - d.diasCorridos
+  const { roas } = rentabilidadPauta(d.facturacion, 0, d.invertido)
+
+  const faltaParaMeta = d.meta === null ? null : Math.max(0, d.meta - d.facturacion)
+  const faltaPorInvertir = d.presupuesto === null ? null : d.presupuesto - (d.invertido ?? 0)
+  // Pasarse del presupuesto no resta facturación: ya no queda nada por invertir.
+  const proyeccionFaltante =
+    roas === null || faltaPorInvertir === null ? null : roas * Math.max(0, faltaPorInvertir)
+
+  return {
+    diasFaltantes: faltantes,
+    faltaParaMeta,
+    promedioDiarioParaMeta:
+      faltaParaMeta === null ? null : faltaParaMeta === 0 ? 0 : safeRatio(faltaParaMeta, faltantes),
+    promedioDiario: safeRatio(d.facturacion, d.diasCorridos),
+    proyeccionLineal:
+      d.diasCorridos > 0 ? (d.facturacion / d.diasCorridos) * faltantes + d.facturacion : null,
+    presupuestoEsperado:
+      d.presupuesto === null ? null : (d.presupuesto / d.diasDelMes) * d.diasCorridos,
+    faltaPorInvertir,
+    roas,
+    proyeccionFaltante,
+    proyeccionTotal: proyeccionFaltante === null ? null : proyeccionFaltante + d.facturacion,
+  }
+}
+
 /** Días hábiles de lunes a sábado dentro de un rango, ambos inclusive. */
 export function diasHabilesEnRango(desde: string, hasta: string): number {
   const a = new Date(`${desde}T00:00:00Z`)

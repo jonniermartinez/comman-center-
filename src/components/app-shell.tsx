@@ -288,7 +288,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* min-w-0: sin él, una tabla ancha estira el área principal más allá de
           la pantalla y se desplaza toda la página en vez de solo la tabla. */}
       <SidebarInset className="min-w-0">
-        <header className="sticky top-0 z-10 flex w-full items-center gap-3 border-b bg-card px-4 py-3.5 sm:px-6">
+        <header className="sticky top-0 z-10 flex w-full items-center gap-3 border-b bg-card px-4 py-3.5 sm:px-6 print:hidden">
           <SidebarTrigger className="-ml-1" />
           <h1 className="flex-1 truncate text-base font-medium sm:text-lg">
             {tituloDe(pathname, !!company)}
@@ -296,7 +296,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {resumeUnMes(pathname) && <FiltroMes />}
         </header>
 
-        <div className="flex-1 p-4 sm:p-6">{children}</div>
+        <div className="flex-1 p-4 sm:p-6 print:p-0">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   )

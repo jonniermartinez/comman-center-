@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation"
 
+import { CumplimientoMes } from "@/components/indicadores/cumplimiento-mes"
 import { DiasHabiles } from "@/components/indicadores/dias-habiles"
 import { InversionPauta } from "@/components/indicadores/inversion-pauta"
 import { RentabilidadPauta } from "@/components/indicadores/rentabilidad-pauta"
+import { ExportarPdf } from "@/components/exportar-pdf"
 import { FiltrosIndicadores } from "@/components/indicadores/filtros"
 import { KpiCard } from "@/components/indicadores/kpi-card"
 import { PageHeader } from "@/components/page-header"
@@ -18,7 +20,7 @@ import {
 } from "@/components/ui/table"
 import { getCompanyContext } from "@/lib/data/company"
 import { loadIndicadores } from "@/lib/data/indicadores"
-import { formatCOP, formatDate, formatNumber, formatPercent } from "@/lib/format"
+import { formatCOP, formatDate, formatNumber, formatPercent, todayISO } from "@/lib/format"
 import {
   consolidar,
   facturacionTotal,
@@ -85,6 +87,11 @@ export default async function IndicadoresPage({
         ? monthLabel(mes)
         : `${formatDate(desde)} – ${formatDate(hasta)}`
 
+  // El cumplimiento se mide contra la meta y el presupuesto del mes, que son
+  // de toda la empresa: solo se arma sobre un mes entero y sin filtrar equipo.
+  const mesEntero = meses.length === 1 && desde === meses[0] && hasta === finDeMes(meses[0])
+  const facturacionEmpresa = facturacionTotal(seleccionados.length ? consolidar(datos.filas) : total)
+
   const pct = (n: number, d: number) => formatPercent(d ? n / d : null)
 
   return (
@@ -94,15 +101,19 @@ export default async function IndicadoresPage({
         description={`${company.name} · ${periodo}. Gestión y ventas de ${
           seleccionados.length ? `${filas.length} comercial(es)` : "todo el equipo"
         }, con la meta y la efectividad de cada indicador.`}
+        actions={<ExportarPdf titulo="Indicadores" empresa={company.name} periodo={periodo} />}
       />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <FiltrosIndicadores
-          comerciales={company.staff}
-          desde={desde}
-          hasta={hasta}
-          seleccionados={seleccionados}
-        />
+        {/* En el PDF el período ya va escrito arriba: los controles sobran. */}
+        <div className="print:hidden">
+          <FiltrosIndicadores
+            comerciales={company.staff}
+            desde={desde}
+            hasta={hasta}
+            seleccionados={seleccionados}
+          />
+        </div>
         <div className="mb-4 flex flex-wrap items-end gap-3">
           {meses.slice(0, 3).map((m) => (
             <DiasHabiles
@@ -137,32 +148,57 @@ export default async function IndicadoresPage({
       <SectionCard className="mb-4">
         <SectionCardHeader
           title="Rentabilidad de la pauta"
-          description={`ROAS = facturación ÷ inversión en pauta; costo por venta = inversión ÷ ventas. La facturación y las ventas salen de la base; la inversión la anota quien administra con el acumulado de cada mes.${
-            meses.length > 1 ? " En un rango de varios meses se suma la inversión de los meses que toca." : ""
+          description={`ROAS = facturación ÷ invertido en pauta; costo por venta = invertido ÷ ventas. La facturación y las ventas salen de la base; el presupuesto autorizado y lo que va invertido los anota quien administra, mes a mes.${
+            meses.length > 1 ? " En un rango de varios meses se suman los de los meses que toca." : ""
           }`}
         />
         <RentabilidadPauta
           facturacion={facturacionTotal(total)}
           ventas={total.ventas_total}
+          presupuesto={datos.presupuesto}
           inversion={datos.inversion}
         />
         <div className="mt-4 flex flex-wrap items-end gap-3 border-t pt-4">
-          {meses.slice(0, 3).map((m) => (
-            <InversionPauta
-              key={m}
-              companyId={company.id}
-              mes={m}
-              valor={datos.inversionPorMes.find((p) => p.period_month === m)?.monto ?? null}
-              editable={company.canManage}
-            />
-          ))}
+          {meses.slice(0, 3).flatMap((m) => {
+            const anotado = datos.inversionPorMes.find((p) => p.period_month === m)
+            return (["presupuesto", "monto"] as const).map((campo) => (
+              <InversionPauta
+                key={`${campo}-${m}`}
+                companyId={company.id}
+                mes={m}
+                campo={campo}
+                valor={anotado?.[campo] ?? null}
+                editable={company.canManage}
+              />
+            ))
+          })}
           {!company.canManage && (
             <p className="pb-2 text-xs text-muted-foreground">
-              La inversión la actualiza quien administra la empresa.
+              El presupuesto y lo invertido los actualiza quien administra la empresa.
             </p>
           )}
         </div>
       </SectionCard>
+
+      {/* ============ Cumplimiento del mes ============ */}
+      {mesEntero && (
+        <SectionCard className="mb-4">
+          <SectionCardHeader
+            title={`Cumplimiento de ${monthLabel(meses[0])}`}
+            description={`A dónde llega la facturación al ritmo que lleva y cuánto más traería la pauta que falta por invertir, sobre días calendario. La meta es la de facturación que se fija en Objetivos.${
+              seleccionados.length ? " Va con la facturación de toda la empresa, no solo de los comerciales filtrados." : ""
+            }`}
+          />
+          <CumplimientoMes
+            mes={meses[0]}
+            hoy={todayISO()}
+            facturacion={facturacionEmpresa}
+            meta={datos.metaFacturacionPorMes.find((o) => o.period_month === meses[0])?.meta ?? null}
+            presupuesto={datos.presupuesto}
+            invertido={datos.inversion}
+          />
+        </SectionCard>
+      )}
 
       {/* ============ KPI 1 · Validación presencial / digital ============ */}
       <div className="grid gap-4 lg:grid-cols-3">

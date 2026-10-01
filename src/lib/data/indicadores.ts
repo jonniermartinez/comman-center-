@@ -25,14 +25,24 @@ export interface DatosIndicadores {
   configurados: { period_month: string; dias: number }[]
   /** Las metas que la empresa fijó por su cuenta. Lo que falte usa la de por defecto. */
   metas: MetasEmpresa
-  /** La inversión en pauta digitada por mes, para el campo editable. */
-  inversionPorMes: { period_month: string; monto: number }[]
+  /**
+   * Lo digitado de pauta por mes, para los campos editables: el presupuesto
+   * autorizado y lo que va invertido. Cualquiera de los dos puede faltar.
+   */
+  inversionPorMes: { period_month: string; monto: number | null; presupuesto: number | null }[]
   /**
    * La inversión del período, o null si ningún mes del rango tiene dato. Se
    * suma por meses enteros: la pauta se anota como acumulado del mes y no se
    * puede repartir por días, así que un rango de medio mes toma el mes completo.
    */
   inversion: number | null
+  /** El presupuesto autorizado del período, sumado igual que la inversión. */
+  presupuesto: number | null
+  /**
+   * La meta de facturación de la empresa por mes, la que se fija en Objetivos.
+   * Contra ella se calcula el promedio diario que hace falta para llegar.
+   */
+  metaFacturacionPorMes: { period_month: string; meta: number }[]
 }
 
 export async function loadIndicadores(
@@ -43,7 +53,7 @@ export async function loadIndicadores(
   const supabase = await createClient()
   const meses = mesesDe(desde, hasta)
 
-  const [filas, config, metasFijadas, pauta] = await Promise.all([
+  const [filas, config, metasFijadas, pauta, objetivos] = await Promise.all([
     supabase.rpc("indicadores_por_comercial", {
       p_company: companyId,
       p_desde: desde,
@@ -57,8 +67,15 @@ export async function loadIndicadores(
     supabase.from("company_kpi_targets").select("kpi_code, meta").eq("company_id", companyId),
     supabase
       .from("company_ad_spend")
-      .select("period_month, monto")
+      .select("period_month, monto, presupuesto")
       .eq("company_id", companyId)
+      .in("period_month", meses),
+    supabase
+      .from("objectives")
+      .select("period_month, target_value")
+      .eq("company_id", companyId)
+      .eq("metric_code", "facturacion")
+      .is("user_id", null)
       .in("period_month", meses),
   ])
 
@@ -91,11 +108,16 @@ export async function loadIndicadores(
 
   const inversionPorMes = (pauta.data ?? []).map((p) => ({
     period_month: p.period_month,
-    monto: Number(p.monto),
+    monto: p.monto === null ? null : Number(p.monto),
+    presupuesto: p.presupuesto === null ? null : Number(p.presupuesto),
   }))
-  const inversion = inversionPorMes.length
-    ? inversionPorMes.reduce((suma, p) => suma + p.monto, 0)
-    : null
+  const sumar = (campo: "monto" | "presupuesto") => {
+    const anotados = inversionPorMes.flatMap((p) => (p[campo] === null ? [] : [p[campo]]))
+    return anotados.length ? anotados.reduce((suma, n) => suma + n, 0) : null
+  }
+  const metaFacturacionPorMes = (objetivos.data ?? [])
+    .map((o) => ({ period_month: o.period_month, meta: Number(o.target_value) }))
+    .filter((o) => o.meta > 0)
 
   const numero = (v: unknown) => Number(v ?? 0)
   return {
@@ -112,6 +134,8 @@ export async function loadIndicadores(
     configurados,
     metas,
     inversionPorMes,
-    inversion,
+    inversion: sumar("monto"),
+    presupuesto: sumar("presupuesto"),
+    metaFacturacionPorMes,
   }
 }

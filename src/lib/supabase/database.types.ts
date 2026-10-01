@@ -535,22 +535,25 @@ export type Database = {
       company_ad_spend: {
         Row: {
           company_id: string
-          monto: number
+          monto: number | null
           period_month: string
+          presupuesto: number | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           company_id: string
-          monto: number
+          monto?: number | null
           period_month: string
+          presupuesto?: number | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           company_id?: string
-          monto?: number
+          monto?: number | null
           period_month?: string
+          presupuesto?: number | null
           updated_at?: string
           updated_by?: string | null
         }

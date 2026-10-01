@@ -511,22 +511,39 @@ export async function setKpiTarget(
 }
 
 /**
- * Cuánto se invirtió en pauta un mes. Es el único dato del ROAS que se digita:
- * la facturación y las ventas ya están en la base. Cero lo borra y los
- * indicadores de pauta vuelven a quedar vacíos.
+ * Los dos datos de pauta que se digitan por mes: el presupuesto autorizado
+ * (`presupuesto`) y lo que va realmente invertido (`monto`). La facturación y
+ * las ventas ya están en la base. Cero borra el dato; si la fila se queda sin
+ * ninguno de los dos, se borra entera y los indicadores vuelven a quedar vacíos.
  */
 export async function setAdSpend(
   companyId: string,
   periodMonth: string,
-  monto: number,
+  campo: "monto" | "presupuesto",
+  valor: number,
 ): Promise<Result> {
   const session = await requireSession()
   const supabase = await createClient()
 
-  if (!Number.isFinite(monto) || monto < 0) return { ok: false, error: "La inversión no es un número válido." }
+  if (campo !== "monto" && campo !== "presupuesto") return { ok: false, error: "El dato no es válido." }
+  if (!Number.isFinite(valor) || valor < 0) return { ok: false, error: "El valor no es un número válido." }
   if (!/^\d{4}-\d{2}-01$/.test(periodMonth)) return { ok: false, error: "El mes no es válido." }
 
-  if (monto === 0) {
+  const actual = await supabase
+    .from("company_ad_spend")
+    .select("monto, presupuesto")
+    .eq("company_id", companyId)
+    .eq("period_month", periodMonth)
+    .maybeSingle()
+  if (actual.error) return { ok: false, error: actual.error.message }
+
+  const fila = {
+    monto: actual.data?.monto ?? null,
+    presupuesto: actual.data?.presupuesto ?? null,
+    [campo]: valor === 0 ? null : valor,
+  }
+
+  if (fila.monto === null && fila.presupuesto === null) {
     const { error } = await supabase
       .from("company_ad_spend")
       .delete()
@@ -535,7 +552,7 @@ export async function setAdSpend(
     if (error) return { ok: false, error: error.message }
   } else {
     const { error } = await supabase.from("company_ad_spend").upsert(
-      { company_id: companyId, period_month: periodMonth, monto, updated_by: session.profile.id },
+      { company_id: companyId, period_month: periodMonth, ...fila, updated_by: session.profile.id },
       { onConflict: "company_id,period_month" },
     )
     if (error) return { ok: false, error: error.message }
@@ -546,7 +563,7 @@ export async function setAdSpend(
     entity: "company_ad_spend",
     entity_id: `${companyId}:${periodMonth}`,
     company_id: companyId,
-    after: { monto },
+    after: fila,
   })
 
   refrescar()

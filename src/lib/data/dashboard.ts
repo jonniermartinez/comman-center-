@@ -46,6 +46,8 @@ export interface DashboardData {
   embudo: { nombre: string; valor: number }[]
   /** Pesos invertidos en pauta el mes, o null si nadie lo anotó. */
   inversionPauta: number | null
+  /** Presupuesto de pauta autorizado para el mes, o null si nadie lo anotó. */
+  presupuestoPauta: number | null
 }
 
 /**
@@ -110,7 +112,7 @@ export async function loadDashboard(companyId: string, mes: string): Promise<Das
     supabase.from("payment_methods").select("code, name"),
     supabase
       .from("company_ad_spend")
-      .select("monto")
+      .select("monto, presupuesto")
       .eq("company_id", companyId)
       .eq("period_month", mes)
       .maybeSingle(),
@@ -178,7 +180,8 @@ export async function loadDashboard(companyId: string, mes: string): Promise<Das
   )
 
   return {
-    inversionPauta: pauta.data ? numero(pauta.data.monto) : null,
+    inversionPauta: pauta.data?.monto == null ? null : numero(pauta.data.monto),
+    presupuestoPauta: pauta.data?.presupuesto == null ? null : numero(pauta.data.presupuesto),
     totales: {
       ventas: numero(totales.data?.ventas_mes),
       licencias: numero(totales.data?.licencias_mes),

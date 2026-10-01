@@ -153,3 +153,36 @@
     @apply font-sans;
   }
 }
+
+/*
+ * Impresión: el "Descargar PDF" de Indicadores y Dashboard es la pantalla
+ * impresa. Sale solo el contenido —sin menú lateral ni barra superior—, en
+ * horizontal para que quepan las rejillas de escritorio, y con los fondos de
+ * las placas, que el navegador quita por defecto.
+ */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  [data-slot="sidebar"],
+  [data-slot="sidebar-gap"],
+  [data-slot="sidebar-container"] {
+    display: none !important;
+  }
+  /* Una placa o una tarjeta partida entre dos hojas no se puede leer. */
+  section,
+  dl > div,
+  tr {
+    break-inside: avoid;
+  }
+  /* Las gráficas se midieron con el ancho de la pantalla: que no se salgan. */
+  .recharts-wrapper,
+  .recharts-surface {
+    max-width: 100% !important;
+  }
+}
