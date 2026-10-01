@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Acta de entrega · Genelypse Command Center</title>
+<style>
+  @page { size: A4; margin: 0; }
+  :root {
+    --ink: #1b1730; --muted: #5b5872; --line: #e3dff0; --soft: #f6f3fc;
+    --brand: #4b3a71; --brand2: #7c5cc4; --ok: #14804a; --oksoft: #e7f6ee;
+    --gold: #a36a00; --goldsoft: #fdf3dc;
+  }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { margin: 0; }
+  body { font-family: -apple-system, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); font-size: 9.6pt; line-height: 1.45; }
+  a { color: inherit; text-decoration: none; }
+  .page { width: 210mm; height: 297mm; padding: 16mm 17mm 14mm; position: relative; overflow: hidden; page-break-after: always; display: flex; flex-direction: column; }
+  .page:last-child { page-break-after: auto; }
+  .foot { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; font-size: 7.6pt; color: var(--muted); }
+  .eyebrow { font-size: 7.6pt; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--brand2); }
+  h1 { font-size: 30pt; line-height: 1.05; letter-spacing: -.02em; margin: 6px 0 0; font-weight: 700; }
+  h2 { font-size: 16pt; letter-spacing: -.01em; margin: 4px 0 2px; font-weight: 700; }
+  h3 { font-size: 10.5pt; margin: 0 0 6px; font-weight: 700; }
+  p { margin: 0 0 8px; }
+  .lead { font-size: 10.6pt; color: #322c4d; max-width: 150mm; }
+  .muted { color: var(--muted); }
+
+  /* ---------- Portada ---------- */
+  .cover { background: linear-gradient(160deg, #1d1638 0%, #33265c 55%, #4b3a71 100%); color: #fff; }
+  .cover .eyebrow { color: #c9b8f0; }
+  .cover .lead { color: #ddd5f3; }
+  .cover .foot { border-color: rgba(255,255,255,.18); color: #b9aedb; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand img { width: 44px; height: 44px; background: #fff; border-radius: 11px; padding: 6px; }
+  .brand b { font-size: 12.5pt; letter-spacing: -.01em; }
+  .brand span { display: block; font-size: 8pt; color: #b9aedb; }
+  .pill { display: inline-block; border: 1px solid rgba(255,255,255,.28); border-radius: 999px; padding: 3px 12px; font-size: 8pt; color: #e6dffa; }
+  .hero { margin-top: 30mm; }
+  .hero h1 { font-size: 40pt; }
+  .hero h1 em { font-style: normal; color: #c9b8f0; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14mm; }
+  .stat { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 12px 14px; }
+  .stat b { display: block; font-size: 19pt; letter-spacing: -.02em; line-height: 1.1; }
+  .stat span { font-size: 8pt; color: #c9c0e6; }
+  .links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 9mm; }
+  .link { display: block; background: #fff; color: var(--ink); border-radius: 12px; padding: 12px 14px; }
+  .link small { display: block; font-size: 7.4pt; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--brand2); }
+  .link b { display: block; font-size: 10.6pt; margin: 2px 0 3px; }
+  .link u { font-size: 7.6pt; color: var(--muted); text-decoration: none; word-break: break-all; }
+  .meta { display: grid; grid-template-columns: repeat(4, auto); gap: 18px; margin-top: 10mm; font-size: 8.4pt; color: #c9c0e6; justify-content: start; }
+  .meta b { display: block; color: #fff; font-size: 9.6pt; }
+
+  /* ---------- Listas de entrega ---------- */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin-top: 8px; }
+  .item { display: flex; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--line); break-inside: avoid; }
+  .item .ck { flex: none; width: 17px; height: 17px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 9pt; font-weight: 700; line-height: 17px; text-align: center; margin-top: 1px; }
+  .item.plus .ck { background: var(--gold); }
+  .item b { display: block; font-size: 9.4pt; }
+  .item span { font-size: 8.3pt; color: var(--muted); line-height: 1.35; display: block; }
+  .band { border-radius: 12px; padding: 10px 14px; margin: 12px 0 2px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .band.ok { background: var(--oksoft); color: #0d5c35; }
+  .band.plus { background: var(--goldsoft); color: #7a4f00; }
+  .band b { font-size: 10.6pt; }
+  .band span { font-size: 8.4pt; }
+  .tag { flex: none; font-size: 7.6pt; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; border-radius: 999px; padding: 3px 10px; background: #fff; }
+
+  /* ---------- Datos y cierre ---------- */
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin: 10px 0 8px; }
+  .kpi { border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; background: var(--soft); }
+  .kpi b { display: block; font-size: 16pt; letter-spacing: -.02em; line-height: 1.1; color: var(--brand); }
+  .kpi span { font-size: 8pt; color: var(--muted); }
+  .note { font-size: 8.3pt; color: var(--muted); }
+  .vids { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .vid { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 11px; padding: 9px 11px; }
+  .vid .play { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #fff; text-align: center; line-height: 30px; font-size: 10pt; }
+  .vid.yt .play { background: #e8261f; }
+  .vid.doc .play { background: var(--brand2); font-size: 8pt; font-weight: 700; }
+  .vid b { display: block; font-size: 9.2pt; }
+  .vid span { font-size: 7.9pt; color: var(--muted); display: block; }
+  .vid u { font-size: 7.4pt; color: var(--brand2); text-decoration: none; word-break: break-all; }
+  .closing { margin-top: 12px; border-radius: 14px; background: linear-gradient(160deg, #1d1638, #4b3a71); color: #fff; padding: 16px 20px; display: grid; grid-template-columns: 1fr auto; gap: 22px; align-items: end; }
+  .closing p { color: #ddd5f3; font-size: 9.4pt; margin-bottom: 6px; }
+  .closing h3 { font-size: 13pt; color: #fff; }
+  .sign { text-align: center; min-width: 58mm; }
+  .sign .hand { font-family: "Snell Roundhand", "Apple Chancery", "Brush Script MT", cursive; font-size: 25pt; line-height: 1; color: #fff; }
+  .sign .rule { border-top: 1px solid rgba(255,255,255,.5); margin: 6px 0 5px; }
+  .sign b { display: block; font-size: 9.6pt; }
+  .sign span { font-size: 7.9pt; color: #c9c0e6; display: block; }
+</style>
+</head>
+<body>
+
+<!-- ======================= 1 · PORTADA ======================= -->
+<section class="page cover">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="brand">
+      <img src="simbolo.png" alt="">
+      <div><b>Genelypse Command Center</b><span>Plataforma de gestión comercial</span></div>
+    </div>
+    <span class="pill">Acta de entrega · 30 de septiembre de 2026</span>
+  </div>
+
+  <div class="hero">
+    <div class="eyebrow">Entrega final del proyecto</div>
+    <h1>La plataforma está<br><em>entregada y en producción.</em></h1>
+    <p class="lead" style="margin-top:14px">
+      Command Center reemplaza los archivos de Excel de la operación comercial: ventas, pagos,
+      gestión diaria, agendas, objetivos e indicadores de cada empresa en un solo lugar, con los
+      datos históricos cargados y al día hasta el <b>30 de septiembre de 2026</b>.
+    </p>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b>13</b><span>empresas operando en la plataforma</span></div>
+    <div class="stat"><b>17.948</b><span>ventas con su historia completa</span></div>
+    <div class="stat"><b>20.790</b><span>pagos registrados y enlazados</span></div>
+    <div class="stat"><b>10.700+</b><span>jornadas de gestión diaria</span></div>
+  </div>
+
+  <div class="links">
+    <a class="link" href="https://commandcenter.genelypsepartner.com">
+      <small>Plataforma</small><b>Entrar a Command Center</b><u>commandcenter.genelypsepartner.com</u>
+    </a>
+    <a class="link" href="https://commandcenter.genelypsepartner.com/entrega/Manual-Command-Center.pdf">
+      <small>Manual de uso · 54 páginas</small><b>Abrir el manual en PDF</b><u>commandcenter.genelypsepartner.com/entrega/Manual-Command-Center.pdf</u>
+    </a>
+    <a class="link" href="https://www.youtube.com/watch?v=f_lu5UzZgZo">
+      <small>Video guía · 25 minutos</small><b>Ver el tutorial en YouTube</b><u>youtube.com/watch?v=f_lu5UzZgZo</u>
+    </a>
+  </div>
+
+  <div class="meta">
+    <div>Cliente<b>Genelypse Partner</b></div>
+    <div>Cotización<b>COT-2026-0624</b></div>
+    <div>Desarrollo<b>17 ago – 30 sep 2026</b></div>
+    <div>Entrega y firma<b>Jonnier Martínez</b></div>
+  </div>
+
+  <div class="foot"><span>Genelypse Command Center · Acta de entrega</span><span>1 / 3</span></div>
+</section>
+
+<!-- ======================= 2 · QUÉ SE ENTREGA ======================= -->
+<section class="page">
+  <div class="eyebrow">Alcance</div>
+  <h2>Lo que se entrega</h2>
+  <p class="muted" style="max-width:160mm">Todo lo comprometido en la cotización está construido, desplegado y en uso. Además se entregan,
+  sin costo adicional, las funciones que fueron surgiendo en las sesiones de revisión con el equipo.</p>
+
+  <div class="band ok"><div><b>Comprometido en la cotización</b><br><span>COT-2026-0624 · entregado al 100 %</span></div><span class="tag">Entregado</span></div>
+  <div class="cols">
+    <div class="item"><span class="ck">✓</span><div><b>Plataforma web en producción</b><span>En línea con dominio propio, inicio de sesión y base de datos en la nube.</span></div></div>
+    <div class="item"><span class="ck">✓</span><div><b>Empresas y sedes</b><span>Alta de empresas paso a paso, configuración, sedes y equipo comercial por sede.</span></div></div>
+    <div class="item"><span class="ck">✓</span><div><b>Usuarios y cuentas reales</b><span>Creación de cuentas, contraseñas, baja y restauración sin perder la historia.</span></div></div>
+    <div class="item"><span class="ck">✓</span><div><b>Formularios de captura</b><span>Ventas, pagos, gestión diaria, agendas e ingreso y gasto, como las hojas del Excel.</span></div></div>
+    <div class="item"><span class="ck">✓</span><div><b>Dashboard y KPIs</b><span>Resultados del mes, evolución diaria, embudo, ranking y desglose por sede.</span></div></div>
+    <div class="item"><span class="ck">✓</span><div><b>Histórico del Excel importado</b><span>Ventas, pagos, gestión, caja y agendas de todas las oficinas, al 30 de septiembre.</span></div></div>
+    <div class="item"><span class="ck">✓</span><div><b>Manual de uso y video guía</b><span>Instructivo de 54 páginas con capturas y un tutorial de 25 minutos por rol.</span></div></div>
+    <div class="item"><span class="ck">✓</span><div><b>Capacitación y traspaso</b><span>Sesiones en vivo con el equipo, grabadas, y entrega de accesos de la infraestructura.</span></div></div>
+  </div>
+
+  <div class="band plus"><div><b>Adicional, sin costo</b><br><span>No estaba en la cotización. Se construyó porque la operación lo necesitaba y no se cobra.</span></div><span class="tag">Cortesía</span></div>
+  <div class="cols">
+    <div class="item plus"><span class="ck">+</span><div><b>Tres roles con permisos</b><span>Super admin, coordinador y asesor: cada quien ve y edita solo lo suyo.</span></div></div>
+    <div class="item plus"><span class="ck">+</span><div><b>Tablero de Indicadores</b><span>Los 14 KPI de gerencia con meta, semáforo y metas propias por empresa.</span></div></div>
+    <div class="item plus"><span class="ck">+</span><div><b>Objetivos comerciales</b><span>Metas por mes y por responsable, con cumplimiento y proyección.</span></div></div>
+    <div class="item plus"><span class="ck">+</span><div><b>Rentabilidad de la pauta</b><span>Presupuesto, inversión, ROAS, costo por venta y cumplimiento del mes.</span></div></div>
+    <div class="item plus"><span class="ck">+</span><div><b>Integración con Kommo</b><span>Las agendas del CRM llegan solas a la plataforma, por empresa.</span></div></div>
+    <div class="item plus"><span class="ck">+</span><div><b>Mi jornada en tiempo real</b><span>El asesor abre, tipifica y cierra su día; los contadores se llenan solos.</span></div></div>
+    <div class="item plus"><span class="ck">+</span><div><b>Productos, precios y bonos</b><span>Lista de precios por empresa, bonos autorizados y personalizados, adiciones.</span></div></div>
+    <div class="item plus"><span class="ck">+</span><div><b>Exportar a Excel y PDF</b><span>Ventas y pagos del rango a Excel con formato; Indicadores y Dashboard a PDF.</span></div></div>
+    <div class="item plus"><span class="ck">+</span><div><b>Auditoría</b><span>Quién hizo qué y cuándo: empresas, usuarios, metas y registros.</span></div></div>
+    <div class="item plus"><span class="ck">+</span><div><b>Comprobantes y seguimiento</b><span>Fotos del pago en cada venta y alerta de recontacto a los 85 días.</span></div></div>
+    <div class="item plus"><span class="ck">+</span><div><b>Módulos por empresa y marca</b><span>Cada empresa activa lo que usa, con su logo y su color.</span></div></div>
+    <div class="item plus"><span class="ck">+</span><div><b>Modo oscuro y celular</b><span>La misma plataforma, cómoda de noche y desde el teléfono.</span></div></div>
+  </div>
+
+  <div class="foot"><span>Genelypse Command Center · Acta de entrega</span><span>2 / 3</span></div>
+</section>
+
+<!-- ======================= 3 · DATOS, MATERIAL Y CIERRE ======================= -->
+<section class="page">
+  <div class="eyebrow">Estado de los datos</div>
+  <h2>Información al 30 de septiembre de 2026</h2>
+  <p class="muted" style="max-width:165mm">La base se actualizó con los archivos de cada oficina recibidos el 30 de septiembre. Cada cifra
+  de la plataforma sale de estos registros; ninguna se digita aparte.</p>
+  <div class="grid4">
+    <div class="kpi"><b>17.948</b><span>ventas</span></div>
+    <div class="kpi"><b>20.790</b><span>pagos</span></div>
+    <div class="kpi"><b>10.747</b><span>jornadas de gestión</span></div>
+    <div class="kpi"><b>13</b><span>empresas activas</span></div>
+  </div>
+  <p class="note">Con corte al 30 de septiembre: CEA la 28, Eduvial, Autogo, Ruta Maestra, Ruta Segura, Atenas, San José,
+  Punto Tránsito, Cevial, Trámites Candelaria, Trámites Florida y Carss (Legendarios y Monarcas). TTC y el equipo Sultanes de Carss
+  conservan el corte de agosto; se actualizan apenas se reciban sus archivos. Desde hoy la captura se hace directamente en la plataforma.</p>
+
+  <div class="eyebrow" style="margin-top:14px">Material de capacitación</div>
+  <h2>Para aprender y para consultar</h2>
+  <div class="vids">
+    <a class="vid doc" href="https://commandcenter.genelypsepartner.com/entrega/Manual-Command-Center.pdf"><span class="play">PDF</span><div><b>Manual de uso</b><span>54 páginas, con capturas y enlaces al video</span><u>…/entrega/Manual-Command-Center.pdf</u></div></a>
+    <a class="vid yt" href="https://www.youtube.com/watch?v=f_lu5UzZgZo"><span class="play">▶</span><div><b>Video guía completo</b><span>25 min · super admin, coordinador y asesor</span><u>youtube.com/watch?v=f_lu5UzZgZo</u></div></a>
+    <a class="vid" href="https://commandcenter.genelypsepartner.com/entrega/videos.html#sesion-1"><span class="play">▶</span><div><b>Sesión de entrega · parte 1</b><span>54 min · recorrido de la plataforma con el equipo</span><u>…/entrega/videos.html#sesion-1</u></div></a>
+    <a class="vid" href="https://commandcenter.genelypsepartner.com/entrega/videos.html#sesion-2"><span class="play">▶</span><div><b>Sesión de entrega · parte 2</b><span>27 min · configuración, productos y ventas</span><u>…/entrega/videos.html#sesion-2</u></div></a>
+    <a class="vid" href="https://commandcenter.genelypsepartner.com/entrega/videos.html#sesion-3"><span class="play">▶</span><div><b>Sesión de entrega · parte 3</b><span>22 min · traspaso técnico: base de datos, dominio y despliegue</span><u>…/entrega/videos.html#sesion-3</u></div></a>
+    <a class="vid doc" href="https://commandcenter.genelypsepartner.com"><span class="play">WEB</span><div><b>La plataforma</b><span>Cada persona entra con su correo y su contraseña</span><u>commandcenter.genelypsepartner.com</u></div></a>
+  </div>
+
+  <div class="closing">
+    <div>
+      <h3>Gracias por la confianza.</h3>
+      <p>Con este documento doy por entregado el proyecto Command Center: lo cotizado, completo, y lo adicional, de corazón.
+      Fue un gusto construirlo junto a un equipo que sabe exactamente lo que necesita y lo dice claro.</p>
+      <p style="margin:0">Quedo atento a lo que venga. Un abrazo grande para todo el equipo.</p>
+    </div>
+    <div class="sign">
+      <div class="hand">Jonnier Martínez</div>
+      <div class="rule"></div>
+      <b>Jonnier Martínez</b>
+      <span>Desarrollo y entrega · 30 de septiembre de 2026</span>
+    </div>
+  </div>
+
+  <div class="foot"><span>Genelypse Command Center · Acta de entrega</span><span>3 / 3</span></div>
+</section>
+
+</body>
+</html>

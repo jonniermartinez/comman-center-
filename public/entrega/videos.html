@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Sesiones de entrega · Genelypse Command Center</title>
+<style>
+  :root { --bg:#f6f5fa; --card:#fff; --ink:#1e1c36; --muted:#5b5872; --line:#e3dff0; --brand:#4b3a71; --brand2:#7c5cc4; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0b0e16; --card:#161b26; --ink:#e8eaf0; --muted:#9aa1b2; --line:#262d3b; --brand:#b3a1dc; --brand2:#b3a1dc; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { display:flex; align-items:center; gap:12px; margin-bottom: 24px; }
+  header img { width:44px; height:44px; border-radius:11px; background:#fff; padding:6px; }
+  header b { display:block; font-size:18px; }
+  header span { color:var(--muted); font-size:13px; }
+  h1 { font-size: 28px; letter-spacing:-.02em; margin: 0 0 6px; }
+  p.lead { color:var(--muted); margin:0 0 24px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:16px; scroll-margin-top:16px; }
+  section small { color:var(--brand2); font-weight:700; letter-spacing:.12em; text-transform:uppercase; font-size:11px; }
+  section h2 { font-size:19px; margin:2px 0 4px; }
+  section p { color:var(--muted); font-size:14px; margin:0 0 12px; }
+  video { width:100%; aspect-ratio:16/9; border-radius:10px; background:#000; display:block; }
+  .pend { border:1px dashed var(--line); border-radius:10px; padding:28px 16px; text-align:center; color:var(--muted); font-size:14px; }
+  nav { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+  nav a { border:1px solid var(--line); background:var(--card); color:var(--ink); text-decoration:none; border-radius:999px; padding:6px 14px; font-size:13px; }
+  footer { color:var(--muted); font-size:13px; margin-top:24px; }
+  footer a { color:var(--brand2); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="simbolo.png" alt="">
+    <div><b>Genelypse Command Center</b><span>Sesiones de entrega · 30 de septiembre de 2026</span></div>
+  </header>
+  <h1>Sesiones de entrega grabadas</h1>
+  <p class="lead">Las tres partes de la sesión en vivo con el equipo. Para aprender función por función, el
+  <a href="https://www.youtube.com/watch?v=f_lu5UzZgZo" style="color:var(--brand2)">video guía en YouTube</a> y el
+  <a href="Manual-Command-Center.pdf" style="color:var(--brand2)">manual en PDF</a> van al grano.</p>
+  <nav><a href="#sesion-1">Parte 1 · Recorrido</a><a href="#sesion-2">Parte 2 · Configuración y ventas</a><a href="#sesion-3">Parte 3 · Traspaso técnico</a></nav>
+
+  <section id="sesion-1" data-video="sesion-1.mp4">
+    <small>Parte 1 · 54 min</small>
+    <h2>Recorrido de la plataforma con el equipo</h2>
+    <p>Usuarios y roles, indicadores, objetivos, ventas, agendas y cómo usar el manual.</p>
+  </section>
+  <section id="sesion-2" data-video="sesion-2.mp4">
+    <small>Parte 2 · 27 min</small>
+    <h2>Configuración, productos y ventas</h2>
+    <p>Datos y marca de la empresa, lista de precios y bonos, registrar y corregir una venta, dashboard.</p>
+  </section>
+  <section id="sesion-3" data-video="sesion-3.mp4">
+    <small>Parte 3 · 22 min</small>
+    <h2>Traspaso técnico</h2>
+    <p>Base de datos, copias de seguridad, dominio y despliegue: dónde vive cada cosa y quién tiene acceso.</p>
+  </section>
+
+  <footer>Entrega firmada por Jonnier Martínez · <a href="Entrega-Command-Center.pdf">Acta de entrega (PDF)</a></footer>
+</main>
+<script>
+  // Dónde están publicados los videos. Vacío mientras se suben: la página
+  // lo dice en vez de mostrar un reproductor roto.
+  const BASE = ""
+  for (const s of document.querySelectorAll("section[data-video]")) {
+    if (BASE) {
+      const v = document.createElement("video")
+      v.controls = true; v.preload = "metadata"; v.src = BASE + s.dataset.video
+      s.appendChild(v)
+    } else {
+      const d = document.createElement("div")
+      d.className = "pend"; d.textContent = "Este video se está publicando. Vuelva a abrir esta página en un rato."
+      s.appendChild(d)
+    }
+  }
+</script>
+</body>
+</html>
