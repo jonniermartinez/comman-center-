@@ -53,18 +53,18 @@
     <h2>Configuración, productos y ventas</h2>
     <p>Datos y marca de la empresa, lista de precios y bonos, registrar y corregir una venta, dashboard.</p>
   </section>
-  <section id="sesion-3" data-video="sesion-3.mp4">
+  <section id="sesion-3">
     <small>Parte 3 · 22 min</small>
     <h2>Traspaso técnico</h2>
     <p>Base de datos, copias de seguridad, dominio y despliegue: dónde vive cada cosa y quién tiene acceso.</p>
+    <div class="pend">Esta parte muestra cuentas y accesos de la infraestructura, así que no se publica en una página abierta: se entrega directamente al responsable técnico.</div>
   </section>
 
   <footer>Entrega firmada por Jonnier Martínez · <a href="Entrega-Command-Center.pdf">Acta de entrega (PDF)</a></footer>
 </main>
 <script>
-  // Dónde están publicados los videos. Vacío mientras se suben: la página
-  // lo dice en vez de mostrar un reproductor roto.
-  const BASE = ""
+  // Dónde están publicados los videos.
+  const BASE = "https://pub-4f837f5fa76846c782c1182cc6c49f75.r2.dev/"
   for (const s of document.querySelectorAll("section[data-video]")) {
     if (BASE) {
       const v = document.createElement("video")
