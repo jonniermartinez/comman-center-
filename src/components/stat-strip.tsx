@@ -25,19 +25,19 @@ export function StatStrip({ items, className }: { items: StatItem[]; className?:
   // cuatro, la quinta caía sola en una segunda fila y la tira dejaba de leerse
   // como un grupo.
   const columnas: Record<number, string> = {
-    1: "lg:grid-cols-1",
-    2: "lg:grid-cols-2",
-    3: "lg:grid-cols-3",
-    4: "lg:grid-cols-4",
-    5: "lg:grid-cols-5",
-    6: "lg:grid-cols-6",
+    1: "lg:grid-cols-1 print:grid-cols-1",
+    2: "lg:grid-cols-2 print:grid-cols-2",
+    3: "lg:grid-cols-3 print:grid-cols-3",
+    4: "lg:grid-cols-4 print:grid-cols-4",
+    5: "lg:grid-cols-5 print:grid-cols-5",
+    6: "lg:grid-cols-6 print:grid-cols-6",
   }
 
   return (
     <div
       className={cn(
         "grid grid-cols-2 gap-4 rounded-xl border bg-card p-4 sm:p-6 lg:gap-6",
-        columnas[items.length] ?? "lg:grid-cols-4",
+        columnas[items.length] ?? "lg:grid-cols-4 print:grid-cols-4",
         className,
       )}
     >
@@ -92,7 +92,7 @@ export function StatStrip({ items, className }: { items: StatItem[]; className?:
             </div>
 
             {i < items.length - 1 && (
-              <div aria-hidden className="mx-4 hidden h-full w-px bg-border lg:block xl:mx-6" />
+              <div aria-hidden className="mx-4 hidden h-full w-px bg-border lg:block xl:mx-6 print:block" />
             )}
           </div>
         )

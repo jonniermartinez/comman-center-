@@ -103,5 +103,5 @@ export function RentabilidadPauta({
     },
   ]
 
-  return <Placas celdas={celdas} className={cn("lg:grid-cols-6", className)} />
+  return <Placas celdas={celdas} className={cn("lg:grid-cols-6 print:grid-cols-6", className)} />
 }

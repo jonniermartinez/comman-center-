@@ -20,13 +20,33 @@ export type Celda = string | number | null | undefined | CeldaFecha | CeldaPesos
 
 export interface HojaXlsx {
   nombre: string
-  /** Líneas sueltas encima de la tabla: título, período, fecha de exportación. */
+  /**
+   * Líneas sueltas encima de la tabla. La primera es el título y va grande;
+   * las demás —período, fecha de exportación— van en gris debajo.
+   */
   encabezado?: string[]
   columnas: { titulo: string; ancho?: number }[]
   filas: Celda[][]
 }
 
-const ESTILO = { normal: 0, negrita: 1, fecha: 2, pesos: 3 } as const
+/*
+ * Los estilos de `styles.xml`, por posición. Los del cuerpo van de a cuatro
+ * —texto, fecha, pesos, número— y se repiten con fondo para la fila alterna:
+ * sumar `ALTERNA` a un estilo del cuerpo da su versión con franja.
+ */
+const ESTILO = {
+  normal: 0,
+  titulo: 1,
+  dato: 2,
+  cabecera: 3,
+  texto: 4,
+  fecha: 5,
+  pesos: 6,
+  numero: 7,
+  totalTexto: 12,
+  totalPesos: 13,
+} as const
+const ALTERNA = 4
 
 function escapar(texto: string): string {
   return texto
@@ -53,50 +73,109 @@ function serial(fecha: string): number | null {
   return Number.isNaN(ms) ? null : ms / 86_400_000 + 25_569
 }
 
-function celda(valor: Celda, ref: string, estilo: number = ESTILO.normal): string {
-  if (valor === null || valor === undefined || valor === "") return ""
+const esPesos = (valor: Celda): valor is CeldaPesos =>
+  typeof valor === "object" && valor !== null && "pesos" in valor
+
+function texto(valor: string, ref: string, estilo: number): string {
+  return `<c r="${ref}" s="${estilo}" t="inlineStr"><is><t xml:space="preserve">${escapar(valor)}</t></is></c>`
+}
+
+/**
+ * Una celda del cuerpo. Una celda vacía también se escribe, con su estilo:
+ * sin eso la franja y los bordes de la fila quedarían con huecos.
+ */
+function celdaCuerpo(valor: Celda, ref: string, franja: number): string {
+  const vacia = `<c r="${ref}" s="${ESTILO.texto + franja}"/>`
+  if (valor === null || valor === undefined || valor === "") return vacia
   if (typeof valor === "object") {
     if ("fecha" in valor) {
       const n = serial(valor.fecha)
-      return n === null ? "" : `<c r="${ref}" s="${ESTILO.fecha}"><v>${n}</v></c>`
+      return n === null ? vacia : `<c r="${ref}" s="${ESTILO.fecha + franja}"><v>${n}</v></c>`
     }
     return Number.isFinite(valor.pesos)
-      ? `<c r="${ref}" s="${ESTILO.pesos}"><v>${valor.pesos}</v></c>`
-      : ""
+      ? `<c r="${ref}" s="${ESTILO.pesos + franja}"><v>${valor.pesos}</v></c>`
+      : vacia
   }
   if (typeof valor === "number") {
-    return Number.isFinite(valor) ? `<c r="${ref}" s="${estilo}"><v>${valor}</v></c>` : ""
+    return Number.isFinite(valor)
+      ? `<c r="${ref}" s="${ESTILO.numero + franja}"><v>${valor}</v></c>`
+      : vacia
   }
-  return `<c r="${ref}" s="${estilo}" t="inlineStr"><is><t xml:space="preserve">${escapar(valor)}</t></is></c>`
+  return texto(valor, ref, ESTILO.texto + franja)
 }
 
 function hojaXml(hoja: HojaXlsx): string {
   const filas: string[] = []
+  const columnas = hoja.columnas.length
   let n = 0
-  const fila = (celdas: Celda[], estilo?: number) => {
+
+  ;(hoja.encabezado ?? []).forEach((linea, i) => {
     n++
     filas.push(
-      `<row r="${n}">${celdas.map((c, i) => celda(c, `${letra(i)}${n}`, estilo)).join("")}</row>`,
+      i === 0
+        ? `<row r="${n}" ht="24" customHeight="1">${texto(linea, `A${n}`, ESTILO.titulo)}</row>`
+        : `<row r="${n}">${texto(linea, `A${n}`, ESTILO.dato)}</row>`,
     )
-  }
-
-  for (const linea of hoja.encabezado ?? []) fila([linea], ESTILO.negrita)
+  })
   if (hoja.encabezado?.length) n++ // una fila en blanco antes de la tabla
-  fila(hoja.columnas.map((c) => c.titulo), ESTILO.negrita)
+
+  n++
   const filaTitulos = n
-  for (const f of hoja.filas) fila(f)
+  filas.push(
+    `<row r="${n}" ht="30" customHeight="1">${hoja.columnas
+      .map((c, i) => texto(c.titulo, `${letra(i)}${n}`, ESTILO.cabecera))
+      .join("")}</row>`,
+  )
+
+  hoja.filas.forEach((f, k) => {
+    n++
+    const franja = k % 2 === 1 ? ALTERNA : 0
+    const celdas = Array.from({ length: columnas }, (_, i) =>
+      celdaCuerpo(f[i], `${letra(i)}${n}`, franja),
+    )
+    filas.push(`<row r="${n}">${celdas.join("")}</row>`)
+  })
+  const ultimaFila = n
+
+  // La fila de totales suma cada columna de plata. Va como fórmula, para que
+  // siga cuadrando si alguien filtra o corrige una celda, y con el valor ya
+  // calculado, para los visores que no recalculan.
+  const dePesos = hoja.columnas.map((_, i) => hoja.filas.some((f) => esPesos(f[i])))
+  if (hoja.filas.length && dePesos.some(Boolean)) {
+    n++
+    const celdas = hoja.columnas.map((_, i) => {
+      const ref = `${letra(i)}${n}`
+      if (dePesos[i]) {
+        const suma = hoja.filas.reduce((s, f) => s + (esPesos(f[i]) ? f[i].pesos : 0), 0)
+        const rango = `${letra(i)}${filaTitulos + 1}:${letra(i)}${ultimaFila}`
+        return `<c r="${ref}" s="${ESTILO.totalPesos}"><f>SUBTOTAL(109,${rango})</f><v>${suma}</v></c>`
+      }
+      return i === 0
+        ? texto(`Total · ${hoja.filas.length.toLocaleString("es-CO")} registro(s)`, ref, ESTILO.totalTexto)
+        : `<c r="${ref}" s="${ESTILO.totalTexto}"/>`
+    })
+    filas.push(`<row r="${n}" ht="22" customHeight="1">${celdas.join("")}</row>`)
+  }
 
   const cols = hoja.columnas
     .map((c, i) => `<col min="${i + 1}" max="${i + 1}" width="${c.ancho ?? 16}" customWidth="1"/>`)
     .join("")
+  const tabla = `A${filaTitulos}:${letra(columnas - 1)}${Math.max(ultimaFila, filaTitulos)}`
 
   return (
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
     `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
-    // Los títulos de la tabla quedan fijos al bajar por el listado.
-    `<sheetViews><sheetView workbookViewId="0"><pane ySplit="${filaTitulos}" topLeftCell="A${filaTitulos + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` +
+    `<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>` +
+    // Los títulos de la tabla quedan fijos al bajar por el listado, y sin la
+    // cuadrícula gris de Excel: los bordes los ponen las celdas.
+    `<sheetViews><sheetView showGridLines="0" workbookViewId="0"><pane ySplit="${filaTitulos}" topLeftCell="A${filaTitulos + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` +
     `<cols>${cols}</cols>` +
     `<sheetData>${filas.join("")}</sheetData>` +
+    // Cada columna con su filtro, como una tabla de Excel.
+    `<autoFilter ref="${tabla}"/>` +
+    // Al imprimir: horizontal y a lo ancho de una hoja.
+    `<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>` +
+    `<pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>` +
     `</worksheet>`
   )
 }
@@ -124,22 +203,13 @@ const WORKBOOK_RELS =
   `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>` +
   `</Relationships>`
 
-// Los cuatro estilos de `ESTILO`, en ese orden: normal, negrita, fecha y pesos.
+/*
+ * Los estilos, en el orden de `ESTILO`: título, dato del encabezado, cabecera
+ * de la tabla (morado de marca, letra blanca), los cuatro del cuerpo, los
+ * mismos cuatro con franja, y los dos de la fila de totales.
+ */
 const STYLES =
-  `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-  `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
-  `<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>` +
-  `<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>` +
-  `<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>` +
-  `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
-  `<cellXfs count="4">` +
-  `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
-  `<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>` +
-  `<xf numFmtId="14" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>` +
-  `<xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>` +
-  `</cellXfs>` +
-  `<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>` +
-  `</styleSheet>`
+  `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="&quot;$&quot;\\ #,##0;[Red]\\-&quot;$&quot;\\ #,##0"/></numFmts><fonts count="5"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="16"/><color rgb="FF5B3D9C"/><name val="Calibri"/></font><font><sz val="10"/><color rgb="FF5B5872"/><name val="Calibri"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF5B3D9C"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF7F5FC"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEDE7F8"/></patternFill></fill></fills><borders count="3"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFDCD9EA"/></left><right style="thin"><color rgb="FFDCD9EA"/></right><top style="thin"><color rgb="FFDCD9EA"/></top><bottom style="thin"><color rgb="FFDCD9EA"/></bottom><diagonal/></border><border><left style="thin"><color rgb="FFDCD9EA"/></left><right style="thin"><color rgb="FFDCD9EA"/></right><top style="medium"><color rgb="FF5B3D9C"/></top><bottom style="thin"><color rgb="FFDCD9EA"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="14"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="14" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="14" fontId="0" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="164" fontId="0" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="3" fontId="0" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="1" fillId="4" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="164" fontId="1" fillId="4" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`
 
 function workbookXml(nombre: string): string {
   // Excel no admite estos caracteres en el nombre de una hoja, ni más de 31.

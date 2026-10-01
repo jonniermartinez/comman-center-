@@ -156,16 +156,23 @@
 
 /*
  * Impresión: el "Descargar PDF" de Indicadores y Dashboard es la pantalla
- * impresa. Sale solo el contenido —sin menú lateral ni barra superior—, en
- * horizontal para que quepan las rejillas de escritorio, y con los fondos de
- * las placas, que el navegador quita por defecto.
+ * impresa, en el tema que esté activo. Sale solo el contenido —sin menú
+ * lateral ni barra superior—, en horizontal para que quepan las rejillas de
+ * escritorio.
+ *
+ * La hoja va sin margen y el margen lo pone el contenido: el margen de @page
+ * queda siempre blanco, y en tema oscuro eso es un marco blanco alrededor de
+ * un informe negro. Con el fondo en el body y el relleno clonado en cada
+ * fragmento, el color llega hasta el borde del papel en todas las hojas.
  */
 @media print {
   @page {
     size: A4 landscape;
-    margin: 10mm;
+    margin: 0;
   }
+  html,
   body {
+    background: var(--background) !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -173,6 +180,29 @@
   [data-slot="sidebar-gap"],
   [data-slot="sidebar-container"] {
     display: none !important;
+  }
+  /* Un contenedor flex no se parte bien entre hojas: en papel, bloques. */
+  [data-slot="sidebar-wrapper"],
+  [data-slot="sidebar-inset"] {
+    display: block !important;
+    min-height: 0 !important;
+    background: transparent !important;
+  }
+  /* Un poco más pequeño que en pantalla: caben dos o tres bloques por hoja
+     en vez de uno, y se lee como un informe y no como una captura. */
+  .pdf-hoja {
+    zoom: 0.8;
+    padding: 12mm 12mm 16mm !important;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  /* El pie se repite en cada hoja: un elemento fijo se imprime en todas. */
+  .pdf-pie {
+    position: fixed;
+    right: 12mm;
+    bottom: 6mm;
+    left: 12mm;
+    justify-content: space-between;
   }
   /* Una placa o una tarjeta partida entre dos hojas no se puede leer. */
   section,

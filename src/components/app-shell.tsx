@@ -296,7 +296,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {resumeUnMes(pathname) && <FiltroMes />}
         </header>
 
-        <div className="flex-1 p-4 sm:p-6 print:p-0">{children}</div>
+        <div className="pdf-hoja flex-1 p-4 sm:p-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   )

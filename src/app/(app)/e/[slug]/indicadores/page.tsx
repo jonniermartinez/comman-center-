@@ -4,7 +4,7 @@ import { CumplimientoMes } from "@/components/indicadores/cumplimiento-mes"
 import { DiasHabiles } from "@/components/indicadores/dias-habiles"
 import { InversionPauta } from "@/components/indicadores/inversion-pauta"
 import { RentabilidadPauta } from "@/components/indicadores/rentabilidad-pauta"
-import { ExportarPdf } from "@/components/exportar-pdf"
+import { EncabezadoPdf, ExportarPdf } from "@/components/exportar-pdf"
 import { FiltrosIndicadores } from "@/components/indicadores/filtros"
 import { KpiCard } from "@/components/indicadores/kpi-card"
 import { PageHeader } from "@/components/page-header"
@@ -96,7 +96,16 @@ export default async function IndicadoresPage({
 
   return (
     <div className="mx-auto max-w-7xl">
+      <EncabezadoPdf
+        titulo="Indicadores"
+        empresa={company.name}
+        periodo={periodo}
+        detalle={`Gestión y ventas de ${
+          seleccionados.length ? `${filas.length} comercial(es)` : "todo el equipo"
+        }, con la meta y la efectividad de cada indicador.`}
+      />
       <PageHeader
+        className="print:hidden"
         title="Indicadores"
         description={`${company.name} · ${periodo}. Gestión y ventas de ${
           seleccionados.length ? `${filas.length} comercial(es)` : "todo el equipo"
@@ -158,7 +167,7 @@ export default async function IndicadoresPage({
           presupuesto={datos.presupuesto}
           inversion={datos.inversion}
         />
-        <div className="mt-4 flex flex-wrap items-end gap-3 border-t pt-4">
+        <div className="mt-4 flex flex-wrap items-end gap-3 border-t pt-4 print:hidden">
           {meses.slice(0, 3).flatMap((m) => {
             const anotado = datos.inversionPorMes.find((p) => p.period_month === m)
             return (["presupuesto", "monto"] as const).map((campo) => (
@@ -201,8 +210,8 @@ export default async function IndicadoresPage({
       )}
 
       {/* ============ KPI 1 · Validación presencial / digital ============ */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <SectionCard className="lg:col-span-2">
+      <div className="grid gap-4 lg:grid-cols-3 print:grid-cols-3">
+        <SectionCard className="lg:col-span-2 print:col-span-2">
           <SectionCardHeader
             title="Validación de ventas presenciales y digitales"
             description="Lo que dice la base de ventas contra lo que tipificó el equipo en gestión diaria. Deberían coincidir."
@@ -299,7 +308,7 @@ export default async function IndicadoresPage({
             company.canManage ? " La meta de cada indicador se cambia en su tarjeta; vacía vuelve a la de por defecto." : ""
           }`}
         />
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3">
           {kpis.map((k) => (
             <KpiCard key={k.code} kpi={k} companyId={company.id} editable={company.canManage} />
           ))}
