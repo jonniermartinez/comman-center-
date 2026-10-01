@@ -59,7 +59,10 @@ EMPRESAS = {
     "Ruta Segura":           ("Buga",         "Valle del Cauca", "#be123c"),
     "Atenas":                ("Yumbo",        "Valle del Cauca", "#ca8a04"),
     "San José":              ("Palmira",      "Valle del Cauca", "#4d7c0f"),
-    "Trámites Buenaventura": ("Buenaventura", "Valle del Cauca", "#0369a1"),
+    # Se llamó "Trámites Buenaventura" hasta que la empresa cambió su nombre en
+    # la aplicación. Se busca por el slug de hoy: con el viejo, la importación
+    # crearía una segunda empresa vacía para la misma oficina.
+    "Punto Tránsito":        ("Buenaventura", "Valle del Cauca", "#0369a1"),
     "Cevial":                ("El Cerrito",   "Valle del Cauca", "#9333ea"),
     "Trámites Candelaria":   ("Candelaria",   "Valle del Cauca", "#c2410c"),
     "Trámites Florida":      ("Florida",      "Valle del Cauca", "#059669"),
@@ -76,7 +79,7 @@ MAPA = {
     "Ventas - Ruta Segura":         "Ruta Segura",
     "Ventas LV - Yumbo":            "Atenas",
     "Ventas LV - Palmira":          "San José",
-    "Ventas LV - Buenaventura":     "Trámites Buenaventura",
+    "Ventas LV - Buenaventura":     "Punto Tránsito",
     "Ventas - CEA Cevial":          "Cevial",
     "Ventas - Trámites Candelaria": "Trámites Candelaria",
     "Ventas - Trámites Florida":    "Trámites Florida",
@@ -211,7 +214,7 @@ class Supabase:
         r.raise_for_status()
         return r.json()
 
-    def insert(self, tabla, filas, upsert_on=None, devolver=False):
+    def insert(self, tabla, filas, upsert_on=None, devolver=False, pisar=True):
         if not filas:
             return []
         if self.dry_run:
@@ -222,7 +225,11 @@ class Supabase:
         prefer = ["return=representation" if devolver else "return=minimal"]
         params = {}
         if upsert_on:
-            prefer.append("resolution=merge-duplicates")
+            # `pisar=False` deja quieto lo que ya existe: los catálogos, los
+            # módulos y la sede de cada persona se corrigen en la aplicación,
+            # y una recarga del histórico no debe devolverlos a como estaban.
+            prefer.append("resolution=merge-duplicates" if pisar
+                          else "resolution=ignore-duplicates")
             params["on_conflict"] = upsert_on
         salida = []
         # Por lotes: 46.000 filas en una sola petición se caen por tamaño.
@@ -248,10 +255,28 @@ class Supabase:
 # ------------------------------------------------------------------
 # Lectura de hojas
 # ------------------------------------------------------------------
-def leer_hoja(ruta, nombres):
-    """Devuelve (cabecera, filas) de la primera hoja que exista de `nombres`."""
+def leer_hoja(ruta, nombres, empieza_por=None):
+    """
+    Devuelve (cabecera, filas) de la primera hoja que exista de `nombres`.
+
+    Si ninguna existe y se pasa `empieza_por`, se busca la hoja cuya cabecera
+    arranque con esas columnas. La de gestión cambia de nombre de un archivo a
+    otro y de un mes al siguiente —"Gestión", "GESTIÓN", "Gestion", "gestion" y
+    hasta "0"—, y una hoja que no se encuentra no falla: se lee como vacía y la
+    recarga borra las jornadas que ese archivo ya tenía en la base.
+    """
     with open_workbook(ruta) as wb:
         hoja = next((h for h in nombres if h in wb.sheets), None)
+        if not hoja and empieza_por:
+            for candidata in wb.sheets:
+                with wb.get_sheet(candidata) as sh:
+                    primera = next((
+                        [str(c.v).strip() if c.v is not None else "" for c in fila]
+                        for fila in sh.rows()
+                        if any(c.v not in (None, "") for c in fila)), [])
+                if primera[:len(empieza_por)] == empieza_por:
+                    hoja = candidata
+                    break
         if not hoja:
             return None, []
         with wb.get_sheet(hoja) as sh:
@@ -331,7 +356,7 @@ class Catalogos:
                 for f in filas:
                     # "Ren A2", "Ren C1": el producto dice si es renovación.
                     f["is_renovacion"] = f["code"].startswith("ren_") or f["code"] == "ren"
-            sb.insert(tabla, filas, upsert_on="code")
+            sb.insert(tabla, filas, upsert_on="code", pisar=False)
             print(f"  catálogo {tabla:18s} {len(filas):4d} valores")
 
 
@@ -350,7 +375,7 @@ def asegurar_estructura(sb, archivos):
                  for n in nombres for s in sedes_de(n)}
         return empresas, sedes
 
-    empresas, sedes = {}, {}
+    empresas, sedes, nuevas = {}, {}, []
     for nombre in sorted(nombres):
         ciudad, departamento, color = EMPRESAS[nombre]
         datos = {
@@ -368,6 +393,7 @@ def asegurar_estructura(sb, archivos):
         else:
             creada = sb.insert("companies", [datos], devolver=True)
             empresas[nombre] = creada[0]["id"] if creada else None
+            nuevas.append(empresas[nombre])
             print(f"  empresa creada: {nombre}")
 
         cid = empresas[nombre]
@@ -391,12 +417,13 @@ def asegurar_estructura(sb, archivos):
             sedes[(nombre, sede)] = creada[0]["id"] if creada else None
             print(f"  sede creada: {nombre} · {sede}")
 
-    # Todos los módulos habilitados para todas las empresas importadas.
+    # Todos los módulos habilitados, pero solo en las empresas que nacen acá:
+    # a las que ya existían les pudieron apagar alguno a propósito.
     modulos = [m["code"] for m in sb.select("modules", {"select": "code"})]
     sb.insert("company_modules",
               [{"company_id": cid, "module_code": m}
-               for cid in empresas.values() if cid for m in modulos],
-              upsert_on="company_id,module_code")
+               for cid in nuevas if cid for m in modulos],
+              upsert_on="company_id,module_code", pisar=False)
 
     return empresas, sedes
 
@@ -576,7 +603,8 @@ def leer_pagos(ruta, cat, ctx, fecha_por_ref=None, sede_por_ref=None):
 
 
 def leer_actividad(ruta, ctx):
-    cab, filas = leer_hoja(ruta, ["Gestión", "GESTIÓN"])
+    cab, filas = leer_hoja(ruta, ["Gestión", "GESTIÓN"],
+                           empieza_por=["Periodo", "Fecha", "Responsable", "Hora Llegada"])
     if not cab:
         return [], set()
     salida, personas, vistos, repetidos = [], set(), set(), 0
@@ -622,7 +650,10 @@ def leer_actividad(ruta, ctx):
             "llamada_seguimiento": entero(f("Llamada Seguimiento")),
             "llamada_agenda": entero(f("Llamada Agenda")),
             "llamada_no_interesado": entero(f("Llamada NO Interesado")),
-            "llamada_contestada": entero(f("Llamada Contestada")),
+            # Derivada (044): la que trae el Excel viene mal digitada a veces.
+            "llamada_contestada": sum(entero(f(c)) for c in (
+                "Llamada Efectiva (Venta Realizada)", "Llamada Seguimiento",
+                "Llamada Agenda", "Llamada NO Interesado", "Llamada Postventa")),
             "llamada_postventa": entero(f("Llamada Postventa")),
             "atencion_venta": entero(f("Atención Venta Exitosa")),
             "atencion_seguimiento": entero(f("Atención Seguimiento")),
@@ -764,6 +795,33 @@ def leer_agendas(ruta, ctx):
     return salida, personas
 
 
+def sin_ya_registradas(sb, company_id, filas):
+    """
+    Quita las jornadas que la base ya tiene de otra fuente.
+
+    Tras borrar lo de este archivo, lo que queda de esa empresa lo escribió la
+    aplicación o un archivo que no viene en esta carga. La tabla admite una
+    jornada por sede, día y persona, y la que ya está manda: es más reciente
+    o es de un equipo que no se está recargando.
+    """
+    existentes, desde = set(), 0
+    while True:
+        lote = sb.select("daily_activity", {
+            "company_id": f"eq.{company_id}",
+            "select": "branch_id,report_date,staff_id",
+            "order": "id", "offset": desde, "limit": 1000})
+        existentes |= {(x["branch_id"], x["report_date"], x["staff_id"]) for x in lote}
+        if len(lote) < 1000:
+            break
+        desde += 1000
+    quedan = [f for f in filas
+              if (f["branch_id"], f["report_date"], f["staff_id"]) not in existentes]
+    if len(quedan) < len(filas):
+        print(f"    · {len(filas) - len(quedan)} jornada(s) ya estaban en la base "
+              "por otra fuente, se conservan esas")
+    return quedan
+
+
 # ------------------------------------------------------------------
 # Programa principal
 # ------------------------------------------------------------------
@@ -809,12 +867,14 @@ def main():
         sys.exit("Estos archivos no están en el mapa de empresas: " + ", ".join(desconocidos))
 
     # Los tres de Carss comparten empresa y sede y sus jornadas se juntan entre
-    # sí, así que van juntos o no van: cargar uno solo dejaría la jornada de una
-    # persona partida en dos filas del mismo día, y eso la base no lo admite.
+    # sí. Si falta alguno, lo que ese equipo ya tenía en la base se queda como
+    # está, y la jornada de quien también reportó ahí el mismo día no se vuelve
+    # a cargar (ver `ya_registradas` más abajo): la base admite una sola.
     carss = {a for a, e in MAPA.items() if e == "Carss"}
     faltan = carss - set(archivos)
     if carss & set(archivos) and faltan:
-        sys.exit("Los archivos de Carss se importan juntos. Faltan: " + ", ".join(sorted(faltan)))
+        print("  aviso: de Carss faltan " + ", ".join(sorted(faltan))
+              + "; lo suyo se conserva como está en la base")
 
     print("→ Empresas y sedes")
     empresas, sedes = asegurar_estructura(sb, archivos)
@@ -876,7 +936,7 @@ def main():
     sb.insert("company_staff",
               [{"company_id": c, "staff_id": s, "branch_id": b}
                for (c, s), b in vinculos.items()],
-              upsert_on="company_id,staff_id")
+              upsert_on="company_id,staff_id", pisar=False)
     print(f"  vínculos persona-empresa: {len(vinculos)}")
 
     print("\n→ Cargando")
@@ -890,6 +950,8 @@ def main():
                     f["staff_id"] = staff.get(f.pop("_staff"))
             # Borrar antes de insertar es lo que hace repetible la importación.
             sb.delete(tabla, {"source_file": f"eq.{archivo}", "source": "eq.excel"})
+            if tabla == "daily_activity" and filas and not args.dry_run:
+                filas = sin_ya_registradas(sb, datos["ctx"]["company_id"], filas)
             sb.insert(tabla, filas)
             totales[tabla] += len(filas)
             if filas:
