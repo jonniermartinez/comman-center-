@@ -139,7 +139,8 @@ function Bloque({
  * digitarlas es de donde salen los descuadres:
  *
  *   * El precio lo pone el producto de la lista de la empresa.
- *   * La rebaja solo puede ser un bono autorizado de ese producto.
+ *   * La rebaja es un bono: uno autorizado de ese producto o uno
+ *     personalizado, con su concepto.
  *   * El saldo es el valor final menos los pagos, y los pagos van en su módulo.
  *
  * El resumen de plata vive pegado al pie y no al final del formulario: es la
@@ -291,9 +292,14 @@ export function NuevaVenta({
     }
   }, [open, editando, detalleListo, registro?.id])
 
-  const totalBonos = bonos.reduce((s, b) => s + b.amount, 0)
+  // Un bono personalizado a medio llenar —sin concepto o sin valor— no cuenta
+  // ni se guarda, igual que una adición vacía.
+  const bonosValidos = bonos.filter((b) => b.bonus_id !== null || (b.name.trim() && b.amount > 0))
+  const totalBonos = bonosValidos.reduce((s, b) => s + b.amount, 0)
   const totalAdiciones = adiciones.reduce((s, a) => s + a.amount, 0)
-  const valorFinal = Math.max(0, valorLista + totalAdiciones - totalBonos)
+  // Las adiciones se registran con su concepto pero no entran al valor final:
+  // lo único que mueve el precio de lista son los bonos.
+  const valorFinal = Math.max(0, valorLista - totalBonos)
 
   // Lo recaudado son los pagos ya registrados contra esta venta; acá solo se
   // muestra para que el saldo cuadre con lo que se está editando.
@@ -608,17 +614,17 @@ export function NuevaVenta({
               </Bloque>
 
               <Bloque
-                titulo="Bonos y adiciones"
-                nota="Lo que le baja y lo que le sube al precio de lista."
+                titulo="Bonos"
+                nota="Lo que le baja al precio de lista."
                 acciones={
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setAdiciones((a) => [...a, { concepto: "", amount: 0 }])}
+                    onClick={() => setBonos((b) => [...b, { bonus_id: null, name: "", amount: 0 }])}
                   >
                     <Plus className="size-4" />
-                    Adición
+                    Bono
                   </Button>
                 }
               >
@@ -659,8 +665,74 @@ export function NuevaVenta({
                   </p>
                 )}
 
-                {adiciones.length > 0 && (
+                {bonos.some((b) => b.bonus_id === null) && (
                   <div className="space-y-2 border-t pt-4">
+                    <div className="grid grid-cols-[1fr_9rem_2.25rem] gap-3">
+                      <Label className="text-xs font-normal text-muted-foreground">
+                        Bono personalizado
+                      </Label>
+                      <Label className="text-xs font-normal text-muted-foreground">Valor</Label>
+                      <span />
+                    </div>
+                    {bonos.map((bono, i) =>
+                      bono.bonus_id !== null ? null : (
+                        <div key={i} className="grid grid-cols-[1fr_9rem_2.25rem] items-center gap-3">
+                          <Input
+                            value={bono.name}
+                            onChange={(e) =>
+                              setBonos((actual) =>
+                                actual.map((b, j) => (i === j ? { ...b, name: e.target.value } : b)),
+                              )
+                            }
+                            placeholder="Bono referido, convenio…"
+                            aria-label={`Concepto del bono personalizado ${i + 1}`}
+                          />
+                          <MoneyInput
+                            value={bono.amount}
+                            onValueChange={(v) =>
+                              setBonos((actual) =>
+                                actual.map((b, j) => (i === j ? { ...b, amount: v } : b)),
+                              )
+                            }
+                            aria-label={`Valor del bono personalizado ${i + 1}`}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-9"
+                            onClick={() => setBonos((actual) => actual.filter((_, j) => j !== i))}
+                          >
+                            <Trash2 className="size-4" />
+                            <span className="sr-only">Quitar el bono personalizado {i + 1}</span>
+                          </Button>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                )}
+              </Bloque>
+
+              <Bloque
+                titulo="Adiciones"
+                nota="Lo que se cobra aparte, con su concepto. No suma al valor final."
+                acciones={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAdiciones((a) => [...a, { concepto: "", amount: 0 }])}
+                  >
+                    <Plus className="size-4" />
+                    Adición
+                  </Button>
+                }
+              >
+                {adiciones.length === 0 && (
+                  <p className="text-xs text-muted-foreground">Sin adiciones.</p>
+                )}
+                {adiciones.length > 0 && (
+                  <div className="space-y-2">
                     <div className="grid grid-cols-[1fr_9rem_2.25rem] gap-3">
                       <Label className="text-xs font-normal text-muted-foreground">Concepto</Label>
                       <Label className="text-xs font-normal text-muted-foreground">Valor</Label>
@@ -964,7 +1036,7 @@ export function NuevaVenta({
               <div className="max-sm:hidden">
                 <dt className="text-xs text-muted-foreground">Adiciones</dt>
                 <dd className="font-medium tabular-nums">
-                  {totalAdiciones ? `+${formatCOP(totalAdiciones)}` : formatCOP(0)}
+                  {formatCOP(totalAdiciones)}
                 </dd>
               </div>
               <div className="sm:border-l sm:pl-6">
@@ -1050,9 +1122,9 @@ export function NuevaVenta({
                       valor_final: valorFinal,
                       cantidad_final: cantidad,
                       observacion: observacion.trim() || null,
-                      bonos: bonos.map((b) => ({
+                      bonos: bonosValidos.map((b) => ({
                         bonus_id: b.bonus_id,
-                        name: b.name,
+                        name: b.name.trim(),
                         amount: b.amount,
                       })),
                       adiciones: adiciones
