@@ -39,6 +39,11 @@ export interface CompanyContext {
    */
   myStaffId: string | null
   /**
+   * La hora a la que se espera a quien está mirando: la suya si se la fijaron
+   * en Equipo (058), o la de la empresa.
+   */
+  miHoraEntrada: string
+  /**
    * Si quien mira administra la plataforma entera.
    *
    * Una venta guardada solo la corrige el super admin (039): el formulario
@@ -117,7 +122,7 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
       .order("name"),
     supabase
       .from("company_staff")
-      .select("staff(id, full_name, active)")
+      .select("hora_entrada, staff(id, full_name, active)")
       .eq("company_id", company.id),
     supabase.from("company_modules").select("module_code").eq("company_id", company.id),
     supabase.rpc("can_manage_company", { target_company: company.id }),
@@ -167,6 +172,8 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
     canManage: Boolean(sesion.data),
     isSuperAdmin: Boolean(superAdmin.data),
     myStaffId: yo?.id ?? null,
+    miHoraEntrada:
+      (staff.data ?? []).find((r) => r.staff?.id === yo?.id)?.hora_entrada ?? company.hora_entrada,
     financiaciones: financiaciones.data ?? [],
     productosEmpresa: (productosEmpresa.data ?? []).map((p) => ({
       id: p.id,

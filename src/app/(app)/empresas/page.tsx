@@ -37,6 +37,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { formatCOPShort, formatNumber, formatPercent, todayISO } from "@/lib/format"
+import { rentabilidadPauta } from "@/lib/indicadores"
 import { monthLabel } from "@/lib/kpi"
 import { useCompanyMonthly } from "@/lib/data/client-queries"
 import { archiveCompany } from "@/lib/data/companies-actions"
@@ -200,6 +201,7 @@ function CompanyCard({
     facturacion: Number(fila?.facturacion_mes ?? 0),
     recaudo: Number(fila?.recaudo_mes ?? 0),
   }
+  const pauta = rentabilidadPauta(totals.facturacion, totals.ventas, fila?.inversion_pauta ?? null)
   const members = db.company_staff.filter((cs) => cs.company_id === company.id).length
   const sedes = db.branches.filter(
     (b) => b.company_id === company.id && b.status === "activa",
@@ -342,6 +344,28 @@ function CompanyCard({
           <div>
             <p className="text-xs text-muted-foreground">Recaudo</p>
             <p className="font-medium tabular-nums">{formatCOPShort(totals.recaudo)}</p>
+          </div>
+          {/* La pauta del mes. Sin inversión anotada van en "—": un cero diría
+              que la pauta no rindió. */}
+          <div>
+            <p className="text-xs text-muted-foreground">Invertido en pauta</p>
+            <p className="font-medium tabular-nums">
+              {fila?.inversion_pauta == null ? "—" : formatCOPShort(fila.inversion_pauta)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">ROAS</p>
+            <p className="font-medium tabular-nums">
+              {pauta.roas === null
+                ? "—"
+                : `${pauta.roas.toLocaleString("es-CO", { maximumFractionDigits: 1 })}×`}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Costo por venta</p>
+            <p className="font-medium tabular-nums">
+              {pauta.costoPorVenta === null ? "—" : formatCOPShort(pauta.costoPorVenta)}
+            </p>
           </div>
         </div>
       </CardContent>

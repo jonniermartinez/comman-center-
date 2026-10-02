@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { AlertCircle, CheckCircle2, Clock } from "lucide-react"
 
 import { Embudo, GraficaBarras, GraficaDiaria } from "@/components/graficas"
+import { ComparativoPauta } from "@/components/indicadores/comparativo-pauta"
 import { RentabilidadPauta } from "@/components/indicadores/rentabilidad-pauta"
 import { ExportarPdf } from "@/components/exportar-pdf"
 import { InformeDashboard } from "@/components/informes/informe-dashboard"
@@ -19,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { getCompanyContext } from "@/lib/data/company"
-import { loadDashboard } from "@/lib/data/dashboard"
+import { loadDashboard, MESES_COMPARATIVO } from "@/lib/data/dashboard"
 import { formatCOP, formatCOPShort, formatNumber, formatPercent, todayISO } from "@/lib/format"
 import { monthLabel } from "@/lib/kpi"
 import { mesActivo } from "@/lib/store/periodo-server"
@@ -42,7 +43,10 @@ export default async function DashboardPage({
 
   const hoy = todayISO()
   const mes = await mesActivo(sp.mes)
-  const datos = await loadDashboard(company.id, mes)
+  // Cuántos meses compara la tabla de pauta: tres por defecto, o seis o doce.
+  const pedidos = Number(sp.comparar)
+  const comparar = (MESES_COMPARATIVO as readonly number[]).includes(pedidos) ? pedidos : 3
+  const datos = await loadDashboard(company.id, mes, comparar)
 
   return (
     <>
@@ -85,6 +89,18 @@ export default async function DashboardPage({
             .
           </p>
         )}
+      </SectionCard>
+
+      <SectionCard className="mb-4">
+        <SectionCardHeader
+          title="Pauta mes contra mes"
+          description={`${monthLabel(mes)} y los meses anteriores: facturación, lo invertido en pauta, ROAS y costo por venta.`}
+        />
+        <ComparativoPauta
+          meses={datos.comparativo}
+          cuantos={comparar}
+          hrefMeses={(n) => `/e/${slug}?${new URLSearchParams({ ...(typeof sp.mes === "string" ? { mes: sp.mes } : {}), comparar: String(n) })}`}
+        />
       </SectionCard>
 
       <div className="grid gap-4 lg:grid-cols-3">

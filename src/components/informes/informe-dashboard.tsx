@@ -2,6 +2,7 @@ import { Barra, Cifras, Informe, Pildora, Seccion, Tabla } from "@/components/in
 import type { DashboardData } from "@/lib/data/dashboard"
 import { formatCOP, formatCOPShort, formatNumber, formatPercent } from "@/lib/format"
 import { rentabilidadPauta } from "@/lib/indicadores"
+import { monthLabel } from "@/lib/kpi"
 
 const pesos = (n: number | null) => (n === null ? "—" : formatCOPShort(n))
 
@@ -120,6 +121,35 @@ export function InformeDashboard({
               destacada: true,
             },
             { label: "Costo por venta", valor: pesos(costoPorVenta), nota: costoPorVenta === null ? "—" : formatCOP(Math.round(costoPorVenta)), destacada: true },
+          ]}
+        />
+      </Seccion>
+
+      <Seccion
+        titulo="Pauta mes contra mes"
+        nota="El mes del informe y los anteriores."
+        junto={datos.comparativo.length <= 6}
+      >
+        <Tabla
+          filas={datos.comparativo.map((m) => ({ ...m, ...rentabilidadPauta(m.facturacion, m.ventas, m.invertido) }))}
+          clave={(m) => m.mes}
+          columnas={[
+            { titulo: "Mes", celda: (m) => monthLabel(m.mes) },
+            { titulo: "Ventas", num: true, celda: (m) => formatNumber(m.ventas) },
+            { titulo: "Facturación", num: true, total: true, celda: (m) => formatCOP(m.facturacion) },
+            { titulo: "Presupuesto", num: true, celda: (m) => (m.presupuesto === null ? "—" : formatCOP(m.presupuesto)) },
+            { titulo: "Invertido", num: true, celda: (m) => (m.invertido === null ? "—" : formatCOP(m.invertido)) },
+            {
+              titulo: "ROAS",
+              num: true,
+              total: true,
+              celda: (m) => (m.roas === null ? "—" : `${m.roas.toLocaleString("es-CO", { maximumFractionDigits: 1 })}×`),
+            },
+            {
+              titulo: "Costo por venta",
+              num: true,
+              celda: (m) => (m.costoPorVenta === null ? "—" : formatCOP(Math.round(m.costoPorVenta))),
+            },
           ]}
         />
       </Seccion>

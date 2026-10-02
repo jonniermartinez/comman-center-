@@ -21,7 +21,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { buscarVentas, type VentaBuscada } from "@/lib/data/records-actions"
 import { formatCOP, formatDate, todayISO } from "@/lib/format"
-import { esVentaDeContado } from "@/lib/ventas"
 
 /**
  * Registro de un abono.
@@ -96,12 +95,10 @@ export function NuevoPago({
   const [buscando, startBusqueda] = useTransition()
   const [pendiente, startTransition] = useTransition()
 
-  // Con crédito el comprobante es obligatorio: es lo que respalda el abono
-  // frente al cliente y la financiera. De contado es opcional.
-  const comprobanteObligatorio = !!venta && !esVentaDeContado(venta.financing_code)
-  const tieneComprobante = !!archivo || !!registro?.voucher
-  const valido =
-    !!venta && monto > 0 && fecha <= hoy && (!comprobanteObligatorio || tieneComprobante)
+  // El comprobante es opcional siempre (2 de octubre). Fue obligatorio en
+  // crédito, pero hay abonos que se registran antes de tener el soporte en la
+  // mano, y bloquear el pago dejaba el recaudo sin registrar.
+  const valido = !!venta && monto > 0 && fecha <= hoy
 
   function limpiar() {
     setBusqueda("")
@@ -208,7 +205,7 @@ export function NuevoPago({
               <Label htmlFor="comprobante">
                 Comprobante (foto o PDF)
                 <span className="font-normal text-muted-foreground">
-                  {comprobanteObligatorio ? " · obligatorio en crédito" : " · opcional de contado"}
+                  {" · opcional"}
                 </span>
               </Label>
               <div className="flex flex-wrap items-center gap-2">
@@ -252,7 +249,7 @@ export function NuevoPago({
                   )
                 ) : (
                   <span className="text-sm text-muted-foreground">
-                    {comprobanteObligatorio ? "Falta el comprobante." : "Sin archivo."}
+                    Sin archivo.
                   </span>
                 )}
               </div>

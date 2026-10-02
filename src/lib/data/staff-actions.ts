@@ -302,3 +302,68 @@ export async function linkStaffToProfile(
   refrescar()
   return { ok: true }
 }
+
+/** El horario de cada persona del equipo, para la tarjeta de Equipo. */
+export async function listStaffSchedules(
+  companyId: string,
+): Promise<{ staffId: string; nombre: string; entrada: string | null; salida: string | null }[]> {
+  await requireSession()
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("company_staff")
+    .select("staff_id, hora_entrada, hora_salida, staff(full_name, active)")
+    .eq("company_id", companyId)
+  return (data ?? [])
+    .filter((r) => r.staff?.active)
+    .map((r) => ({
+      staffId: r.staff_id,
+      nombre: r.staff!.full_name,
+      entrada: r.hora_entrada,
+      salida: r.hora_salida,
+    }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+}
+
+/**
+ * Fija la hora de entrada o de salida de una persona en una empresa (058).
+ *
+ * Vacío vuelve al horario de la empresa. La de entrada es contra la que se
+ * decide si llegó tarde, y aplica a todas sus jornadas, también las pasadas:
+ * no se guarda una "hora esperada" por día.
+ */
+export async function setStaffSchedule(
+  companyId: string,
+  staffId: string,
+  campo: "hora_entrada" | "hora_salida",
+  hora: string | null,
+): Promise<Result> {
+  await requireSession()
+  const supabase = await createClient()
+
+  if (campo !== "hora_entrada" && campo !== "hora_salida") return { ok: false, error: "El dato no es válido." }
+  if (hora !== null && !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(hora)) {
+    return { ok: false, error: "La hora no es válida." }
+  }
+
+  const cambio = campo === "hora_entrada" ? { hora_entrada: hora } : { hora_salida: hora }
+  const { data, error } = await supabase
+    .from("company_staff")
+    .update(cambio)
+    .eq("company_id", companyId)
+    .eq("staff_id", staffId)
+    .select("staff_id")
+
+  if (error) return { ok: false, error: error.message }
+  if (!data?.length) return { ok: false, error: "No tienes permiso para cambiar el horario." }
+
+  await logAudit({
+    action: "update",
+    entity: "company_staff",
+    entity_id: `${companyId}:${staffId}`,
+    company_id: companyId,
+    after: cambio,
+  })
+
+  refrescar()
+  return { ok: true }
+}

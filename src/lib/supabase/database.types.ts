@@ -968,16 +968,22 @@ export type Database = {
         Row: {
           branch_id: string | null
           company_id: string
+          hora_entrada: string | null
+          hora_salida: string | null
           staff_id: string
         }
         Insert: {
           branch_id?: string | null
           company_id: string
+          hora_entrada?: string | null
+          hora_salida?: string | null
           staff_id: string
         }
         Update: {
           branch_id?: string | null
           company_id?: string
+          hora_entrada?: string | null
+          hora_salida?: string | null
           staff_id?: string
         }
         Relationships: [

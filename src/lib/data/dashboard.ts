@@ -48,6 +48,30 @@ export interface DashboardData {
   inversionPauta: number | null
   /** Presupuesto de pauta autorizado para el mes, o null si nadie lo anotó. */
   presupuestoPauta: number | null
+  /**
+   * El mes que se mira y los anteriores, del más reciente al más viejo: lo
+   * que hace falta para comparar cómo viene rindiendo la pauta.
+   */
+  comparativo: MesComparado[]
+}
+
+export interface MesComparado {
+  mes: string
+  ventas: number
+  facturacion: number
+  presupuesto: number | null
+  invertido: number | null
+}
+
+/** Cuántos meses puede abarcar el comparativo del dashboard. */
+export const MESES_COMPARATIVO = [3, 6, 12] as const
+
+/** `mes` y los `n - 1` anteriores, como `YYYY-MM-01`, del más reciente al más viejo. */
+function mesesHaciaAtras(mes: string, n: number): string[] {
+  const [y, m] = mes.split("-").map(Number)
+  return Array.from({ length: n }, (_, i) =>
+    new Date(Date.UTC(y, m - 1 - i, 1)).toISOString().slice(0, 10),
+  )
 }
 
 /**
@@ -57,14 +81,19 @@ export interface DashboardData {
  * TypeScript, el dashboard y los reportes podrían dar números distintos para lo
  * mismo, que es exactamente lo que el Excel hacía mal.
  */
-export async function loadDashboard(companyId: string, mes: string): Promise<DashboardData> {
+export async function loadDashboard(
+  companyId: string,
+  mes: string,
+  mesesComparativo: number = 3,
+): Promise<DashboardData> {
   const supabase = await createClient()
+  const periodo = mesesHaciaAtras(mes, mesesComparativo)
 
   const finDeMes = new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0))
     .toISOString()
     .slice(0, 10)
 
-  const [totales, financiacion, medios, sedes, ranking, captura, ventasDia, pagosDia, nombresMedio, pauta] =
+  const [totales, financiacion, medios, sedes, ranking, captura, ventasDia, pagosDia, nombresMedio, pauta, totalesPeriodo, pautaPeriodo] =
     await Promise.all([
     supabase
       .from("v_monthly_totals")
@@ -116,6 +145,16 @@ export async function loadDashboard(companyId: string, mes: string): Promise<Das
       .eq("company_id", companyId)
       .eq("period_month", mes)
       .maybeSingle(),
+    supabase
+      .from("v_monthly_totals")
+      .select("period_month, ventas_mes, facturacion_mes")
+      .eq("company_id", companyId)
+      .in("period_month", periodo),
+    supabase
+      .from("company_ad_spend")
+      .select("period_month, monto, presupuesto")
+      .eq("company_id", companyId)
+      .in("period_month", periodo),
   ])
 
   const numero = (v: unknown) => Number(v ?? 0)
@@ -179,7 +218,20 @@ export async function loadDashboard(companyId: string, mes: string): Promise<Das
     { llamadas: 0, contestadas: 0, agendas: 0, atenciones: 0, ventas: 0 },
   )
 
+  const comparativo: MesComparado[] = periodo.map((m) => {
+    const t = (totalesPeriodo.data ?? []).find((x) => x.period_month === m)
+    const p = (pautaPeriodo.data ?? []).find((x) => x.period_month === m)
+    return {
+      mes: m,
+      ventas: numero(t?.ventas_mes),
+      facturacion: numero(t?.facturacion_mes),
+      presupuesto: p?.presupuesto == null ? null : numero(p.presupuesto),
+      invertido: p?.monto == null ? null : numero(p.monto),
+    }
+  })
+
   return {
+    comparativo,
     inversionPauta: pauta.data?.monto == null ? null : numero(pauta.data.monto),
     presupuestoPauta: pauta.data?.presupuesto == null ? null : numero(pauta.data.presupuesto),
     totales: {

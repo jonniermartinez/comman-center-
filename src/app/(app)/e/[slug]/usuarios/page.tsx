@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { useActiveCompany } from "@/components/company-guard"
 import { CrearCuentasDialog } from "@/components/crear-cuentas-dialog"
 import { PageHeader } from "@/components/page-header"
+import { HorariosEquipo } from "@/components/horarios-equipo"
 import { SectionCard } from "@/components/section-card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
@@ -228,6 +229,8 @@ export default function EquipoPage() {
           </Table>
         </div>
       </SectionCard>
+
+      <HorariosEquipo companyId={company.id} horaEmpresa={company.hora_entrada} editable={canManage} />
 
       <AlertDialog open={!!aQuitar} onOpenChange={(o) => !o && setAQuitar(null)}>
         <AlertDialogContent>

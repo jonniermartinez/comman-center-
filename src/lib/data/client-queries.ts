@@ -58,6 +58,8 @@ export interface CompanyMonthly {
   renovaciones_mes: number
   facturacion_mes: number
   recaudo_mes: number
+  /** Lo invertido en pauta ese mes, o null si nadie lo anotó. De ahí salen el ROAS y el costo por venta. */
+  inversion_pauta: number | null
 }
 
 /** Totales del mes de todas las empresas visibles. Alimenta el grid de inicio. */
@@ -67,15 +69,26 @@ export function useCompanyMonthly(month: string) {
 
   useEffect(() => {
     let vigente = true
-    createClient()
-      .from("v_monthly_totals")
-      .select("company_id, company_name, ventas_mes, licencias_mes, renovaciones_mes, facturacion_mes, recaudo_mes")
-      .eq("period_month", month)
-      .then(({ data }) => {
-        if (!vigente) return
-        setDatos((data ?? []) as unknown as CompanyMonthly[])
-        setCargando(false)
-      })
+    const supabase = createClient()
+    Promise.all([
+      supabase
+        .from("v_monthly_totals")
+        .select("company_id, company_name, ventas_mes, licencias_mes, renovaciones_mes, facturacion_mes, recaudo_mes")
+        .eq("period_month", month),
+      supabase.from("company_ad_spend").select("company_id, monto").eq("period_month", month),
+    ]).then(([totales, pauta]) => {
+      if (!vigente) return
+      const invertido = new Map(
+        (pauta.data ?? []).filter((p) => p.monto !== null).map((p) => [p.company_id, Number(p.monto)]),
+      )
+      setDatos(
+        ((totales.data ?? []) as unknown as Omit<CompanyMonthly, "inversion_pauta">[]).map((t) => ({
+          ...t,
+          inversion_pauta: invertido.get(t.company_id) ?? null,
+        })),
+      )
+      setCargando(false)
+    })
     return () => {
       vigente = false
     }

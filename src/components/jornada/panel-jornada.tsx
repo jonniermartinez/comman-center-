@@ -125,7 +125,11 @@ export function PanelJornada({
   const [destino, setDestino] = useState<string>(miStaffId)
   const nombreDe = (id: string | null) => equipo.find((p) => p.id === id)?.full_name ?? null
   const [admin, setAdmin] = useState(false)
-  const [presencial, setPresencial] = useState<null | "elegir" | "comercial" | "administrativa">(null)
+  const [presencial, setPresencial] = useState<
+    null | "persona" | "elegir" | "comercial" | "administrativa"
+  >(null)
+  // Quién atendió al cliente en el punto: como en agendas, no siempre es quien registra.
+  const [atendio, setAtendio] = useState<string>(miStaffId)
   const [cerrando, setCerrando] = useState(false)
   const [pendiente, startTransition] = useTransition()
 
@@ -197,7 +201,7 @@ export function PanelJornada({
               minute: "2-digit",
               timeZone: "America/Bogota",
             })}
-            {" · se espera al equipo a las "}
+            {" · tu hora de entrada es "}
             {horaEntrada.slice(0, 5)}
           </p>
         </div>
@@ -411,7 +415,11 @@ export function PanelJornada({
                 <PhoneCall className="size-4" />
                 Llamada administrativa
               </Button>
-              <Button variant="outline" disabled={pendiente} onClick={() => setPresencial("elegir")}>
+              <Button variant="outline" disabled={pendiente} onClick={() => {
+                  setAtendio(miStaffId)
+                  setPresencial("persona")
+                }}
+              >
                 <UserRound className="size-4" />
                 Atención presencial
               </Button>
@@ -484,16 +492,42 @@ export function PanelJornada({
       </Dialog>
 
       {/* ---- Atención presencial ---- */}
-      <Dialog open={presencial !== null} onOpenChange={(v) => !pendiente && setPresencial(v ? "elegir" : null)}>
+      <Dialog open={presencial !== null} onOpenChange={(v) => !pendiente && setPresencial(v ? "persona" : null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Atención presencial</DialogTitle>
             <DialogDescription>
-              {presencial === "elegir"
-                ? "El cliente vino al punto. ¿De qué se trató?"
-                : "¿En qué terminó?"}
+              {presencial === "persona"
+                ? "El cliente vino al punto. ¿Quién lo atendió? Suma en el día de esa persona."
+                : presencial === "elegir"
+                  ? `Atendió ${nombreDe(atendio) ?? "—"}. ¿De qué se trató?`
+                  : `Atendió ${nombreDe(atendio) ?? "—"}. ¿En qué terminó?`}
             </DialogDescription>
           </DialogHeader>
+
+          {presencial === "persona" && (
+            <div className="grid max-h-80 gap-2 overflow-y-auto">
+              {[...equipo]
+                .sort((a, b) => Number(b.id === miStaffId) - Number(a.id === miStaffId))
+                .map((p) => (
+                  <Button
+                    key={p.id}
+                    variant="outline"
+                    className="h-11 justify-start"
+                    onClick={() => {
+                      setAtendio(p.id)
+                      setPresencial("elegir")
+                    }}
+                  >
+                    <UserRound className="size-4 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate text-left">{p.full_name}</span>
+                    {p.id === miStaffId && (
+                      <span className="text-xs font-normal text-muted-foreground">Yo</span>
+                    )}
+                  </Button>
+                ))}
+            </div>
+          )}
 
           {presencial === "elegir" && (
             <div className="grid gap-2">
@@ -517,7 +551,7 @@ export function PanelJornada({
                   key={o.code}
                   opcion={o}
                   disabled={pendiente}
-                  onClick={() => registrar("atencion", "comercial", o.code)}
+                  onClick={() => registrar("atencion", "comercial", o.code, undefined, atendio)}
                 />
               ))}
             </div>
@@ -530,7 +564,7 @@ export function PanelJornada({
                   key={o.code}
                   opcion={o}
                   disabled={pendiente}
-                  onClick={() => registrar("atencion", "administrativa", o.code)}
+                  onClick={() => registrar("atencion", "administrativa", o.code, undefined, atendio)}
                 />
               ))}
             </div>
@@ -715,7 +749,7 @@ function JornadaCerrada({
           ))}
         </div>
         <p className="mt-4 text-xs text-muted-foreground">
-          Se esperaba al equipo a las {horaEntrada.slice(0, 5)}. Los contadores del día ya están
+          Tu hora de entrada era {horaEntrada.slice(0, 5)}. Los contadores del día ya están
           en Gestión Diaria; no hay que volver a digitarlos.
         </p>
       </SectionCard>

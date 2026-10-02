@@ -78,7 +78,7 @@ export default async function MiJornadaPage({ params }: PageProps<"/e/[slug]/mi-
         <PanelJornada
           jornada={jornada}
           companyId={company.id}
-          horaEntrada={company.hora_entrada}
+          horaEntrada={company.miHoraEntrada}
           equipo={company.staff}
           miStaffId={company.myStaffId}
         />
