@@ -934,6 +934,36 @@ export type Database = {
           },
         ]
       }
+      company_schools: {
+        Row: {
+          active: boolean
+          company_id: string
+          created_at: string
+          name: string
+          school_code: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          company_id: string
+          created_at?: string
+          name: string
+          school_code: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          created_at?: string
+          name?: string
+          school_code?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       company_staff: {
         Row: {
           branch_id: string | null
@@ -3300,6 +3330,10 @@ export type Database = {
       jornada_pausa: {
         Args: { p_jornada: string; p_tipo?: string }
         Returns: undefined
+      }
+      company_school_add: {
+        Args: { p_company: string; p_name: string }
+        Returns: string
       }
       jornada_tipificar: {
         Args: {

@@ -59,7 +59,12 @@ export interface CompanyContext {
   centrosMedicos: { code: string; name: string }[]
   tiposId: { code: string; name: string }[]
   productos: { code: string; name: string }[]
-  escuelas: { code: string; name: string }[]
+  /**
+   * Las escuelas de esta empresa (057), activas e inactivas. El formulario
+   * solo ofrece las activas; las demás están para que una venta vieja siga
+   * mostrando su nombre.
+   */
+  escuelas: { code: string; name: string; active: boolean }[]
   estados: { code: string; name: string }[]
   mediosPago: { code: string; name: string }[]
   conceptosCaja: { code: string; name: string }[]
@@ -133,7 +138,11 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
     supabase.from("medical_centers").select("code, name").order("sort_order"),
     supabase.from("id_types").select("code, name").order("sort_order"),
     supabase.from("products").select("code, name").order("sort_order"),
-    supabase.from("schools").select("code, name").order("sort_order"),
+    supabase
+      .from("company_schools")
+      .select("school_code, name, active")
+      .eq("company_id", company.id)
+      .order("name"),
     supabase.from("sale_states").select("code, name").order("sort_order"),
     supabase.from("payment_methods").select("code, name").order("sort_order"),
     supabase.from("cash_concepts").select("code, name").order("sort_order"),
@@ -175,7 +184,11 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
     centrosMedicos: centrosMedicos.data ?? [],
     tiposId: tiposId.data ?? [],
     productos: productos.data ?? [],
-    escuelas: escuelas.data ?? [],
+    escuelas: (escuelas.data ?? []).map((e) => ({
+      code: e.school_code,
+      name: e.name,
+      active: e.active,
+    })),
     estados: estados.data ?? [],
     mediosPago: medios.data ?? [],
     conceptosCaja: conceptos.data ?? [],

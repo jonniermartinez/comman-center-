@@ -180,7 +180,8 @@ export function NuevaVenta({
   tiposVenta: Catalogo[]
   centrosMedicos: Catalogo[]
   tiposId: Catalogo[]
-  escuelas: Catalogo[]
+  /** Las de la empresa; `active` en falso deja de ofrecerse en ventas nuevas. */
+  escuelas: (Catalogo & { active?: boolean })[]
   estados: Catalogo[]
   /** Quien administra registra a nombre de cualquiera; el comercial, lo suyo. */
   canManage: boolean
@@ -600,7 +601,11 @@ export function NuevaVenta({
                     value={escuela}
                     onChange={setEscuela}
                     vacio="Sin definir"
-                    options={escuelas.map((e) => ({ value: e.code, label: e.name }))}
+                    // Una apagada solo aparece si es la de la venta que se está
+                    // corrigiendo: quitarla de la lista le borraría el dato.
+                    options={escuelas
+                      .filter((e) => e.active !== false || e.code === escuela)
+                      .map((e) => ({ value: e.code, label: e.name }))}
                   />
                   <CampoSelect
                     id="estado"

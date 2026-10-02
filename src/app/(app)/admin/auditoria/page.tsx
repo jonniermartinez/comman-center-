@@ -34,6 +34,7 @@ const ENTIDAD_LABELS: Record<string, string> = {
   company_modules: "Módulos",
   company_financing_types: "Financiaciones",
   company_payment_methods: "Medios de recaudo",
+  company_schools: "Escuelas",
   objectives: "Objetivos",
 }
 

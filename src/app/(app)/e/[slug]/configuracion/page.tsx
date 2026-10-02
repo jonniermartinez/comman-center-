@@ -7,6 +7,7 @@ import { toast } from "sonner"
 
 import { useActiveCompany } from "@/components/company-guard"
 import { DeleteCompanyDialog } from "@/components/delete-company-dialog"
+import { EscuelasEmpresa } from "@/components/escuelas-empresa"
 import { LogoUploader } from "@/components/logo-uploader"
 import { CityCombobox } from "@/components/city-combobox"
 import { PageHeader } from "@/components/page-header"
@@ -256,6 +257,8 @@ export default function ConfiguracionPage() {
           })}
         </CardContent>
       </Card>
+
+      <EscuelasEmpresa companyId={company.id} editable={canManage} />
 
       <div className="mb-4 grid gap-4 sm:grid-cols-2">
         <Card>

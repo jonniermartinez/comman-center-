@@ -569,3 +569,79 @@ export async function setAdSpend(
   refrescar()
   return { ok: true }
 }
+
+/** Las escuelas de una empresa, para administrarlas en Configuración. */
+export async function listCompanySchools(
+  companyId: string,
+): Promise<{ code: string; name: string; active: boolean }[]> {
+  await requireSession()
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("company_schools")
+    .select("school_code, name, active")
+    .eq("company_id", companyId)
+    .order("name")
+  return (data ?? []).map((e) => ({ code: e.school_code, name: e.name, active: e.active }))
+}
+
+/**
+ * Agrega una escuela a la lista de la empresa.
+ *
+ * Entra por una función de la base porque son dos escrituras que van juntas:
+ * el código en el catálogo global, que es al que apuntan las ventas, y la
+ * fila de la empresa. Si la escuela ya estaba apagada, la vuelve a encender.
+ */
+export async function addCompanySchool(companyId: string, name: string): Promise<Result> {
+  await requireSession()
+  const supabase = await createClient()
+
+  const { error } = await supabase.rpc("company_school_add", {
+    p_company: companyId,
+    p_name: name,
+  })
+  if (error) return { ok: false, error: error.message }
+
+  await logAudit({
+    action: "create",
+    entity: "company_schools",
+    entity_id: `${companyId}:${name.trim()}`,
+    company_id: companyId,
+    after: { name: name.trim() },
+  })
+
+  refrescar()
+  return { ok: true }
+}
+
+/**
+ * Enciende o apaga una escuela de la empresa. No se borra: las ventas que ya
+ * la tienen la siguen nombrando, solo deja de ofrecerse en las nuevas.
+ */
+export async function setCompanySchoolActive(
+  companyId: string,
+  code: string,
+  active: boolean,
+): Promise<Result> {
+  const session = await requireSession()
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from("company_schools")
+    .update({ active, updated_by: session.profile.id })
+    .eq("company_id", companyId)
+    .eq("school_code", code)
+    .select("school_code")
+  if (error) return { ok: false, error: error.message }
+  if (!data?.length) return { ok: false, error: "No tienes permiso para cambiar las escuelas." }
+
+  await logAudit({
+    action: "update",
+    entity: "company_schools",
+    entity_id: `${companyId}:${code}`,
+    company_id: companyId,
+    after: { active },
+  })
+
+  refrescar()
+  return { ok: true }
+}
