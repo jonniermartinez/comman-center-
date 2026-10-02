@@ -1050,6 +1050,11 @@ export type Database = {
       daily_activity: {
         Row: {
           agenda_cancela: number
+          validacion_cancela: number
+          validacion_confirmada: number
+          validacion_no_contesta: number
+          validacion_posible: number
+          validacion_reprograma: number
           agenda_confirmada: number
           agenda_no_contesta: number
           agenda_posible: number
@@ -1100,6 +1105,11 @@ export type Database = {
         }
         Insert: {
           agenda_cancela?: number
+          validacion_cancela?: number
+          validacion_confirmada?: number
+          validacion_no_contesta?: number
+          validacion_posible?: number
+          validacion_reprograma?: number
           agenda_confirmada?: number
           agenda_no_contesta?: number
           agenda_posible?: number
@@ -1150,6 +1160,11 @@ export type Database = {
         }
         Update: {
           agenda_cancela?: number
+          validacion_cancela?: number
+          validacion_confirmada?: number
+          validacion_no_contesta?: number
+          validacion_posible?: number
+          validacion_reprograma?: number
           agenda_confirmada?: number
           agenda_no_contesta?: number
           agenda_posible?: number
@@ -1302,6 +1317,7 @@ export type Database = {
           id: string
           inicio: string
           jornada_id: string
+          staff_destino: string | null
           tipificacion: string | null
         }
         Insert: {
@@ -1316,6 +1332,7 @@ export type Database = {
           id?: string
           inicio: string
           jornada_id: string
+          staff_destino?: string | null
           tipificacion?: string | null
         }
         Update: {
@@ -1330,6 +1347,7 @@ export type Database = {
           id?: string
           inicio?: string
           jornada_id?: string
+          staff_destino?: string | null
           tipificacion?: string | null
         }
         Relationships: [
@@ -2769,6 +2787,12 @@ export type Database = {
       v_daily_activity: {
         Row: {
           agenda_cancela: number | null
+          validacion_cancela: number | null
+          validacion_confirmada: number | null
+          validacion_no_contesta: number | null
+          validacion_posible: number | null
+          validacion_reprograma: number | null
+          total_validaciones: number | null
           agenda_confirmada: number | null
           agenda_no_contesta: number | null
           agenda_posible: number | null
@@ -3282,6 +3306,7 @@ export type Database = {
           p_categoria: string
           p_clase: string
           p_contestada: boolean
+          p_destino?: string
           p_jornada: string
           p_tipificacion: string
         }

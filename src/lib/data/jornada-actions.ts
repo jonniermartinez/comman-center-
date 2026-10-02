@@ -74,6 +74,11 @@ export async function tipificar(input: {
   contestada?: boolean
   categoria: Categoria
   tipificacion?: string | null
+  /**
+   * La persona del equipo a la que suma la gestión, cuando no es quien la
+   * registra. La base solo lo acepta en agendas y validaciones.
+   */
+  destinoStaffId?: string | null
 }): Promise<Result> {
   await requireSession()
   const supabase = await createClient()
@@ -87,6 +92,7 @@ export async function tipificar(input: {
     p_contestada: input.clase === "llamada" ? (input.contestada ?? false) : false,
     p_categoria: input.categoria,
     p_tipificacion: input.tipificacion ?? "",
+    p_destino: input.destinoStaffId ?? undefined,
   })
   if (error) return { ok: false, error: explicar(error.message) }
 

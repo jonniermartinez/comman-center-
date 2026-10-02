@@ -3,9 +3,12 @@
 import {
   ArrowLeft,
   CalendarCheck,
+  ClipboardCheck,
   ClipboardList,
   Coffee,
   GraduationCap,
+  PersonStanding,
+  TriangleAlert,
   PhoneOff,
   PhoneCall,
   Play,
@@ -29,8 +32,9 @@ import type { JornadaEvento, MiJornada } from "@/lib/data/mi-jornada"
 import { cerrarJornada, pausar, tipificar } from "@/lib/data/jornada-actions"
 import {
   ADMINISTRATIVA,
-  LLAMADA_AGENDA,
+  BLOQUES_CITA,
   LLAMADA_COMERCIAL,
+  type BloqueCita,
   PAUSAS,
   PRESENCIAL_COMERCIAL,
   duracionCorta,
@@ -45,6 +49,8 @@ const ICONO_PAUSA: Record<TipoPausa, React.ComponentType<{ className?: string }>
   bano: UserRound,
   capacitacion: GraduationCap,
   almuerzo: Coffee,
+  incidencia: TriangleAlert,
+  pausa_activa: PersonStanding,
 }
 
 /** Un cronómetro que corre en el navegador desde una marca del servidor. */
@@ -101,13 +107,23 @@ export function PanelJornada({
   jornada,
   companyId,
   horaEntrada,
+  equipo,
+  miStaffId,
 }: {
   jornada: MiJornada
   companyId: string
   horaEntrada: string
+  /** El equipo de la empresa: a nombre de quién puede ir una agenda o una validación. */
+  equipo: { id: string; full_name: string }[]
+  miStaffId: string
 }) {
   const { resumen, eventos, crm } = jornada
-  const [paso, setPaso] = useState<"inicio" | "contestada" | "agenda">("inicio")
+  const [paso, setPaso] = useState<"inicio" | "contestada" | "persona" | "cita">("inicio")
+  // Agenda o validación, y de quién: se elige el bloque, luego la persona y
+  // por último la respuesta del cliente.
+  const [bloque, setBloque] = useState<BloqueCita>("agenda")
+  const [destino, setDestino] = useState<string>(miStaffId)
+  const nombreDe = (id: string | null) => equipo.find((p) => p.id === id)?.full_name ?? null
   const [admin, setAdmin] = useState(false)
   const [presencial, setPresencial] = useState<null | "elegir" | "comercial" | "administrativa">(null)
   const [cerrando, setCerrando] = useState(false)
@@ -135,6 +151,7 @@ export function PanelJornada({
     categoria: "comercial" | "administrativa",
     tipificacion: string | null,
     contestada?: boolean,
+    destinoStaffId?: string,
   ) =>
     correr(
       () =>
@@ -145,12 +162,25 @@ export function PanelJornada({
           categoria,
           tipificacion,
           contestada,
+          destinoStaffId,
         }),
-      tipificacion ? `Registrado: ${etiqueta(tipificacion)}` : "Registrado: no contestó",
+      tipificacion
+        ? `Registrado: ${etiqueta(tipificacion)}${
+            destinoStaffId && destinoStaffId !== miStaffId ? ` · a nombre de ${nombreDe(destinoStaffId)}` : ""
+          }`
+        : "Registrado: no contestó",
     )
 
+  const abrirBloque = (b: BloqueCita) => {
+    setBloque(b)
+    setDestino(miStaffId)
+    setPaso("persona")
+  }
+
   if (cerrada) {
-    return <JornadaCerrada jornada={jornada} companyId={companyId} horaEntrada={horaEntrada} />
+    return (
+      <JornadaCerrada jornada={jornada} companyId={companyId} horaEntrada={horaEntrada} nombreDe={nombreDe} />
+    )
   }
 
   return (
@@ -247,15 +277,26 @@ export function PanelJornada({
                   />
                 ))}
               </div>
-              <div className="mx-auto mt-3 max-w-xl">
+              {/* Agendas son agendas y validaciones son validaciones: dos
+                  botones, dos bloques de contadores. */}
+              <div className="mx-auto mt-3 grid max-w-xl gap-3 sm:grid-cols-2">
                 <Button
                   variant="outline"
                   className="w-full"
                   disabled={pendiente}
-                  onClick={() => setPaso("agenda")}
+                  onClick={() => abrirBloque("agenda")}
                 >
                   <CalendarCheck className="size-4" />
-                  Era para confirmar una cita ya agendada
+                  Agenda
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled={pendiente}
+                  onClick={() => abrirBloque("validacion")}
+                >
+                  <ClipboardCheck className="size-4" />
+                  Validaciones
                 </Button>
               </div>
               <Button
@@ -271,16 +312,70 @@ export function PanelJornada({
             </>
           )}
 
-          {paso === "agenda" && (
+          {paso === "persona" && (
             <>
-              <p className="mt-5 text-sm font-medium">¿Qué dijo sobre su cita?</p>
+              <p className="mt-5 text-sm font-medium">
+                {BLOQUES_CITA[bloque].titulo} · ¿de quién es?
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Lo que registres suma en el día de la persona que elijas.
+              </p>
+              <div className="mx-auto mt-3 grid max-w-xl gap-2 sm:grid-cols-2">
+                {[...equipo]
+                  .sort((a, b) => Number(b.id === miStaffId) - Number(a.id === miStaffId))
+                  .map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      disabled={pendiente}
+                      onClick={() => {
+                        setDestino(p.id)
+                        setPaso("cita")
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 rounded-xl border px-3 py-3 text-left text-sm font-medium transition-colors",
+                        "hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                        "disabled:pointer-events-none disabled:opacity-50",
+                        p.id === miStaffId ? "border-primary/40 bg-primary/5" : "bg-card",
+                      )}
+                    >
+                      <UserRound className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1 truncate">{p.full_name}</span>
+                      {p.id === miStaffId && (
+                        <span className="shrink-0 text-xs font-normal text-muted-foreground">Yo</span>
+                      )}
+                    </button>
+                  ))}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-4"
+                disabled={pendiente}
+                onClick={() => setPaso("contestada")}
+              >
+                <ArrowLeft className="size-4" />
+                Volver
+              </Button>
+            </>
+          )}
+
+          {paso === "cita" && (
+            <>
+              <p className="mt-5 text-sm font-medium">
+                {BLOQUES_CITA[bloque].titulo} · ¿qué dijo sobre su cita?
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                A nombre de <span className="font-medium text-foreground">{nombreDe(destino) ?? "—"}</span>
+                {destino === miStaffId && " (tú)"}
+              </p>
               <div className="mx-auto mt-3 grid max-w-xl gap-3 sm:grid-cols-2">
-                {LLAMADA_AGENDA.map((o) => (
+                {BLOQUES_CITA[bloque].opciones.map((o) => (
                   <BotonOpcion
                     key={o.code}
                     opcion={o}
                     disabled={pendiente}
-                    onClick={() => registrar("llamada", "comercial", o.code, true)}
+                    onClick={() => registrar("llamada", "comercial", o.code, true, destino)}
                   />
                 ))}
               </div>
@@ -292,7 +387,7 @@ export function PanelJornada({
                 size="sm"
                 className="mt-3"
                 disabled={pendiente}
-                onClick={() => setPaso("contestada")}
+                onClick={() => setPaso("persona")}
               >
                 <ArrowLeft className="size-4" />
                 Volver
@@ -357,7 +452,7 @@ export function PanelJornada({
         </>
       )}
 
-      <UltimasGestiones eventos={eventos} />
+      <UltimasGestiones eventos={eventos} nombreDe={nombreDe} />
 
       {/* ---- Llamada administrativa ---- */}
       <Dialog open={admin} onOpenChange={(v) => !pendiente && setAdmin(v)}>
@@ -482,7 +577,14 @@ export function PanelJornada({
 }
 
 /** Lo último que se registró, para saber que el toque sí quedó. */
-function UltimasGestiones({ eventos }: { eventos: JornadaEvento[] }) {
+function UltimasGestiones({
+  eventos,
+  nombreDe,
+}: {
+  eventos: JornadaEvento[]
+  /** Para decir a nombre de quién quedó una agenda o una validación. */
+  nombreDe: (staffId: string | null) => string | null
+}) {
   if (eventos.length === 0) {
     return (
       <SectionCard className="py-10 text-center">
@@ -519,6 +621,11 @@ function UltimasGestiones({ eventos }: { eventos: JornadaEvento[] }) {
               {e.categoria === "administrativa" && (
                 <span className="ml-1.5 text-xs text-muted-foreground">(admin)</span>
               )}
+              {e.staff_destino && (
+                <span className="ml-1.5 text-xs text-muted-foreground">
+                  · a nombre de {nombreDe(e.staff_destino) ?? "otra persona"}
+                </span>
+              )}
             </span>
             <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
               {duracionCorta(e.duracion_ms ?? 0)}
@@ -535,10 +642,12 @@ function JornadaCerrada({
   jornada,
   companyId,
   horaEntrada,
+  nombreDe,
 }: {
   jornada: MiJornada
   companyId: string
   horaEntrada: string
+  nombreDe: (staffId: string | null) => string | null
 }) {
   const { resumen } = jornada
   const [pendiente, startTransition] = useTransition()
@@ -611,7 +720,7 @@ function JornadaCerrada({
         </p>
       </SectionCard>
 
-      <UltimasGestiones eventos={jornada.eventos} />
+      <UltimasGestiones eventos={jornada.eventos} nombreDe={nombreDe} />
     </div>
   )
 }

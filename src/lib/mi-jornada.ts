@@ -32,10 +32,10 @@ export const LLAMADA_COMERCIAL: Opcion[] = [
 ]
 
 /**
- * Llamar a un cliente que ya tiene cita, para confirmar que viene.
+ * Llamar a un cliente que ya tiene cita.
  *
  * Va aparte de las cuatro de arriba porque no es lo mismo buscar un cliente
- * nuevo que confirmar uno que ya dijo que sí, y en el Excel cuentan en
+ * nuevo que hablar con uno que ya dijo que sí, y en el Excel cuentan en
  * columnas distintas.
  */
 export const LLAMADA_AGENDA: Opcion[] = [
@@ -45,6 +45,27 @@ export const LLAMADA_AGENDA: Opcion[] = [
   { code: "no_contesta", label: "No contesta", tono: NEUTRO },
   { code: "cancela", label: "Cancela", tono: CAIDO },
 ]
+
+/**
+ * Validar una agenda. Agendas son agendas y validaciones son validaciones:
+ * las respuestas son las mismas cinco, pero se cuentan en su propio bloque
+ * (056), y por eso cada una tiene su código con `val_` delante.
+ */
+export const LLAMADA_VALIDACION: Opcion[] = LLAMADA_AGENDA.map((o) => ({
+  ...o,
+  code: `val_${o.code}`,
+}))
+
+/**
+ * Los dos bloques cuya gestión puede ir a nombre de otra persona del equipo:
+ * quien llama no siempre es de quien es la agenda.
+ */
+export const BLOQUES_CITA = {
+  agenda: { titulo: "Agenda", opciones: LLAMADA_AGENDA },
+  validacion: { titulo: "Validaciones", opciones: LLAMADA_VALIDACION },
+} as const
+
+export type BloqueCita = keyof typeof BLOQUES_CITA
 
 /** Trámites, no venta: cuentan en el bloque administrativo del Excel. */
 export const ADMINISTRATIVA: Opcion[] = [
@@ -67,6 +88,8 @@ export const PAUSAS = [
   { code: "bano", label: "Baño" },
   { code: "capacitacion", label: "Capacitación" },
   { code: "almuerzo", label: "Almuerzo" },
+  { code: "incidencia", label: "Incidencias" },
+  { code: "pausa_activa", label: "Pausa activa" },
 ] as const
 
 export type TipoPausa = (typeof PAUSAS)[number]["code"]
@@ -85,6 +108,9 @@ const ETIQUETAS: Record<string, string> = Object.fromEntries(
     o.label,
   ]),
 )
+// En el listado de lo último de hoy hay que distinguir de qué bloque fue.
+for (const o of LLAMADA_AGENDA) ETIQUETAS[o.code] = `Agenda · ${o.label}`
+for (const o of LLAMADA_VALIDACION) ETIQUETAS[o.code] = `Validación · ${o.label}`
 for (const p of PAUSAS) ETIQUETAS[p.code] = p.label
 
 export function etiqueta(code: string | null): string {

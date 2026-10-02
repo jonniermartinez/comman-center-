@@ -79,6 +79,8 @@ export default async function MiJornadaPage({ params }: PageProps<"/e/[slug]/mi-
           jornada={jornada}
           companyId={company.id}
           horaEntrada={company.hora_entrada}
+          equipo={company.staff}
+          miStaffId={company.myStaffId}
         />
       ) : (
         <>

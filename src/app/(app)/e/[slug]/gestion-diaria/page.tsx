@@ -116,6 +116,18 @@ const GRUPOS: { titulo: string; tono: keyof typeof TONOS; columnas: Columna[] }[
     ],
   },
   {
+    titulo: "Validaciones",
+    tono: "rose",
+    columnas: [
+      conteo("validacion_confirmada", { label: "Confirm.", titulo: "Validación confirmada" }),
+      conteo("validacion_posible", { label: "Posible", titulo: "Posible asistencia" }),
+      conteo("validacion_reprograma", { label: "Reprog.", titulo: "Reprograma" }),
+      conteo("validacion_no_contesta", { label: "No contesta" }),
+      conteo("validacion_cancela", { label: "Cancela" }),
+      conteo("total_validaciones", { label: "Total", titulo: "Total de validaciones", total: true }),
+    ],
+  },
+  {
     titulo: "Atención presencial",
     tono: "amber",
     columnas: [
