@@ -27,11 +27,14 @@ import {
 export function RecordFilters({
   sedes,
   responsables,
+  estados,
   buscar,
   archivadas,
 }: {
   sedes?: { id: string; name: string }[]
   responsables?: { id: string; full_name: string }[]
+  /** Estados del trámite; solo los pasa el listado de ventas. */
+  estados?: { code: string; name: string }[]
   /** Texto del marcador de búsqueda; si no se pasa, no se muestra el campo. */
   buscar?: string
   /** El listado admite archivar: muestra el interruptor para ver lo archivado. */
@@ -52,7 +55,7 @@ export function RecordFilters({
     router.push(`${pathname}?${next.toString()}`)
   }
 
-  const hayFiltros = ["desde", "hasta", "sede", "responsable", "q", "archivadas"].some((k) => params.get(k))
+  const hayFiltros = ["desde", "hasta", "sede", "responsable", "estado", "q", "archivadas"].some((k) => params.get(k))
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -143,6 +146,28 @@ export function RecordFilters({
               {responsables.map((r) => (
                 <SelectItem key={r.id} value={r.id}>
                   {r.full_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {estados && estados.length > 0 && (
+        <div className="min-w-0 space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Estado</Label>
+          <Select
+            value={params.get("estado") ?? "todos"}
+            onValueChange={(v) => aplicar({ estado: v })}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              {estados.map((e) => (
+                <SelectItem key={e.code} value={e.code}>
+                  {e.name}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -35,6 +35,8 @@ export interface Filtros {
   hasta?: string
   branchId?: string
   staffId?: string
+  /** Estado del trámite de la venta. Solo aplica al listado de ventas. */
+  estado?: string
   /** Texto libre: busca por nombre o documento del cliente. */
   q?: string
   /**
@@ -70,6 +72,7 @@ export function leerFiltros(params: Record<string, string | string[] | undefined
     hasta: uno("hasta"),
     branchId: uno("sede"),
     staffId: uno("responsable"),
+    estado: uno("estado"),
     q: uno("q"),
     archivadas: uno("archivadas") === "1",
     page: Math.max(0, Number(uno("p") ?? 0) || 0),
@@ -91,6 +94,8 @@ interface OpcionesConsulta {
   busqueda?: string[]
   /** Condición extra en sintaxis de `.or()` de PostgREST. */
   condicion?: string
+  /** La tabla tiene `state_code` y admite filtrar por él. */
+  conEstado?: boolean
   /** La tabla tiene `archived_at`: se muestra lo vigente o lo archivado (059). */
   archivable?: boolean
 }
@@ -101,6 +106,7 @@ function filtrar(query: ConsultaSinTipar, filtros: Filtros, opciones: OpcionesCo
   if (filtros.hasta) query = query.lte(opciones.campoFecha, filtros.hasta)
   if (filtros.branchId) query = query.eq("branch_id", filtros.branchId)
   if (filtros.staffId) query = query.eq("staff_id", filtros.staffId)
+  if (opciones.conEstado && filtros.estado) query = query.eq("state_code", filtros.estado)
   if (opciones.archivable) {
     query = filtros.archivadas
       ? query.not("archived_at", "is", null)
@@ -162,6 +168,7 @@ async function todas<T>(
 const OPCIONES_VENTAS: OpcionesConsulta = {
   campoFecha: "report_date",
   archivable: true,
+  conEstado: true,
   busqueda: ["licencia_nombre", "credito_nombre", "licencia_id", "credito_id", "ref_credito"],
 }
 const OPCIONES_PAGOS: OpcionesConsulta = {
@@ -261,6 +268,7 @@ export async function totalesVentas(companyId: string, filtros: Filtros) {
   if (filtros.hasta) query = query.lte("report_date", filtros.hasta)
   if (filtros.branchId) query = query.eq("branch_id", filtros.branchId)
   if (filtros.staffId) query = query.eq("staff_id", filtros.staffId)
+  if (filtros.estado) query = query.eq("state_code", filtros.estado)
 
   const { data } = await query
   return (data ?? []).reduce(
@@ -309,6 +317,7 @@ export async function ventasPorRecontactar(
   if (filtros.hasta) query = query.lte("report_date", filtros.hasta)
   if (filtros.branchId) query = query.eq("branch_id", filtros.branchId)
   if (filtros.staffId) query = query.eq("staff_id", filtros.staffId)
+  if (filtros.estado) query = query.eq("state_code", filtros.estado)
 
   const { count } = await query
   return count ?? 0

@@ -38,6 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
           filtros.staffId
             ? `Responsable: ${company.staff.find((s) => s.id === filtros.staffId)?.full_name ?? ""}`
             : null,
+          filtros.estado ? `Estado: ${nombreDe(company.estados, filtros.estado)}` : null,
         ],
       }),
       columnas: [

@@ -83,6 +83,7 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
         <RecordFilters
           sedes={company.branches}
           responsables={company.staff}
+          estados={company.estados}
           buscar="Nombre o documento del cliente…"
           archivadas
         />
