@@ -584,22 +584,25 @@ export type Database = {
       company_business_days: {
         Row: {
           company_id: string
-          dias: number
+          dias: number | null
           period_month: string
+          transcurridos: number | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           company_id: string
-          dias: number
+          dias?: number | null
           period_month: string
+          transcurridos?: number | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           company_id?: string
-          dias?: number
+          dias?: number | null
           period_month?: string
+          transcurridos?: number | null
           updated_at?: string
           updated_by?: string | null
         }

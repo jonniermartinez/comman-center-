@@ -424,21 +424,43 @@ export async function removeCompanyLogo(companyId: string): Promise<Result> {
 }
 
 /**
- * Fija cuántos días hábiles trabaja la empresa un mes.
+ * Fija a mano los días hábiles de un mes: cuántos tiene y cuántos van.
  *
- * Contra ese número se mide el absentismo: en julio fueron 21 y en un mes con
- * festivos pueden ser 19. Cero lo borra, y la empresa vuelve a contar lunes a
- * sábado.
+ * Contra los del mes se mide el absentismo —en julio fueron 21 y en un mes
+ * con festivos pueden ser 19—, y con los dos se proyecta el cierre en
+ * Objetivos. Solo se toca lo que venga en `cambios`; `null` borra ese número
+ * y vuelve a contarse del calendario. Si no queda ninguno fijado, la fila se
+ * va.
  */
 export async function setBusinessDays(
   companyId: string,
   periodMonth: string,
-  dias: number,
+  cambios: { dias?: number | null; transcurridos?: number | null },
 ): Promise<Result> {
   const session = await requireSession()
   const supabase = await createClient()
 
-  if (dias <= 0) {
+  for (const [campo, minimo] of [["dias", 1], ["transcurridos", 0]] as const) {
+    const n = cambios[campo]
+    if (n != null && (!Number.isInteger(n) || n < minimo || n > 31)) {
+      return { ok: false, error: `Los días van de ${minimo} a 31.` }
+    }
+  }
+
+  const { data: actual } = await supabase
+    .from("company_business_days")
+    .select("dias, transcurridos")
+    .eq("company_id", companyId)
+    .eq("period_month", periodMonth)
+    .maybeSingle()
+
+  const fila = {
+    dias: cambios.dias !== undefined ? cambios.dias : (actual?.dias ?? null),
+    transcurridos:
+      cambios.transcurridos !== undefined ? cambios.transcurridos : (actual?.transcurridos ?? null),
+  }
+
+  if (fila.dias === null && fila.transcurridos === null) {
     const { error } = await supabase
       .from("company_business_days")
       .delete()
@@ -446,11 +468,28 @@ export async function setBusinessDays(
       .eq("period_month", periodMonth)
     if (error) return { ok: false, error: error.message }
   } else {
-    const { error } = await supabase.from("company_business_days").upsert(
-      { company_id: companyId, period_month: periodMonth, dias, updated_by: session.profile.id },
-      { onConflict: "company_id,period_month" },
-    )
-    if (error) return { ok: false, error: error.message }
+    const { data, error } = await supabase
+      .from("company_business_days")
+      .upsert(
+        {
+          company_id: companyId,
+          period_month: periodMonth,
+          ...fila,
+          updated_by: session.profile.id,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "company_id,period_month" },
+      )
+      .select("company_id")
+    if (error) {
+      return {
+        ok: false,
+        error: /row-level security/.test(error.message)
+          ? "Fijar los días hábiles requiere administrar la empresa."
+          : error.message,
+      }
+    }
+    if (!data?.length) return { ok: false, error: "Fijar los días hábiles requiere administrar la empresa." }
   }
 
   await logAudit({
@@ -458,7 +497,8 @@ export async function setBusinessDays(
     entity: "company_business_days",
     entity_id: `${companyId}:${periodMonth}`,
     company_id: companyId,
-    after: { dias },
+    before: actual ?? undefined,
+    after: fila,
   })
 
   refrescar()

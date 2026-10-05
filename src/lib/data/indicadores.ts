@@ -63,6 +63,8 @@ export async function loadIndicadores(
       .from("company_business_days")
       .select("period_month, dias")
       .eq("company_id", companyId)
+      // Una fila puede traer solo los transcurridos (060): sin `dias` no fija nada.
+      .not("dias", "is", null)
       .in("period_month", meses),
     supabase.from("company_kpi_targets").select("kpi_code, meta").eq("company_id", companyId),
     supabase

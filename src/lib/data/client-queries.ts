@@ -140,3 +140,37 @@ export function useObjectiveProgress(companyId: string, month: string) {
 
   return { datos, cargando }
 }
+
+export interface DiasFijados {
+  dias: number | null
+  transcurridos: number | null
+}
+
+/**
+ * Los días hábiles que la empresa fijó a mano para un mes, si fijó alguno.
+ *
+ * Devuelve también `fijar`, para que la pantalla refleje el número apenas se
+ * guarda sin volver a consultar.
+ */
+export function useBusinessDays(companyId: string, month: string) {
+  const [datos, setDatos] = useState<DiasFijados>({ dias: null, transcurridos: null })
+
+  useEffect(() => {
+    let vigente = true
+    createClient()
+      .from("company_business_days")
+      .select("dias, transcurridos")
+      .eq("company_id", companyId)
+      .eq("period_month", month)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!vigente) return
+        setDatos({ dias: data?.dias ?? null, transcurridos: data?.transcurridos ?? null })
+      })
+    return () => {
+      vigente = false
+    }
+  }, [companyId, month])
+
+  return { datos, fijar: (cambios: Partial<DiasFijados>) => setDatos((d) => ({ ...d, ...cambios })) }
+}

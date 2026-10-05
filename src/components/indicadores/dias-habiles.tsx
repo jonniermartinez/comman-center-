@@ -40,7 +40,7 @@ export function DiasHabiles({
     }
     if ((texto === "" && valor === null) || n === valor) return
     startTransition(async () => {
-      const r = await setBusinessDays(companyId, mes, texto === "" ? 0 : n)
+      const r = await setBusinessDays(companyId, mes, { dias: texto === "" ? null : n })
       if (r.ok) toast.success(`Días hábiles de ${monthLabel(mes)}: ${texto || porDefecto}`)
       else toast.error(r.error ?? "No se pudo guardar.")
     })

@@ -26,7 +26,8 @@ import {
   businessDaysInMonth,
   monthLabel,
 } from "@/lib/kpi"
-import { useObjectiveProgress } from "@/lib/data/client-queries"
+import { useBusinessDays, useObjectiveProgress } from "@/lib/data/client-queries"
+import { setBusinessDays } from "@/lib/data/companies-actions"
 import {
   copyObjectivesFromPreviousMonth,
   setObjective,
@@ -65,8 +66,24 @@ export default function ObjetivosPage() {
     )
   }
 
-  const elapsed = businessDaysElapsed(month, today)
-  const totalDias = businessDaysInMonth(month)
+  // Los dos números de la proyección salen del calendario —lunes a sábado,
+  // hasta hoy— salvo que la empresa los haya fijado a mano (060): un festivo o
+  // un cierre no los conoce el calendario.
+  const { datos: fijados, fijar } = useBusinessDays(company.id, month)
+  const totalCalendario = businessDaysInMonth(month)
+  const totalDias = fijados.dias ?? totalCalendario
+  // De un mes ya cerrado transcurrieron todos sus días, los que se hayan fijado.
+  const elapsedCalendario =
+    businessDaysElapsed(month, today) === totalCalendario
+      ? totalDias
+      : Math.min(businessDaysElapsed(month, today), totalDias)
+  const elapsed = fijados.transcurridos ?? elapsedCalendario
+
+  async function guardarDias(campo: "dias" | "transcurridos", valor: number | null) {
+    const r = await setBusinessDays(company.id, month, { [campo]: valor })
+    if (r.ok) fijar({ [campo]: valor })
+    else toast.error(r.error ?? "No se pudieron guardar los días.")
+  }
 
   // Métricas de empresa vs métricas por responsable.
   const metricasEmpresa = db.metrics.filter((m) =>
@@ -204,9 +221,35 @@ export default function ObjetivosPage() {
               })}
             </TableBody>
           </Table>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Proyección: real ÷ {elapsed} día(s) hábiles transcurridos × {totalDias} del mes.
-          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-2 text-xs text-muted-foreground">
+            <span>Proyección: real ÷</span>
+            <DiasInput
+              key={`transcurridos-${month}-${fijados.transcurridos}`}
+              etiqueta="Días hábiles transcurridos"
+              valor={fijados.transcurridos}
+              porDefecto={elapsedCalendario}
+              minimo={0}
+              disabled={!puedeEditar}
+              onGuardar={(v) => guardarDias("transcurridos", v)}
+            />
+            <span>día(s) hábiles transcurridos ×</span>
+            <DiasInput
+              key={`dias-${month}-${fijados.dias}`}
+              etiqueta="Días hábiles del mes"
+              valor={fijados.dias}
+              porDefecto={totalCalendario}
+              minimo={1}
+              disabled={!puedeEditar}
+              onGuardar={(v) => guardarDias("dias", v)}
+            />
+            <span>del mes.</span>
+            {puedeEditar && (
+              <span className="basis-full">
+                Los dos se pueden escribir a mano. Vacío, se cuentan del calendario (lunes a
+                sábado); un número puesto a mano no avanza solo, hay que actualizarlo.
+              </span>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -284,6 +327,59 @@ function CumplBadge({ ratio }: { ratio: number }) {
     <Badge variant={variant} className="tabular-nums">
       {formatPercent(ratio)}
     </Badge>
+  )
+}
+
+/**
+ * Casilla de días de la proyección.
+ *
+ * Vacía muestra lo que cuenta el calendario y no fija nada; con un número, ese
+ * manda. Guarda al salir del campo, como las metas.
+ */
+function DiasInput({
+  etiqueta,
+  valor,
+  porDefecto,
+  minimo,
+  disabled,
+  onGuardar,
+}: {
+  etiqueta: string
+  /** Lo fijado a mano, o null si se está usando el calendario. */
+  valor: number | null
+  porDefecto: number
+  minimo: number
+  disabled?: boolean
+  onGuardar: (valor: number | null) => void
+}) {
+  const [texto, setTexto] = useState(valor === null ? "" : String(valor))
+
+  function guardar() {
+    const n = Number(texto)
+    if (texto !== "" && (!Number.isInteger(n) || n < minimo || n > 31)) {
+      toast.error(`${etiqueta}: va de ${minimo} a 31.`)
+      setTexto(valor === null ? "" : String(valor))
+      return
+    }
+    const nuevo = texto === "" ? null : n
+    if (nuevo !== valor) onGuardar(nuevo)
+  }
+
+  return (
+    <Input
+      type="number"
+      min={minimo}
+      max={31}
+      inputMode="numeric"
+      aria-label={etiqueta}
+      disabled={disabled}
+      value={texto}
+      placeholder={String(porDefecto)}
+      onChange={(e) => setTexto(e.target.value)}
+      onBlur={guardar}
+      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      className="h-7 w-14 px-1.5 text-center text-xs tabular-nums text-foreground"
+    />
   )
 }
 
