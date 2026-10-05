@@ -32,7 +32,11 @@ export function encabezadoDe(
     dateStyle: "short",
     timeStyle: "short",
   })
-  const otros = [filtros.q ? `Búsqueda: "${filtros.q}"` : null, ...(detalle.otros ?? [])].filter(Boolean)
+  const otros = [
+    filtros.archivadas ? "Solo archivadas" : null,
+    filtros.q ? `Búsqueda: "${filtros.q}"` : null,
+    ...(detalle.otros ?? []),
+  ].filter(Boolean)
   return [
     `${modulo} · ${empresa}`,
     `Período: ${periodoDe(filtros)}${otros.length ? ` · ${otros.join(" · ")}` : ""}`,

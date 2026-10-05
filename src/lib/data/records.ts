@@ -10,6 +10,8 @@ interface ConsultaSinTipar {
   eq: (col: string, val: unknown) => ConsultaSinTipar
   gte: (col: string, val: unknown) => ConsultaSinTipar
   lte: (col: string, val: unknown) => ConsultaSinTipar
+  is: (col: string, val: null) => ConsultaSinTipar
+  not: (col: string, op: string, val: unknown) => ConsultaSinTipar
   or: (filtro: string) => ConsultaSinTipar
   order: (col: string, opts: { ascending: boolean }) => ConsultaSinTipar
   range: (desde: number, hasta: number) => ConsultaSinTipar
@@ -35,6 +37,12 @@ export interface Filtros {
   staffId?: string
   /** Texto libre: busca por nombre o documento del cliente. */
   q?: string
+  /**
+   * Ver lo archivado en vez de lo vigente. Nunca las dos cosas juntas: lo
+   * archivado no cuenta, y mezclarlo en el listado descuadraría los totales
+   * de la franja de arriba contra lo que se ve en la tabla.
+   */
+  archivadas?: boolean
   page?: number
 }
 
@@ -63,6 +71,7 @@ export function leerFiltros(params: Record<string, string | string[] | undefined
     branchId: uno("sede"),
     staffId: uno("responsable"),
     q: uno("q"),
+    archivadas: uno("archivadas") === "1",
     page: Math.max(0, Number(uno("p") ?? 0) || 0),
   }
 }
@@ -82,6 +91,8 @@ interface OpcionesConsulta {
   busqueda?: string[]
   /** Condición extra en sintaxis de `.or()` de PostgREST. */
   condicion?: string
+  /** La tabla tiene `archived_at`: se muestra lo vigente o lo archivado (059). */
+  archivable?: boolean
 }
 
 /** Los filtros del listado sobre una consulta: los mismos al paginar y al exportar. */
@@ -90,6 +101,11 @@ function filtrar(query: ConsultaSinTipar, filtros: Filtros, opciones: OpcionesCo
   if (filtros.hasta) query = query.lte(opciones.campoFecha, filtros.hasta)
   if (filtros.branchId) query = query.eq("branch_id", filtros.branchId)
   if (filtros.staffId) query = query.eq("staff_id", filtros.staffId)
+  if (opciones.archivable) {
+    query = filtros.archivadas
+      ? query.not("archived_at", "is", null)
+      : query.is("archived_at", null)
+  }
   // PostgREST solo atiende un `or` por consulta: si hay condición y búsqueda,
   // van anidadas en uno solo.
   const grupos: string[] = []
@@ -145,10 +161,12 @@ async function todas<T>(
 
 const OPCIONES_VENTAS: OpcionesConsulta = {
   campoFecha: "report_date",
+  archivable: true,
   busqueda: ["licencia_nombre", "credito_nombre", "licencia_id", "credito_id", "ref_credito"],
 }
 const OPCIONES_PAGOS: OpcionesConsulta = {
   campoFecha: "report_date",
+  archivable: true,
   busqueda: ["titular_nombre", "titular_id", "ref_credito"],
 }
 
@@ -236,6 +254,9 @@ export async function totalesVentas(companyId: string, filtros: Filtros) {
     .select("valor_final, recaudo, saldo, cantidad_final")
     .eq("company_id", companyId)
     .limit(20000)
+  query = filtros.archivadas
+    ? query.not("archived_at", "is", null)
+    : query.is("archived_at", null)
   if (filtros.desde) query = query.gte("report_date", filtros.desde)
   if (filtros.hasta) query = query.lte("report_date", filtros.hasta)
   if (filtros.branchId) query = query.eq("branch_id", filtros.branchId)
@@ -281,6 +302,9 @@ export async function ventasPorRecontactar(
     // que en SQL deja fuera los nulos.
     .or(`state_code.is.null,state_code.not.in.(${[...ESTADOS_CERRADOS].join(",")})`)
 
+  query = filtros.archivadas
+    ? query.not("archived_at", "is", null)
+    : query.is("archived_at", null)
   if (filtros.desde) query = query.gte("report_date", filtros.desde)
   if (filtros.hasta) query = query.lte("report_date", filtros.hasta)
   if (filtros.branchId) query = query.eq("branch_id", filtros.branchId)

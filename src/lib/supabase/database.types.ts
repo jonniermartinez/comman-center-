@@ -1816,6 +1816,7 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          archived_at: string | null
           branch_id: string
           company_id: string
           contrato: string | null
@@ -1844,6 +1845,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          archived_at?: string | null
           branch_id: string
           company_id: string
           contrato?: string | null
@@ -1872,6 +1874,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          archived_at?: string | null
           branch_id?: string
           company_id?: string
           contrato?: string | null
@@ -2350,6 +2353,7 @@ export type Database = {
         Row: {
           ad_category_code: string | null
           adicion: number
+          archived_at: string | null
           branch_id: string
           cantidad_comision: number
           cantidad_final: number
@@ -2417,6 +2421,7 @@ export type Database = {
         Insert: {
           ad_category_code?: string | null
           adicion?: number
+          archived_at?: string | null
           branch_id: string
           cantidad_comision?: number
           cantidad_final?: number
@@ -2484,6 +2489,7 @@ export type Database = {
         Update: {
           ad_category_code?: string | null
           adicion?: number
+          archived_at?: string | null
           branch_id?: string
           cantidad_comision?: number
           cantidad_final?: number

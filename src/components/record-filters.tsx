@@ -7,6 +7,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -27,11 +28,14 @@ export function RecordFilters({
   sedes,
   responsables,
   buscar,
+  archivadas,
 }: {
   sedes?: { id: string; name: string }[]
   responsables?: { id: string; full_name: string }[]
   /** Texto del marcador de búsqueda; si no se pasa, no se muestra el campo. */
   buscar?: string
+  /** El listado admite archivar: muestra el interruptor para ver lo archivado. */
+  archivadas?: boolean
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -48,7 +52,7 @@ export function RecordFilters({
     router.push(`${pathname}?${next.toString()}`)
   }
 
-  const hayFiltros = ["desde", "hasta", "sede", "responsable", "q"].some((k) => params.get(k))
+  const hayFiltros = ["desde", "hasta", "sede", "responsable", "q", "archivadas"].some((k) => params.get(k))
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -143,6 +147,19 @@ export function RecordFilters({
               ))}
             </SelectContent>
           </Select>
+        </div>
+      )}
+
+      {archivadas && (
+        <div className="flex h-9 items-center gap-2">
+          <Switch
+            id="ver-archivadas"
+            checked={params.get("archivadas") === "1"}
+            onCheckedChange={(v) => aplicar({ archivadas: v ? "1" : undefined })}
+          />
+          <Label htmlFor="ver-archivadas" className="text-xs text-muted-foreground">
+            Ver archivadas
+          </Label>
         </div>
       )}
 

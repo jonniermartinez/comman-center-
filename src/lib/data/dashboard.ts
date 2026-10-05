@@ -135,6 +135,7 @@ export async function loadDashboard(
       .from("payments")
       .select("report_date, amount")
       .eq("company_id", companyId)
+      .is("archived_at", null)
       .gte("report_date", mes)
       .lte("report_date", finDeMes)
       .limit(20000),

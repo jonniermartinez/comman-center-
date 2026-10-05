@@ -31,6 +31,10 @@ function explicar(mensaje: string): string {
   // suya: el upsert intenta escribir sobre esa otra fila y choca por la llave.
   if (mensaje.includes("daily_activity_pkey"))
     return "Ya existe otra jornada de esa persona en esa fecha. Edita esa, o cambia la fecha."
+  if (mensaje.includes("archivar_sin_permiso"))
+    return "Archivar un pago lo hace quien administra la empresa o quien registró la venta."
+  if (mensaje.includes("venta_archivada"))
+    return "La venta de este pago está archivada. Restaura la venta y el pago vuelve con ella."
   if (mensaje.includes("row-level security") || mensaje.includes("permission denied"))
     return "No tienes permiso para registrar en esta empresa."
   return mensaje
@@ -586,6 +590,8 @@ export async function buscarVentas(companyId: string, texto: string): Promise<Ve
       "id, branch_id, ref_credito, financing_code, licencia_nombre, credito_nombre, licencia_id, credito_id, report_date, valor_final, saldo",
     )
     .eq("company_id", companyId)
+    // A una venta archivada no se le abona: no cuenta, y el pago tampoco contaría.
+    .is("archived_at", null)
     .or(
       [
         `licencia_nombre.ilike.${patron}`,
@@ -728,6 +734,56 @@ export async function deleteRecord(tipo: TipoRegistro, id: string): Promise<Resu
     entity_id: id,
     company_id: (antes as { company_id?: string }).company_id ?? null,
     before: antes,
+  })
+
+  refrescar()
+  return { ok: true }
+}
+
+/**
+ * Archiva o restaura una venta o un pago.
+ *
+ * Archivar es la salida para lo que no debía estar y no se quiere perder: el
+ * registro deja de verse y de sumar en todas las cifras, pero sigue en la base
+ * y vuelve con un clic. Borrar, en cambio, no tiene vuelta.
+ *
+ * Quién puede lo decide la base (059): una venta solo el super admin, un pago
+ * quien administra la empresa o registró la venta. Archivar una venta se lleva
+ * sus pagos, y restaurarla los trae de vuelta.
+ */
+export async function archiveRecord(
+  tipo: "venta" | "pago",
+  id: string,
+  archivar: boolean,
+): Promise<Result> {
+  await requireSession()
+  const supabase = await createClient()
+  const tabla = tipo === "venta" ? "sales" : "payments"
+
+  const { data, error } = await supabase
+    .from(tabla)
+    .update({ archived_at: archivar ? new Date().toISOString() : null })
+    .eq("id", id)
+    .select("id, company_id")
+  if (error) return { ok: false, error: explicar(error.message) }
+
+  // Igual que al borrar: si RLS no deja, PostgREST no da error, solo no toca
+  // ninguna fila.
+  if (!data?.length) {
+    return {
+      ok: false,
+      error:
+        tipo === "venta"
+          ? "Archivar o restaurar una venta solo lo puede hacer el super admin."
+          : "No tienes permiso para archivar este pago.",
+    }
+  }
+
+  await logAudit({
+    action: archivar ? "archive" : "restore",
+    entity: tabla,
+    entity_id: id,
+    company_id: data[0].company_id,
   })
 
   refrescar()

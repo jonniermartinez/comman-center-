@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 
 import { NuevaVenta, type VentaExistente } from "@/components/captura/nueva-venta"
+import { ArchivarRegistro } from "@/components/registros/archivar-registro"
 import { AlertaSeguimiento } from "@/components/ventas/alerta-seguimiento"
 import { ExportarExcel } from "@/components/exportar-excel"
 import { ModuleMissing } from "@/components/module-missing"
@@ -83,6 +84,7 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
           sedes={company.branches}
           responsables={company.staff}
           buscar="Nombre o documento del cliente…"
+          archivadas
         />
       }
       summary={
@@ -90,8 +92,16 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
           className="mb-4"
           items={[
             { label: "Ventas", value: pagina.total, unit: "cantidad" },
-            { label: "Licencias", value: Math.round(totales.licencias), unit: "cantidad" },
-            { label: "Facturación", value: totales.facturacion, unit: "moneda" },
+            {
+              label: "Licencias",
+              value: Math.round(totales.licencias),
+              unit: "cantidad",
+            },
+            {
+              label: "Facturación",
+              value: totales.facturacion,
+              unit: "moneda",
+            },
             { label: "Recaudado", value: totales.recaudo, unit: "moneda" },
             { label: "Saldo", value: totales.saldo, unit: "moneda" },
             {
@@ -120,7 +130,7 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
             <TableHead className="text-right">Valor</TableHead>
             <TableHead className="text-right">Recaudo</TableHead>
             <TableHead className="text-right">Saldo</TableHead>
-            <TableHead className="w-10" />
+            <TableHead className="w-20" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -178,27 +188,35 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
               <TableCell>
                 {/* Una venta guardada solo la corrige el super admin (039): a
                     los demás no se les ofrece un lápiz que la base va a
-                    rechazar. */}
+                    rechazar. Archivarla, lo mismo (059). */}
                 {company.isSuperAdmin && (
-                  <NuevaVenta
-                    companyId={company.id}
-                    branches={company.branches}
-                    staff={company.staff}
-                    financiaciones={company.financiaciones}
-                    productosEmpresa={company.productosEmpresa}
-                    traficos={company.traficos}
-                    canales={company.canales}
-                    categorias={company.categorias}
-                    tiposVenta={company.tiposVenta}
-                    centrosMedicos={company.centrosMedicos}
-                    tiposId={company.tiposId}
-                    escuelas={company.escuelas}
-                    estados={company.estados}
-                    canManage={company.canManage}
-                    isSuperAdmin={company.isSuperAdmin}
-                    myStaffId={company.myStaffId}
-                    registro={v as unknown as VentaExistente}
-                  />
+                  <div className="flex justify-end">
+                    <NuevaVenta
+                      companyId={company.id}
+                      branches={company.branches}
+                      staff={company.staff}
+                      financiaciones={company.financiaciones}
+                      productosEmpresa={company.productosEmpresa}
+                      traficos={company.traficos}
+                      canales={company.canales}
+                      categorias={company.categorias}
+                      tiposVenta={company.tiposVenta}
+                      centrosMedicos={company.centrosMedicos}
+                      tiposId={company.tiposId}
+                      escuelas={company.escuelas}
+                      estados={company.estados}
+                      canManage={company.canManage}
+                      isSuperAdmin={company.isSuperAdmin}
+                      myStaffId={company.myStaffId}
+                      registro={v as unknown as VentaExistente}
+                    />
+                    <ArchivarRegistro
+                      tipo="venta"
+                      id={v.id}
+                      nombre={v.licencia_nombre ?? "este cliente"}
+                      archivado={!!v.archived_at}
+                    />
+                  </div>
                 )}
               </TableCell>
             </TableRow>

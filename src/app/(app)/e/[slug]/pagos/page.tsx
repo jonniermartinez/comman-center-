@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import { NuevoPago, type PagoExistente } from "@/components/captura/nuevo-pago"
 import { ExportarExcel } from "@/components/exportar-excel"
 import { ModuleMissing } from "@/components/module-missing"
+import { ArchivarRegistro } from "@/components/registros/archivar-registro"
 import { RecordFilters } from "@/components/record-filters"
 import { EmptyRow, RecordsScaffold } from "@/components/records-scaffold"
 import { StatStrip } from "@/components/stat-strip"
@@ -42,11 +43,23 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
   const supabase = await createClient()
   const [{ data: ventas }, urls] = await Promise.all([
     saleIds.length
-      ? supabase.from("sales").select("id, financing_code").in("id", saleIds)
-      : Promise.resolve({ data: [] as { id: string; financing_code: string | null }[] }),
+      ? supabase.from("sales").select("id, financing_code, staff_id").in("id", saleIds)
+      : Promise.resolve({
+          data: [] as {
+            id: string
+            financing_code: string | null
+            staff_id: string | null
+          }[],
+        }),
     urlsComprobantes(pagina.rows.map((p) => p.voucher).filter((v): v is string => !!v)),
   ])
   const financiacion = new Map((ventas ?? []).map((v) => [v.id, v.financing_code]))
+  // Archiva un pago quien administra la empresa o quien registró su venta: la
+  // misma regla con la que la base deja borrarlo (059).
+  const vendedor = new Map((ventas ?? []).map((v) => [v.id, v.staff_id]))
+  const puedeArchivar = (saleId: string | null) =>
+    company.canManage ||
+    (!!company.myStaffId && !!saleId && vendedor.get(saleId) === company.myStaffId)
   const totalPagina = pagina.rows.reduce((a, p) => a + Number(p.amount), 0)
   const sede = (id: string) => company.branches.find((b) => b.id === id)?.name ?? "—"
   const filtrando = Object.values(sp).some((v) => typeof v === "string" && v)
@@ -66,13 +79,21 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
         </>
       }
       filters={
-        <RecordFilters sedes={company.branches} buscar="Nombre, documento o referencia…" />
+        <RecordFilters
+          sedes={company.branches}
+          buscar="Nombre, documento o referencia…"
+          archivadas
+        />
       }
       summary={
         <StatStrip
           className="mb-4"
           items={[
-            { label: "Pagos en el filtro", value: pagina.total, unit: "cantidad" },
+            {
+              label: "Pagos en el filtro",
+              value: pagina.total,
+              unit: "cantidad",
+            },
             {
               label: "Suma de esta página",
               value: totalPagina,
@@ -96,7 +117,7 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
             <TableHead className="w-32">Medio de pago</TableHead>
             <TableHead className="w-32">Comprobante</TableHead>
             <TableHead className="text-right">Valor</TableHead>
-            <TableHead className="w-10" />
+            <TableHead className="w-20" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -155,18 +176,28 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
                 {formatCOP(Number(p.amount))}
               </TableCell>
               <TableCell>
-                <NuevoPago
-                  companyId={company.id}
-                  branches={company.branches}
-                  mediosPago={company.mediosPago}
-                  registro={
-                    {
-                      ...p,
-                      financing_code: p.sale_id ? (financiacion.get(p.sale_id) ?? null) : null,
-                    } as unknown as PagoExistente
-                  }
-                  voucherUrl={p.voucher ? urls[p.voucher] : undefined}
-                />
+                <div className="flex justify-end">
+                  <NuevoPago
+                    companyId={company.id}
+                    branches={company.branches}
+                    mediosPago={company.mediosPago}
+                    registro={
+                      {
+                        ...p,
+                        financing_code: p.sale_id ? (financiacion.get(p.sale_id) ?? null) : null,
+                      } as unknown as PagoExistente
+                    }
+                    voucherUrl={p.voucher ? urls[p.voucher] : undefined}
+                  />
+                  {puedeArchivar(p.sale_id) && (
+                    <ArchivarRegistro
+                      tipo="pago"
+                      id={p.id}
+                      nombre={p.titular_nombre ?? "este titular"}
+                      archivado={!!p.archived_at}
+                    />
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}
