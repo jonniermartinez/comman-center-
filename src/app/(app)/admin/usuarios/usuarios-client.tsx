@@ -73,12 +73,17 @@ type Vista = "activos" | "eliminados"
 
 export function UsuariosClient({ users, meId }: { users: UserRow[]; meId: string }) {
   const [vista, setVista] = useState<Vista>("activos")
+  // "todos" o un rol: para ver de un vistazo quiénes son coordinadores, por
+  // ejemplo, sin recorrer la lista entera.
+  const [rol, setRol] = useState<UserRole | "todos">("todos")
   const [aEliminar, setAEliminar] = useState<UserRow | null>(null)
   const [aEditar, setAEditar] = useState<UserRow | null>(null)
   const [aClave, setAClave] = useState<UserRow | null>(null)
   const [pendiente, startTransition] = useTransition()
 
-  const visibles = users.filter((u) => (vista === "activos" ? !u.deleted_at : !!u.deleted_at))
+  const visibles = users.filter(
+    (u) => (vista === "activos" ? !u.deleted_at : !!u.deleted_at) && (rol === "todos" || u.role === rol),
+  )
   const eliminados = users.filter((u) => u.deleted_at).length
 
   /** Ejecuta una acción del servidor y reporta el resultado en un toast. */
@@ -108,6 +113,19 @@ export function UsuariosClient({ users, meId }: { users: UserRow[]; meId: string
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+            <Select value={rol} onValueChange={(v) => setRol(v as UserRole | "todos")}>
+              <SelectTrigger className="w-40" aria-label="Filtrar por rol">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los roles</SelectItem>
+                {(Object.keys(ROLE_LABELS) as UserRole[]).map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <NuevoUsuarioDialog />
           </>
         }
@@ -297,9 +315,11 @@ export function UsuariosClient({ users, meId }: { users: UserRow[]; meId: string
               {visibles.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                    {vista === "eliminados"
-                      ? "No hay usuarios eliminados."
-                      : "Todavía no hay usuarios. Crea el primero con «Nuevo usuario»."}
+                    {rol !== "todos"
+                      ? `No hay usuarios con rol ${ROLE_LABELS[rol]} en esta vista.`
+                      : vista === "eliminados"
+                        ? "No hay usuarios eliminados."
+                        : "Todavía no hay usuarios. Crea el primero con «Nuevo usuario»."}
                   </TableCell>
                 </TableRow>
               )}
