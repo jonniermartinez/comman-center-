@@ -75,7 +75,7 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
             escuelas={company.escuelas}
             estados={company.estados}
             canManage={company.canManage}
-            isSuperAdmin={company.isSuperAdmin}
+            puedeEditar={company.puedeEditarVentas}
             myStaffId={company.myStaffId}
           />
         </>
@@ -204,10 +204,11 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
                 {formatCOP(Number(v.saldo))}
               </TableCell>
               <TableCell>
-                {/* Una venta guardada solo la corrige el super admin (039): a
-                    los demás no se les ofrece un lápiz que la base va a
-                    rechazar. Archivarla, lo mismo (059). */}
-                {company.isSuperAdmin && (
+                {/* Una venta guardada la corrige el super admin o un coordinador
+                    habilitado en esta empresa (062): a los demás no se les
+                    ofrece un lápiz que la base va a rechazar. Archivarla es
+                    solo del super admin. */}
+                {company.puedeEditarVentas && (
                   <div className="flex justify-end">
                     <NuevaVenta
                       companyId={company.id}
@@ -224,16 +225,18 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
                       escuelas={company.escuelas}
                       estados={company.estados}
                       canManage={company.canManage}
-                      isSuperAdmin={company.isSuperAdmin}
+                      puedeEditar={company.puedeEditarVentas}
                       myStaffId={company.myStaffId}
                       registro={v as unknown as VentaExistente}
                     />
-                    <ArchivarRegistro
-                      tipo="venta"
-                      id={v.id}
-                      nombre={v.licencia_nombre ?? "este cliente"}
-                      archivado={!!v.archived_at}
-                    />
+                    {company.isSuperAdmin && (
+                      <ArchivarRegistro
+                        tipo="venta"
+                        id={v.id}
+                        nombre={v.licencia_nombre ?? "este cliente"}
+                        archivado={!!v.archived_at}
+                      />
+                    )}
                   </div>
                 )}
               </TableCell>

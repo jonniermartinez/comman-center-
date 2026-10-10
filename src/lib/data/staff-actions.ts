@@ -367,3 +367,46 @@ export async function setStaffSchedule(
   refrescar()
   return { ok: true }
 }
+
+/**
+ * Habilita o quita a un coordinador la corrección de ventas en una empresa.
+ *
+ * Es por empresa: el mismo coordinador puede editar en una y no en otra. Solo
+ * lo cambia el super admin, y la base lo exige también (062).
+ */
+export async function setPuedeEditar(
+  companyId: string,
+  userId: string,
+  puedeEditar: boolean,
+): Promise<Result> {
+  const session = await requireSession()
+  if (!session.isSuperAdmin) {
+    return { ok: false, error: "Solo el super admin puede habilitar la edición." }
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("company_users")
+    .update({ puede_editar: puedeEditar })
+    .eq("company_id", companyId)
+    .eq("user_id", userId)
+    .eq("role", "coordinador")
+    .is("removed_at", null)
+    .select("user_id")
+
+  if (error) return { ok: false, error: error.message }
+  if (!data?.length) {
+    return { ok: false, error: "Solo se habilita a un coordinador de esta empresa." }
+  }
+
+  await logAudit({
+    action: "update",
+    entity: "company_users",
+    entity_id: userId,
+    company_id: companyId,
+    after: { puede_editar: puedeEditar },
+  })
+
+  refrescar()
+  return { ok: true }
+}

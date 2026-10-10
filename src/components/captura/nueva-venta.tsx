@@ -165,7 +165,7 @@ export function NuevaVenta({
   escuelas,
   estados,
   canManage,
-  isSuperAdmin,
+  puedeEditar,
   myStaffId,
   registro,
 }: {
@@ -185,8 +185,8 @@ export function NuevaVenta({
   estados: Catalogo[]
   /** Quien administra registra a nombre de cualquiera; el comercial, lo suyo. */
   canManage: boolean
-  /** Solo el super admin puede corregir una venta ya guardada. */
-  isSuperAdmin: boolean
+  /** Corregir una venta ya guardada: el super admin o un coordinador habilitado (062). */
+  puedeEditar: boolean
   myStaffId: string | null
   /** Si viene, el formulario corrige esa venta en vez de crear una. */
   registro?: VentaExistente
@@ -1069,7 +1069,7 @@ export function NuevaVenta({
                 Cancelar
               </Button>
               <Button
-                disabled={!valido || pendiente || (editando && !isSuperAdmin)}
+                disabled={!valido || pendiente || (editando && !puedeEditar)}
                 onClick={() =>
                   startTransition(async () => {
                     // Las fotos se suben antes de guardar la venta: si una falla

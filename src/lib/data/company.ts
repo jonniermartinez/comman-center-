@@ -50,6 +50,11 @@ export interface CompanyContext {
    * necesita saberlo para no ofrecer un lápiz que la base va a rechazar.
    */
   isSuperAdmin: boolean
+  /**
+   * Si quien mira puede corregir una venta ya guardada: el super admin, o un
+   * coordinador al que se le encendió la casilla en esta empresa (062).
+   */
+  puedeEditarVentas: boolean
   /** Catálogos para los formularios de alta. */
   financiaciones: { code: string; name: string; es_mixta: boolean }[]
   /** La lista de precios de esta empresa. Es de donde sale el valor de una venta. */
@@ -99,6 +104,7 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
     modules,
     sesion,
     superAdmin,
+    puedeEditar,
     financiaciones,
     productosEmpresa,
     traficos,
@@ -127,6 +133,7 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
     supabase.from("company_modules").select("module_code").eq("company_id", company.id),
     supabase.rpc("can_manage_company", { target_company: company.id }),
     supabase.rpc("is_super_admin"),
+    supabase.rpc("puede_editar_ventas", { target_company: company.id }),
     supabase.from("financing_types").select("code, name, es_mixta").order("sort_order"),
     supabase
       .from("company_products")
@@ -171,6 +178,7 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
     modules: (modules.data ?? []).map((m) => m.module_code),
     canManage: Boolean(sesion.data),
     isSuperAdmin: Boolean(superAdmin.data),
+    puedeEditarVentas: Boolean(puedeEditar.data),
     myStaffId: yo?.id ?? null,
     miHoraEntrada:
       (staff.data ?? []).find((r) => r.staff?.id === yo?.id)?.hora_entrada ?? company.hora_entrada,

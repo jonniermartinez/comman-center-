@@ -1019,6 +1019,7 @@ export type Database = {
           assigned_by: string | null
           branch_id: string | null
           company_id: string
+          puede_editar: boolean
           removed_at: string | null
           role: Database["public"]["Enums"]["user_role"]
           user_id: string
@@ -1028,6 +1029,7 @@ export type Database = {
           assigned_by?: string | null
           branch_id?: string | null
           company_id: string
+          puede_editar?: boolean
           removed_at?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           user_id: string
@@ -1037,6 +1039,7 @@ export type Database = {
           assigned_by?: string | null
           branch_id?: string | null
           company_id?: string
+          puede_editar?: boolean
           removed_at?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           user_id?: string
@@ -3254,6 +3257,7 @@ export type Database = {
         Returns: undefined
       }
       can_manage_company: { Args: { target_company: string }; Returns: boolean }
+      puede_editar_ventas: { Args: { target_company: string }; Returns: boolean }
       company_data_counts: { Args: { target_company: string }; Returns: Json }
       company_role: {
         Args: { target_company: string }

@@ -97,6 +97,8 @@ export interface CompanyUser {
   branch_id?: string | null
   role: Exclude<UserRole, "super_admin">
   removed_at?: string | null
+  /** Coordinador habilitado para corregir ventas guardadas en esta empresa. */
+  puede_editar?: boolean
 }
 
 export interface CatalogItem {

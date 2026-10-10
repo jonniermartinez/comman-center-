@@ -32,7 +32,7 @@ function explicar(mensaje: string): string {
   if (mensaje.includes("daily_activity_pkey"))
     return "Ya existe otra jornada de esa persona en esa fecha. Edita esa, o cambia la fecha."
   if (mensaje.includes("archivar_sin_permiso"))
-    return "Archivar un pago lo hace quien administra la empresa o quien registró la venta."
+    return "Archivar y restaurar lo hace solo el super admin."
   if (mensaje.includes("venta_archivada"))
     return "La venta de este pago está archivada. Restaura la venta y el pago vuelve con ella."
   if (mensaje.includes("row-level security") || mensaje.includes("permission denied"))

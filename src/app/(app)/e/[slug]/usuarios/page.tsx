@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   Table,
   TableBody,
@@ -47,6 +48,7 @@ import {
   addStaffToCompany,
   linkStaffToProfile,
   removeStaffFromCompany,
+  setPuedeEditar,
   setStaffBranch,
 } from "@/lib/data/staff-actions"
 import { initials } from "@/lib/format"
@@ -134,12 +136,21 @@ export default function EquipoPage() {
                 <TableHead>Comercial</TableHead>
                 <TableHead className="w-52">Sede</TableHead>
                 <TableHead className="w-64">Cuenta de acceso</TableHead>
+                {isSuperAdmin && <TableHead className="w-32">Edita ventas</TableHead>}
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {members.map((m) => {
                 const cuenta = db.profiles.find((p) => p.id === m.profile_id)
+                // La casilla solo aplica a un coordinador de esta empresa (062).
+                const acceso = db.company_users.find(
+                  (cu) =>
+                    cu.company_id === company.id &&
+                    cu.user_id === m.profile_id &&
+                    !cu.removed_at &&
+                    cu.role === "coordinador",
+                )
                 return (
                   <TableRow key={m.id}>
                     <TableCell>
@@ -203,6 +214,27 @@ export default function EquipoPage() {
                       )}
                     </TableCell>
 
+                    {isSuperAdmin && (
+                      <TableCell>
+                        {acceso && m.profile_id ? (
+                          <Switch
+                            checked={Boolean(acceso.puede_editar)}
+                            aria-label={`${m.full_name} puede editar ventas`}
+                            onCheckedChange={(v) =>
+                              correr(
+                                () => setPuedeEditar(company.id, m.profile_id!, v),
+                                v
+                                  ? `${m.full_name} puede editar ventas en ${company.name}`
+                                  : `${m.full_name} ya no edita ventas`,
+                              )
+                            }
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    )}
+
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -220,7 +252,7 @@ export default function EquipoPage() {
 
               {members.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={isSuperAdmin ? 5 : 4} className="py-8 text-center text-sm text-muted-foreground">
                     {company.name} todavía no tiene comerciales. Agrega el primero.
                   </TableCell>
                 </TableRow>

@@ -54,12 +54,8 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
     urlsComprobantes(pagina.rows.map((p) => p.voucher).filter((v): v is string => !!v)),
   ])
   const financiacion = new Map((ventas ?? []).map((v) => [v.id, v.financing_code]))
-  // Archiva un pago quien administra la empresa o quien registró su venta: la
-  // misma regla con la que la base deja borrarlo (059).
-  const vendedor = new Map((ventas ?? []).map((v) => [v.id, v.staff_id]))
-  const puedeArchivar = (saleId: string | null) =>
-    company.canManage ||
-    (!!company.myStaffId && !!saleId && vendedor.get(saleId) === company.myStaffId)
+  // Archivar y restaurar es solo del super admin (062).
+  const puedeArchivar = company.isSuperAdmin
   const totalPagina = pagina.rows.reduce((a, p) => a + Number(p.amount), 0)
   const sede = (id: string) => company.branches.find((b) => b.id === id)?.name ?? "—"
   const filtrando = Object.values(sp).some((v) => typeof v === "string" && v)
@@ -189,7 +185,7 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
                     }
                     voucherUrl={p.voucher ? urls[p.voucher] : undefined}
                   />
-                  {puedeArchivar(p.sale_id) && (
+                  {puedeArchivar && (
                     <ArchivarRegistro
                       tipo="pago"
                       id={p.id}
