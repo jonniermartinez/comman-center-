@@ -247,7 +247,7 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
             </TableRow>
           ))}
 
-          {pagina.rows.length === 0 && <EmptyRow colSpan={10} filtrando={filtrando} />}
+          {pagina.rows.length === 0 && <EmptyRow colSpan={11} filtrando={filtrando} />}
         </TableBody>
       </Table>
     </RecordsScaffold>
