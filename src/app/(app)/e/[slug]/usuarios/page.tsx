@@ -136,7 +136,7 @@ export default function EquipoPage() {
                 <TableHead>Comercial</TableHead>
                 <TableHead className="w-52">Sede</TableHead>
                 <TableHead className="w-64">Cuenta de acceso</TableHead>
-                {isSuperAdmin && <TableHead className="w-32">Edita ventas</TableHead>}
+                {isSuperAdmin && <TableHead className="w-40">Edita ventas y pagos</TableHead>}
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
@@ -219,13 +219,13 @@ export default function EquipoPage() {
                         {acceso && m.profile_id ? (
                           <Switch
                             checked={Boolean(acceso.puede_editar)}
-                            aria-label={`${m.full_name} puede editar ventas`}
+                            aria-label={`${m.full_name} puede editar ventas y pagos`}
                             onCheckedChange={(v) =>
                               correr(
                                 () => setPuedeEditar(company.id, m.profile_id!, v),
                                 v
-                                  ? `${m.full_name} puede editar ventas en ${company.name}`
-                                  : `${m.full_name} ya no edita ventas`,
+                                  ? `${m.full_name} puede editar ventas y pagos en ${company.name}`
+                                  : `${m.full_name} ya no edita ventas ni pagos`,
                               )
                             }
                           />

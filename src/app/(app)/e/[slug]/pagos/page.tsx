@@ -56,6 +56,13 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
   const financiacion = new Map((ventas ?? []).map((v) => [v.id, v.financing_code]))
   // Archivar y restaurar es solo del super admin (062).
   const puedeArchivar = company.isSuperAdmin
+  // Corregir un pago: el super admin, un coordinador habilitado, o quien
+  // registró la venta (063). A los demás no se les ofrece un lápiz que la base
+  // va a rechazar.
+  const vendedor = new Map((ventas ?? []).map((v) => [v.id, v.staff_id]))
+  const puedeEditar = (saleId: string | null) =>
+    company.puedeEditarVentas ||
+    (!!company.myStaffId && !!saleId && vendedor.get(saleId) === company.myStaffId)
   const totalPagina = pagina.rows.reduce((a, p) => a + Number(p.amount), 0)
   const sede = (id: string) => company.branches.find((b) => b.id === id)?.name ?? "—"
   const filtrando = Object.values(sp).some((v) => typeof v === "string" && v)
@@ -173,18 +180,20 @@ export default async function PagosPage({ params, searchParams }: PageProps<"/e/
               </TableCell>
               <TableCell>
                 <div className="flex justify-end">
-                  <NuevoPago
-                    companyId={company.id}
-                    branches={company.branches}
-                    mediosPago={company.mediosPago}
-                    registro={
-                      {
-                        ...p,
-                        financing_code: p.sale_id ? (financiacion.get(p.sale_id) ?? null) : null,
-                      } as unknown as PagoExistente
-                    }
-                    voucherUrl={p.voucher ? urls[p.voucher] : undefined}
-                  />
+                  {puedeEditar(p.sale_id) && (
+                    <NuevoPago
+                      companyId={company.id}
+                      branches={company.branches}
+                      mediosPago={company.mediosPago}
+                      registro={
+                        {
+                          ...p,
+                          financing_code: p.sale_id ? (financiacion.get(p.sale_id) ?? null) : null,
+                        } as unknown as PagoExistente
+                      }
+                      voucherUrl={p.voucher ? urls[p.voucher] : undefined}
+                    />
+                  )}
                   {puedeArchivar && (
                     <ArchivarRegistro
                       tipo="pago"
