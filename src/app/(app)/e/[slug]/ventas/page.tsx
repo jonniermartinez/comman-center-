@@ -20,6 +20,7 @@ import {
 import { construirHref, getCompanyContext, nombreDe } from "@/lib/data/company"
 import { leerFiltros, listSales, totalesVentas, ventasPorRecontactar } from "@/lib/data/records"
 import { formatCOP, formatDate, todayISO } from "@/lib/format"
+import { enlaceWhatsApp } from "@/lib/whatsapp"
 
 /**
  * Ventas: una fila por crédito, como la hoja "Base" del Excel.
@@ -143,6 +144,22 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
                 <p className="truncate text-xs text-muted-foreground">
                   {v.licencia_id ?? ""} · {sede(v.branch_id)}
                 </p>
+                {v.licencia_celular && (
+                  <p className="truncate text-xs text-muted-foreground tabular-nums">
+                    {enlaceWhatsApp(v.licencia_celular) ? (
+                      <a
+                        href={enlaceWhatsApp(v.licencia_celular)!}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:underline"
+                      >
+                        {v.licencia_celular}
+                      </a>
+                    ) : (
+                      v.licencia_celular
+                    )}
+                  </p>
+                )}
               </TableCell>
               <TableCell className="text-sm">
                 {nombreDeProducto(v.company_product_id) ??
