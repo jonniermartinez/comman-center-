@@ -127,6 +127,7 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
             <TableHead>Cliente</TableHead>
             <TableHead className="w-24">Producto</TableHead>
             <TableHead className="w-28">Financiación</TableHead>
+            <TableHead className="w-32">Tráfico</TableHead>
             <TableHead>Responsable</TableHead>
             <TableHead className="w-28">Estado</TableHead>
             <TableHead className="text-right">Valor</TableHead>
@@ -167,6 +168,9 @@ export default async function VentasPage({ params, searchParams }: PageProps<"/e
               </TableCell>
               <TableCell className="text-sm">
                 {nombreDe(company.financiaciones, v.financing_code)}
+              </TableCell>
+              <TableCell className="text-sm">
+                {v.traffic_code ? nombreDe(company.traficos, v.traffic_code) : "—"}
               </TableCell>
               <TableCell className="max-w-40 truncate text-sm">
                 {v.responsable_nombre ?? "—"}
