@@ -303,16 +303,32 @@ export async function linkStaffToProfile(
   return { ok: true }
 }
 
+export type HorarioDia = { dia: number; entrada: string | null; salida: string | null }
+
 /** El horario de cada persona del equipo, para la tarjeta de Equipo. */
-export async function listStaffSchedules(
-  companyId: string,
-): Promise<{ staffId: string; nombre: string; entrada: string | null; salida: string | null }[]> {
+export async function listStaffSchedules(companyId: string): Promise<
+  {
+    staffId: string
+    nombre: string
+    entrada: string | null
+    salida: string | null
+    /** Solo los días que tienen hora propia (064). */
+    dias: HorarioDia[]
+  }[]
+> {
   await requireSession()
   const supabase = await createClient()
-  const { data } = await supabase
-    .from("company_staff")
-    .select("staff_id, hora_entrada, hora_salida, staff(full_name, active)")
-    .eq("company_id", companyId)
+  const [{ data }, { data: dias }] = await Promise.all([
+    supabase
+      .from("company_staff")
+      .select("staff_id, hora_entrada, hora_salida, staff(full_name, active)")
+      .eq("company_id", companyId),
+    supabase
+      .from("company_staff_horarios")
+      .select("staff_id, dia, hora_entrada, hora_salida")
+      .eq("company_id", companyId)
+      .order("dia"),
+  ])
   return (data ?? [])
     .filter((r) => r.staff?.active)
     .map((r) => ({
@@ -320,6 +336,9 @@ export async function listStaffSchedules(
       nombre: r.staff!.full_name,
       entrada: r.hora_entrada,
       salida: r.hora_salida,
+      dias: (dias ?? [])
+        .filter((d) => d.staff_id === r.staff_id)
+        .map((d) => ({ dia: d.dia, entrada: d.hora_entrada, salida: d.hora_salida })),
     }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre))
 }
@@ -362,6 +381,78 @@ export async function setStaffSchedule(
     entity_id: `${companyId}:${staffId}`,
     company_id: companyId,
     after: cambio,
+  })
+
+  refrescar()
+  return { ok: true }
+}
+
+/**
+ * Fija la hora de entrada o de salida de una persona para un día de la
+ * semana (064). 1 = lunes … 7 = domingo.
+ *
+ * Vacío vuelve a la hora general de la persona; cuando el día se queda sin
+ * entrada ni salida, la fila se borra. Como la de siempre, la de entrada es
+ * contra la que se decide si llegó tarde, también en las jornadas pasadas.
+ */
+export async function setStaffDaySchedule(
+  companyId: string,
+  staffId: string,
+  dia: number,
+  campo: "hora_entrada" | "hora_salida",
+  hora: string | null,
+): Promise<Result> {
+  await requireSession()
+  const supabase = await createClient()
+
+  if (campo !== "hora_entrada" && campo !== "hora_salida") return { ok: false, error: "El dato no es válido." }
+  if (!Number.isInteger(dia) || dia < 1 || dia > 7) return { ok: false, error: "El día no es válido." }
+  if (hora !== null && !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(hora)) {
+    return { ok: false, error: "La hora no es válida." }
+  }
+
+  const { data: actual } = await supabase
+    .from("company_staff_horarios")
+    .select("hora_entrada, hora_salida")
+    .eq("company_id", companyId)
+    .eq("staff_id", staffId)
+    .eq("dia", dia)
+    .maybeSingle()
+
+  const fila = {
+    hora_entrada: actual?.hora_entrada ?? null,
+    hora_salida: actual?.hora_salida ?? null,
+    [campo]: hora,
+  }
+
+  if (!fila.hora_entrada && !fila.hora_salida) {
+    const { error } = await supabase
+      .from("company_staff_horarios")
+      .delete()
+      .eq("company_id", companyId)
+      .eq("staff_id", staffId)
+      .eq("dia", dia)
+    if (error) return { ok: false, error: error.message }
+  } else {
+    const { data, error } = await supabase
+      .from("company_staff_horarios")
+      .upsert({ company_id: companyId, staff_id: staffId, dia, ...fila })
+      .select("staff_id")
+    if (error) {
+      return {
+        ok: false,
+        error: error.code === "42501" ? "No tienes permiso para cambiar el horario." : error.message,
+      }
+    }
+    if (!data?.length) return { ok: false, error: "No tienes permiso para cambiar el horario." }
+  }
+
+  await logAudit({
+    action: "update",
+    entity: "company_staff_horarios",
+    entity_id: `${companyId}:${staffId}:${dia}`,
+    company_id: companyId,
+    after: { dia, [campo]: hora },
   })
 
   refrescar()

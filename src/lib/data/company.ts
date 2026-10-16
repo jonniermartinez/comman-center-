@@ -1,5 +1,6 @@
 import "server-only"
 
+import { hoyEnBogota } from "@/lib/mi-jornada"
 import { createClient } from "@/lib/supabase/server"
 
 export interface BonoAutorizado {
@@ -167,6 +168,19 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
     ? await supabase.from("staff").select("id").eq("profile_id", user.id).maybeSingle()
     : { data: null }
 
+  // La hora de hoy: la del día de la semana si la tiene (064), si no la de
+  // la persona y si no la de la empresa. El 1 es lunes, como en la base.
+  const diaHoy = ((new Date(`${hoyEnBogota()}T12:00:00Z`).getUTCDay() + 6) % 7) + 1
+  const { data: miDia } = yo
+    ? await supabase
+        .from("company_staff_horarios")
+        .select("hora_entrada")
+        .eq("company_id", company.id)
+        .eq("staff_id", yo.id)
+        .eq("dia", diaHoy)
+        .maybeSingle()
+    : { data: null }
+
   return {
     ...company,
     branches: branches.data ?? [],
@@ -181,7 +195,9 @@ export async function getCompanyContext(slug: string): Promise<CompanyContext | 
     puedeEditarVentas: Boolean(puedeEditar.data),
     myStaffId: yo?.id ?? null,
     miHoraEntrada:
-      (staff.data ?? []).find((r) => r.staff?.id === yo?.id)?.hora_entrada ?? company.hora_entrada,
+      miDia?.hora_entrada ??
+      (staff.data ?? []).find((r) => r.staff?.id === yo?.id)?.hora_entrada ??
+      company.hora_entrada,
     financiaciones: financiaciones.data ?? [],
     productosEmpresa: (productosEmpresa.data ?? []).map((p) => ({
       id: p.id,

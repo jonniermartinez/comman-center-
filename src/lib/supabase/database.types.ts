@@ -967,6 +967,38 @@ export type Database = {
         }
         Relationships: []
       }
+      company_staff_horarios: {
+        Row: {
+          company_id: string
+          dia: number
+          hora_entrada: string | null
+          hora_salida: string | null
+          staff_id: string
+        }
+        Insert: {
+          company_id: string
+          dia: number
+          hora_entrada?: string | null
+          hora_salida?: string | null
+          staff_id: string
+        }
+        Update: {
+          company_id?: string
+          dia?: number
+          hora_entrada?: string | null
+          hora_salida?: string | null
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_staff_horarios_company_id_staff_id_fkey"
+            columns: ["company_id", "staff_id"]
+            isOneToOne: false
+            referencedRelation: "company_staff"
+            referencedColumns: ["company_id", "staff_id"]
+          },
+        ]
+      }
       company_staff: {
         Row: {
           branch_id: string | null
