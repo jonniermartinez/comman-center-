@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "command-center",
+  "name": "comman-center",
   // Cuenta "Command center". Fija el destino para que un despliegue no pueda
   // salir por error a otra de las cuentas de la sesión de wrangler.
   "account_id": "1f5451cb956ae09fe7a1d8074cef2912",
