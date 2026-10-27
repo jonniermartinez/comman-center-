@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.15"
   }
   public: {
     Tables: {
@@ -45,6 +45,7 @@ export type Database = {
           external_url: string | null
           id: string
           kommo_completado: boolean
+          kommo_intentos: number
           nombre: string | null
           observacion: string | null
           responsable_nombre: string | null
@@ -70,6 +71,7 @@ export type Database = {
           external_url?: string | null
           id?: string
           kommo_completado?: boolean
+          kommo_intentos?: number
           nombre?: string | null
           observacion?: string | null
           responsable_nombre?: string | null
@@ -95,6 +97,7 @@ export type Database = {
           external_url?: string | null
           id?: string
           kommo_completado?: boolean
+          kommo_intentos?: number
           nombre?: string | null
           observacion?: string | null
           responsable_nombre?: string | null
@@ -965,37 +968,34 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: []
-      }
-      company_staff_horarios: {
-        Row: {
-          company_id: string
-          dia: number
-          hora_entrada: string | null
-          hora_salida: string | null
-          staff_id: string
-        }
-        Insert: {
-          company_id: string
-          dia: number
-          hora_entrada?: string | null
-          hora_salida?: string | null
-          staff_id: string
-        }
-        Update: {
-          company_id?: string
-          dia?: number
-          hora_entrada?: string | null
-          hora_salida?: string | null
-          staff_id?: string
-        }
         Relationships: [
           {
-            foreignKeyName: "company_staff_horarios_company_id_staff_id_fkey"
-            columns: ["company_id", "staff_id"]
+            foreignKeyName: "company_schools_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "company_staff"
-            referencedColumns: ["company_id", "staff_id"]
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_schools_school_code_fkey"
+            columns: ["school_code"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "company_schools_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_schools_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_user_activity"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1042,6 +1042,45 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "staff"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_staff_horarios: {
+        Row: {
+          company_id: string
+          dia: number
+          hora_entrada: string | null
+          hora_salida: string | null
+          staff_id: string
+        }
+        Insert: {
+          company_id: string
+          dia: number
+          hora_entrada?: string | null
+          hora_salida?: string | null
+          staff_id: string
+        }
+        Update: {
+          company_id?: string
+          dia?: number
+          hora_entrada?: string | null
+          hora_salida?: string | null
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_staff_horarios_company_id_staff_id_fkey"
+            columns: ["company_id", "staff_id"]
+            isOneToOne: false
+            referencedRelation: "company_staff"
+            referencedColumns: ["company_id", "staff_id"]
+          },
+          {
+            foreignKeyName: "company_staff_horarios_company_id_staff_id_fkey"
+            columns: ["company_id", "staff_id"]
+            isOneToOne: false
+            referencedRelation: "v_capture_status"
+            referencedColumns: ["company_id", "staff_id"]
           },
         ]
       }
@@ -1124,11 +1163,6 @@ export type Database = {
       daily_activity: {
         Row: {
           agenda_cancela: number
-          validacion_cancela: number
-          validacion_confirmada: number
-          validacion_no_contesta: number
-          validacion_posible: number
-          validacion_reprograma: number
           agenda_confirmada: number
           agenda_no_contesta: number
           agenda_posible: number
@@ -1176,14 +1210,14 @@ export type Database = {
           tareas_medio: number
           updated_at: string
           updated_by: string | null
+          validacion_cancela: number
+          validacion_confirmada: number
+          validacion_no_contesta: number
+          validacion_posible: number
+          validacion_reprograma: number
         }
         Insert: {
           agenda_cancela?: number
-          validacion_cancela?: number
-          validacion_confirmada?: number
-          validacion_no_contesta?: number
-          validacion_posible?: number
-          validacion_reprograma?: number
           agenda_confirmada?: number
           agenda_no_contesta?: number
           agenda_posible?: number
@@ -1231,14 +1265,14 @@ export type Database = {
           tareas_medio?: number
           updated_at?: string
           updated_by?: string | null
-        }
-        Update: {
-          agenda_cancela?: number
           validacion_cancela?: number
           validacion_confirmada?: number
           validacion_no_contesta?: number
           validacion_posible?: number
           validacion_reprograma?: number
+        }
+        Update: {
+          agenda_cancela?: number
           agenda_confirmada?: number
           agenda_no_contesta?: number
           agenda_posible?: number
@@ -1286,6 +1320,11 @@ export type Database = {
           tareas_medio?: number
           updated_at?: string
           updated_by?: string | null
+          validacion_cancela?: number
+          validacion_confirmada?: number
+          validacion_no_contesta?: number
+          validacion_posible?: number
+          validacion_reprograma?: number
         }
         Relationships: [
           {
@@ -1458,6 +1497,13 @@ export type Database = {
             columns: ["jornada_id"]
             isOneToOne: false
             referencedRelation: "v_jornada_resumen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornada_eventos_staff_destino_fkey"
+            columns: ["staff_destino"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
@@ -2867,12 +2913,6 @@ export type Database = {
       v_daily_activity: {
         Row: {
           agenda_cancela: number | null
-          validacion_cancela: number | null
-          validacion_confirmada: number | null
-          validacion_no_contesta: number | null
-          validacion_posible: number | null
-          validacion_reprograma: number | null
-          total_validaciones: number | null
           agenda_confirmada: number | null
           agenda_no_contesta: number | null
           agenda_posible: number | null
@@ -2932,8 +2972,14 @@ export type Database = {
           total_agendas: number | null
           total_atencion: number | null
           total_llamadas: number | null
+          total_validaciones: number | null
           updated_at: string | null
           updated_by: string | null
+          validacion_cancela: number | null
+          validacion_confirmada: number | null
+          validacion_no_contesta: number | null
+          validacion_posible: number | null
+          validacion_reprograma: number | null
           volumen_venta_general: number | null
         }
         Relationships: [
@@ -3289,16 +3335,21 @@ export type Database = {
         Returns: undefined
       }
       can_manage_company: { Args: { target_company: string }; Returns: boolean }
-      puede_editar_ventas: { Args: { target_company: string }; Returns: boolean }
       company_data_counts: { Args: { target_company: string }; Returns: Json }
       company_role: {
         Args: { target_company: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      company_school_add: {
+        Args: { p_company: string; p_name: string }
+        Returns: string
+      }
       delete_company_cascade: {
         Args: { confirm_name: string; target_company: string }
         Returns: Json
       }
+      empresas_donde_edito_ventas: { Args: never; Returns: string[] }
+      empresas_que_gestiono: { Args: never; Returns: string[] }
       es_cuenta_de_prueba: { Args: { correo: string }; Returns: boolean }
       es_mi_registro: { Args: { target_staff: string }; Returns: boolean }
       has_company_access: { Args: { target_company: string }; Returns: boolean }
@@ -3382,10 +3433,6 @@ export type Database = {
         Args: { p_jornada: string; p_tipo?: string }
         Returns: undefined
       }
-      company_school_add: {
-        Args: { p_company: string; p_name: string }
-        Returns: string
-      }
       jornada_tipificar: {
         Args: {
           p_categoria: string
@@ -3442,6 +3489,7 @@ export type Database = {
         Args: { p_base_url: string; p_company: string }
         Returns: string
       }
+      kommo_lista: { Args: { valor: Json }; Returns: Json }
       kommo_num: { Args: { p: string }; Returns: number }
       kommo_registrar_sync: {
         Args: { p_company: string; p_count: number; p_error: string }
@@ -3464,6 +3512,7 @@ export type Database = {
         Returns: undefined
       }
       me: { Args: never; Returns: Json }
+      mis_registros: { Args: never; Returns: string[] }
       my_company_ids: { Args: never; Returns: string[] }
       my_role: {
         Args: never
@@ -3473,16 +3522,24 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_status"]
       }
+      puede_editar_ventas: {
+        Args: { target_company: string }
+        Returns: boolean
+      }
       puede_gestionar_jornada: { Args: { p_jornada: string }; Returns: boolean }
       purge_test_user: { Args: { target_user: string }; Returns: undefined }
+      ref_credito_normalizada: { Args: { ref: string }; Returns: string }
       restore_user: { Args: { target_user: string }; Returns: undefined }
       safe_ratio: {
         Args: { denominador: number; numerador: number }
         Returns: number
       }
       shares_company: { Args: { target_user: string }; Returns: boolean }
+      snapshot: { Args: never; Returns: Json }
       soft_delete_user: { Args: { target_user: string }; Returns: undefined }
       usuario_es_de_prueba: { Args: { usuario: string }; Returns: boolean }
+      usuarios_con_quien_comparto: { Args: never; Returns: string[] }
+      usuarios_de_prueba: { Args: never; Returns: string[] }
       ve_cuentas_de_prueba: { Args: never; Returns: boolean }
     }
     Enums: {
