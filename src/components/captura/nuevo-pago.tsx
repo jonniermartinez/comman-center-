@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { buscarVentas, type VentaBuscada } from "@/lib/data/records-actions"
+import { excedeComprobante } from "@/lib/comprobantes"
 import { formatCOP, formatDate, todayISO } from "@/lib/format"
 
 /**
@@ -260,7 +261,11 @@ export function NuevoPago({
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0]
-                  if (f) setArchivo(f)
+                  // Avisar al elegirla: si pasa del tope y llega al servidor,
+                  // Next la corta y tumba la página.
+                  const aviso = f && excedeComprobante(f)
+                  if (aviso) toast.error(aviso)
+                  else if (f) setArchivo(f)
                   e.target.value = ""
                 }}
               />
@@ -363,7 +368,13 @@ export function NuevoPago({
                 if (archivo) {
                   const datos = new FormData()
                   datos.set("file", archivo)
-                  const subida = await uploadPaymentReceipt(companyId, datos)
+                  // Una acción que revienta se queda en el formulario, no se
+                  // lleva la página.
+                  const subida = await uploadPaymentReceipt(companyId, datos).catch(() => ({
+                    ok: false,
+                    path: undefined,
+                    error: undefined,
+                  }))
                   if (!subida.ok || !subida.path) {
                     toast.error(subida.error ?? "No se pudo subir el comprobante.")
                     return

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { requireSession } from "@/lib/auth/session"
+import { MAX_COMPROBANTE } from "@/lib/comprobantes"
 import { logAudit } from "@/lib/data/audit"
 import { totalesJornada } from "@/lib/jornada"
 import { createClient } from "@/lib/supabase/server"
@@ -617,7 +618,6 @@ export async function buscarVentas(companyId: string, texto: string): Promise<Ve
 }
 
 const BUCKET_COMPROBANTES = "comprobantes-pago"
-const MAX_COMPROBANTE = 5 * 1024 * 1024
 
 /**
  * Sube la foto o el PDF del recibo y devuelve la ruta para guardarla en

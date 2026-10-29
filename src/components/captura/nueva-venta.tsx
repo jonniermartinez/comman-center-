@@ -26,6 +26,7 @@ import {
   uploadPaymentReceipt,
   type AdjuntoVenta,
 } from "@/lib/data/records-actions"
+import { excedeComprobante } from "@/lib/comprobantes"
 import { formatCOP, todayISO } from "@/lib/format"
 import { enlaceWhatsApp } from "@/lib/whatsapp"
 
@@ -963,7 +964,13 @@ export function NuevaVenta({
                   accept="image/png,image/jpeg,image/webp,image/heic,application/pdf"
                   className="hidden"
                   onChange={(e) => {
-                    const nuevos = Array.from(e.target.files ?? [])
+                    // La foto que pasa del tope se avisa acá, al elegirla: si
+                    // llega al servidor, Next la corta y tumba la página.
+                    const nuevos = Array.from(e.target.files ?? []).filter((f) => {
+                      const aviso = excedeComprobante(f)
+                      if (aviso) toast.error(aviso)
+                      return !aviso
+                    })
                     if (nuevos.length) setArchivos((a) => [...a, ...nuevos])
                     e.target.value = ""
                   }}
@@ -1078,7 +1085,12 @@ export function NuevaVenta({
                     for (const archivo of archivos) {
                       const datos = new FormData()
                       datos.set("file", archivo)
-                      const subida = await uploadPaymentReceipt(companyId, datos, "ventas")
+                      // Si la acción revienta —se cortó la conexión, el
+                      // servidor rechazó el cuerpo— el error se queda en el
+                      // formulario en vez de llevarse la página.
+                      const subida = await uploadPaymentReceipt(companyId, datos, "ventas").catch(
+                        () => ({ ok: false, path: undefined, error: undefined }),
+                      )
                       if (!subida.ok || !subida.path) {
                         toast.error(subida.error ?? `No se pudo subir ${archivo.name}.`)
                         return
