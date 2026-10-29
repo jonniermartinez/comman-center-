@@ -28,6 +28,14 @@ export async function signIn(_prev: ActionState, formData: FormData): Promise<Ac
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
+    // Solo al log del servidor: el código real distingue una contraseña mala
+    // de una clave o un proyecto mal configurados.
+    console.error("signIn", {
+      proyecto: new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).host,
+      status: error.status,
+      code: error.code,
+      message: error.message,
+    })
     // No se distingue "correo inexistente" de "contraseña incorrecta": decirlo
     // permitiría averiguar qué correos tienen cuenta en la plataforma.
     return { error: "Correo o contraseña incorrectos." }
