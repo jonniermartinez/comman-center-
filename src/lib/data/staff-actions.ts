@@ -120,24 +120,37 @@ export async function addStaffToCompany(input: {
       if (!perfil) return { ok: false, error: "Esa cuenta no existe o fue eliminada." }
 
       const base = slugNombre(perfil.full_name) || "cuenta"
-      // El slug es único y varias cuentas de prueba comparten nombre: si ya
-      // hay una ficha con ese nombre y no es de esta cuenta, se distingue con
-      // un sufijo en vez de robársela a otra persona.
       const { data: ocupados } = await supabase
         .from("staff")
-        .select("slug")
+        .select("id, slug, profile_id")
         .like("slug", `${base}%`)
-      const usados = new Set((ocupados ?? []).map((o) => o.slug))
-      let slug = base
-      for (let n = 2; usados.has(slug); n++) slug = `${base}_${n}`
 
-      const { data, error } = await supabase
-        .from("staff")
-        .insert({ full_name: perfil.full_name, slug, profile_id: input.profile_id })
-        .select("id")
-        .single()
-      if (error) return { ok: false, error: error.message }
-      staffId = data.id
+      // La persona casi siempre ya está en el histórico, sin cuenta: esa es su
+      // ficha y se enlaza. Crear otra la partía en dos.
+      const suya = (ocupados ?? []).find((o) => o.slug === base && !o.profile_id)
+      if (suya) {
+        const { error } = await supabase
+          .from("staff")
+          .update({ profile_id: input.profile_id })
+          .eq("id", suya.id)
+        if (error) return { ok: false, error: error.message }
+        staffId = suya.id
+      } else {
+        // El slug es único y varias cuentas de prueba comparten nombre: si la
+        // ficha con ese nombre es de otra cuenta, se distingue con un sufijo
+        // en vez de robársela a otra persona.
+        const usados = new Set((ocupados ?? []).map((o) => o.slug))
+        let slug = base
+        for (let n = 2; usados.has(slug); n++) slug = `${base}_${n}`
+
+        const { data, error } = await supabase
+          .from("staff")
+          .insert({ full_name: perfil.full_name, slug, profile_id: input.profile_id })
+          .select("id")
+          .single()
+        if (error) return { ok: false, error: error.message }
+        staffId = data.id
+      }
     }
   }
 
@@ -268,6 +281,26 @@ export async function linkStaffToProfile(
   }
 
   const supabase = await createClient()
+
+  // Una cuenta es una sola persona. Si ya está enlazada con otra ficha, se
+  // avisa en vez de dejarla con dos: así es como fichas de una comercial
+  // terminaron colgando de la cuenta de un coordinador.
+  if (profileId) {
+    const { data: otra } = await supabase
+      .from("staff")
+      .select("full_name")
+      .eq("profile_id", profileId)
+      .neq("id", staffId)
+      .limit(1)
+      .maybeSingle()
+    if (otra) {
+      return {
+        ok: false,
+        error: `Esa cuenta ya está enlazada con ${otra.full_name}. Quítasela primero.`,
+      }
+    }
+  }
+
   const { error } = await supabase
     .from("staff")
     .update({ profile_id: profileId })
